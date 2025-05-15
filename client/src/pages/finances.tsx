@@ -173,6 +173,7 @@ export default function Finances() {
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="w-full"
+                // Using standard ISO format for input type="date"
               />
             </div>
           </div>

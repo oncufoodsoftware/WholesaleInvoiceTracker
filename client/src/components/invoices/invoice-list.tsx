@@ -138,10 +138,14 @@ export function InvoiceList({
     }
   };
 
-  // Format date
+  // Format date to DD/MM/YYYY
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   // Check if user can edit/delete

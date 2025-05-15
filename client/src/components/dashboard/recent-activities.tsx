@@ -83,8 +83,8 @@ export function RecentActivities() {
       return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
     } else {
       return date.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric'
       });
     }

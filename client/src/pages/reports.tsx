@@ -301,7 +301,11 @@ export default function Reports() {
                         <tr key={i} className="border-b">
                           <td className="p-4 align-middle">TXN-{1000 + i}</td>
                           <td className="p-4 align-middle">
-                            {new Date(2024, 4, 15 - i).toLocaleDateString()}
+                            {new Date(2024, 4, 15 - i).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
                           </td>
                           <td className="p-4 align-middle">
                             {['Sale', 'Purchase', 'Refund', 'Payment'][i % 4]} - {['Groceries', 'Beverages', 'Snacks', 'Produce'][i % 4]}

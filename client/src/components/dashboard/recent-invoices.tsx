@@ -80,7 +80,11 @@ export function RecentInvoices() {
                     <span className="font-medium">{invoice.invoiceNumber}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(invoice.invoiceDate).toLocaleDateString('en-GB')}
+                    {new Date(invoice.invoiceDate).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
                   </p>
                 </div>
                 <div className="flex items-center space-x-4">
