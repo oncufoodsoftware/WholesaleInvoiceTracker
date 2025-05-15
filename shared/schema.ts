@@ -33,8 +33,9 @@ export const users = pgTable("users", {
 export const branches = pgTable("branches", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
-  location: text("location"),
-  contactInfo: text("contact_info"),
+  address: text("address").notNull(),
+  contactNumber: text("contact_number").notNull(),
+  manager: text("manager"),
 });
 
 // Suppliers table
@@ -45,6 +46,7 @@ export const suppliers = pgTable("suppliers", {
   phone: text("phone"),
   email: text("email"),
   address: text("address"),
+  notes: text("notes"),
 });
 
 // Invoices table
@@ -100,22 +102,8 @@ export const insertFinancialTransactionSchema = createInsertSchema(financialTran
   createdAt: true,
 });
 
-// Define relations
-export const branchRelations = {
-  users: branches.users,
-  invoices: branches.invoices,
-  financialTransactions: branches.financialTransactions,
-};
-
-export const userRelations = {
-  branch: users.branchId,
-  createdInvoices: users.createdInvoices,
-  recordedTransactions: users.recordedTransactions,
-};
-
-export const supplierRelations = {
-  invoices: suppliers.invoices,
-};
+// The Drizzle relations need to be defined later when setting up relations in the database
+// For now, we'll define types only and implement real relations when needed
 
 // Define types
 export type User = typeof users.$inferSelect;

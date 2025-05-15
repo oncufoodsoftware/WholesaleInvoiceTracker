@@ -1,111 +1,103 @@
+import { LogOut, BellIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
   const { user, logoutMutation } = useAuth();
-  
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
-  
+  const { toast } = useToast();
+
   function getUserInitials(fullName?: string, username?: string): string {
-    if (fullName && fullName.length > 0) {
-      const names = fullName.split(" ");
-      if (names.length >= 2) {
-        return `${names[0][0]}${names[1][0]}`.toUpperCase();
-      }
-      return names[0][0].toUpperCase();
-    }
-    
-    if (username && username.length > 0) {
+    if (fullName) {
+      return fullName
+        .split(" ")
+        .map((name) => name[0])
+        .join("")
+        .toUpperCase();
+    } else if (username) {
       return username[0].toUpperCase();
     }
-    
     return "U";
   }
-  
-  const initials = getUserInitials(user?.fullName, user?.username);
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({
+          title: "Logged out",
+          description: "You have been logged out successfully",
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  };
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 shadow-sm z-10 h-16">
-      <div className="flex items-center justify-between h-full px-4">
-        <div className="flex items-center">
-          <span className="material-icons text-primary mr-2">account_balance</span>
-          <h1 className="text-xl font-medium">Finance Management</h1>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <Badge className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center p-0 text-xs">3</Badge>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm">New invoice added</p>
-                  <p className="text-xs text-muted-foreground">5 minutes ago</p>
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
+      <div className="ml-auto flex items-center gap-4">
+        <Button variant="outline" size="icon" className="relative">
+          <BellIcon className="h-5 w-5" />
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+            3
+          </span>
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 font-normal"
+              aria-label="User menu"
+            >
+              <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground font-semibold">
+                {getUserInitials(user?.fullName, user?.username)}
+              </div>
+              <span className="hidden lg:inline-block">
+                {user?.fullName || user?.username}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <div className="flex items-center gap-2 p-2">
+              <div className="rounded-full bg-primary/10 p-1">
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-sm text-primary-foreground font-semibold">
+                  {getUserInitials(user?.fullName, user?.username)}
                 </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm">Payment received</p>
-                  <p className="text-xs text-muted-foreground">2 hours ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm">Daily report ready</p>
-                  <p className="text-xs text-muted-foreground">1 day ago</p>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 p-1">
-                <Avatar className="h-8 w-8 bg-primary text-white">
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
-                <span className="hidden md:inline">{user?.fullName || user?.username}</span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>{logoutMutation.isPending ? "Logging out..." : "Logout"}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium">
+                  {user?.fullName || user?.username}
+                </p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/settings">Profile Settings</a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive" 
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
