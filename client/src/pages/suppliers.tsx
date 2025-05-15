@@ -390,11 +390,7 @@ export default function Suppliers() {
                   </div>
                   {supplier.outstandingAmount > 0 && (
                     <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full ml-2">
-                      {new Intl.NumberFormat('en-GB', {
-                        style: 'currency',
-                        currency: 'GBP',
-                        maximumFractionDigits: 0
-                      }).format(supplier.outstandingAmount)}
+                      Outstanding
                     </div>
                   )}
                 </CardTitle>
