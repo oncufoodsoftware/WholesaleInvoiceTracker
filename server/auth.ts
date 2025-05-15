@@ -1,11 +1,11 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User as SelectUser, actionTypeEnum } from "@shared/schema";
 
 declare global {
   namespace Express {
@@ -45,6 +45,27 @@ export async function comparePasswords(supplied: string, stored: string) {
   } catch (error) {
     console.error("Error comparing passwords:", error);
     return false;
+  }
+}
+
+// Helper function to log user authentication actions
+async function logAuthAction(req: Request, user: SelectUser, actionType: typeof actionTypeEnum.enumValues[number]) {
+  try {
+    await storage.logUserAction({
+      userId: user.id,
+      actionType,
+      entityType: 'users',
+      entityId: user.id,
+      details: JSON.stringify({
+        username: user.username,
+        role: user.role,
+        timestamp: new Date().toISOString()
+      }),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+  } catch (error) {
+    console.error(`Error logging auth action:`, error);
   }
 }
 
@@ -134,6 +155,10 @@ export function setupAuth(app: Express) {
         }
         
         console.log("Login successful for user:", user.username, "with role:", user.role);
+        
+        // Log the login action
+        logAuthAction(req, user, 'login');
+        
         return res.status(200).json(user);
       });
     })(req, res, next);
@@ -141,8 +166,17 @@ export function setupAuth(app: Express) {
 
   // Logout endpoint
   app.post("/api/logout", (req, res, next) => {
+    // Store user info before logout for logging
+    const user = req.user;
+    
     req.logout((err) => {
       if (err) return next(err);
+      
+      // Log the logout action if we had a user
+      if (user) {
+        logAuthAction(req, user, 'logout');
+      }
+      
       res.sendStatus(200);
     });
   });

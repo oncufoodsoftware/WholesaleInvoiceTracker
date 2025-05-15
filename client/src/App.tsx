@@ -14,6 +14,7 @@ import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 import Branches from "@/pages/branches";
 import Suppliers from "@/pages/suppliers";
+import UserActions from "@/pages/user-actions";
 import { ProtectedRoute } from "./lib/protected-route";
 
 import { Layout } from "@/components/layout/layout";
@@ -37,6 +38,7 @@ function Router() {
                 <ProtectedRoute path="/finances" component={Finances} />
                 <ProtectedRoute path="/reports" component={Reports} />
                 <ProtectedRoute path="/users" component={Users} requiredRoles={["admin"]} />
+                <ProtectedRoute path="/user-actions" component={UserActions} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/settings" component={Settings} />
                 <Route component={NotFound} />
               </Switch>
