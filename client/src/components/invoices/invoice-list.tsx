@@ -235,7 +235,7 @@ export function InvoiceList({
                     <TableCell>{getBranchName(invoice.branchId)}</TableCell>
                     <TableCell>{formatDate(invoice.invoiceDate)}</TableCell>
                     <TableCell>{formatType(invoice.type)}</TableCell>
-                    <TableCell>${invoice.amount.toLocaleString()}</TableCell>
+                    <TableCell>£{invoice.amount.toLocaleString()}</TableCell>
                     <TableCell>{formatStatus(invoice.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center">
@@ -343,7 +343,7 @@ export function InvoiceList({
                 <p><span className="text-muted-foreground">Branch:</span> {getBranchName(invoice.branchId)}</p>
                 <p><span className="text-muted-foreground">Date:</span> {formatDate(invoice.invoiceDate)}</p>
                 <p><span className="text-muted-foreground">Type:</span> {invoice.type.replace('_', ' ')}</p>
-                <p><span className="text-muted-foreground">Amount:</span> ${invoice.amount.toLocaleString()}</p>
+                <p><span className="text-muted-foreground">Amount:</span> £{invoice.amount.toLocaleString()}</p>
               </div>
               <div className="flex justify-between items-center pt-2">
                 <Checkbox

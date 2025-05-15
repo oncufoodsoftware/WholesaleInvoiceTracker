@@ -118,7 +118,7 @@ export default function Settings() {
   const appSettingsForm = useForm<z.infer<typeof appSettingsSchema>>({
     resolver: zodResolver(appSettingsSchema),
     defaultValues: {
-      currency: "USD", // Default to USD for consistency
+      currency: "GBP", // Default to GBP (British Pound) for consistency
       language: "en",
       theme: "light",
       enableNotifications: true,

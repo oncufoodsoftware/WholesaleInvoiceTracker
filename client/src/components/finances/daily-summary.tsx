@@ -23,9 +23,9 @@ export function DailySummary({ branchId, date }: DailySummaryProps) {
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'GBP',
     }).format(amount);
   };
 
@@ -52,7 +52,7 @@ export function DailySummary({ branchId, date }: DailySummaryProps) {
               <Skeleton className="h-8 w-24" />
             ) : (
               <p className="text-2xl font-bold">
-                {summary ? formatCurrency(summary.totalSales) : "$0.00"}
+                {summary ? formatCurrency(summary.totalSales) : "£0.00"}
               </p>
             )}
             <div className="flex justify-between mt-2">
@@ -62,7 +62,7 @@ export function DailySummary({ branchId, date }: DailySummaryProps) {
                   <Skeleton className="h-4 w-16" />
                 ) : (
                   <p className="text-sm font-medium">
-                    {summary ? formatCurrency(summary.cardPayments) : "$0.00"}
+                    {summary ? formatCurrency(summary.cardPayments) : "£0.00"}
                   </p>
                 )}
               </div>
@@ -72,7 +72,7 @@ export function DailySummary({ branchId, date }: DailySummaryProps) {
                   <Skeleton className="h-4 w-16" />
                 ) : (
                   <p className="text-sm font-medium">
-                    {summary ? formatCurrency(summary.cashPayments) : "$0.00"}
+                    {summary ? formatCurrency(summary.cashPayments) : "£0.00"}
                   </p>
                 )}
               </div>
@@ -86,7 +86,7 @@ export function DailySummary({ branchId, date }: DailySummaryProps) {
               <Skeleton className="h-8 w-24" />
             ) : (
               <p className="text-2xl font-bold">
-                {summary ? formatCurrency(summary.totalExpenses) : "$0.00"}
+                {summary ? formatCurrency(summary.totalExpenses) : "£0.00"}
               </p>
             )}
             <div className="mt-2">
@@ -118,7 +118,7 @@ export function DailySummary({ branchId, date }: DailySummaryProps) {
               <Skeleton className="h-8 w-24" />
             ) : (
               <p className="text-2xl font-bold">
-                {summary ? formatCurrency(summary.netBalance) : "$0.00"}
+                {summary ? formatCurrency(summary.netBalance) : "£0.00"}
               </p>
             )}
             <div className="mt-2">
