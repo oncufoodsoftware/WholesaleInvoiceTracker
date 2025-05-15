@@ -1,9 +1,8 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
+import { AuthProvider } from "@/hooks/use-auth";
 
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -44,14 +43,14 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
+    <ThemeProvider attribute="class" defaultTheme="light">
+      <TooltipProvider>
+        <Toaster />
+        <AuthProvider>
           <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }
 
