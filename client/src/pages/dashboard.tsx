@@ -51,11 +51,11 @@ export default function Dashboard() {
     queryKey: ["/api/dashboard/summary"],
   });
 
-  // Format numbers as currency
+  // Format numbers as currency (£ Pounds)
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'GBP',
       minimumFractionDigits: 2
     }).format(amount);
   };
@@ -72,12 +72,12 @@ export default function Dashboard() {
   const dashboardData = {
     totalRevenue: summaryData 
       ? formatCurrency(summaryData.totalInvoiceAmount) 
-      : "$124,563.00",
-    totalExpenses: "$86,423.50", // Would be from financial transactions in full implementation
+      : "£124,563.00",
+    totalExpenses: "£86,423.50", // Would be from financial transactions in full implementation
     outstandingInvoices: summaryData 
       ? formatCurrency(summaryData.totalOutstandingAmount) 
-      : "$34,285.75",
-    cashFlow: "$38,139.50", // Would be calculated in full implementation
+      : "£34,285.75",
+    cashFlow: "£38,139.50", // Would be calculated in full implementation
     trends: trends
   };
 
@@ -240,7 +240,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-001</td>
                   <td className="py-3">East Branch</td>
-                  <td className="py-3">$1,250.00</td>
+                  <td className="py-3">£1,250.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Paid</span>
                   </td>
@@ -248,7 +248,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-002</td>
                   <td className="py-3">West Branch</td>
-                  <td className="py-3">$860.00</td>
+                  <td className="py-3">£860.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Pending</span>
                   </td>
@@ -256,7 +256,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-003</td>
                   <td className="py-3">South Branch</td>
-                  <td className="py-3">$1,430.00</td>
+                  <td className="py-3">£1,430.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">Overdue</span>
                   </td>
@@ -264,7 +264,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-004</td>
                   <td className="py-3">North Branch</td>
-                  <td className="py-3">$540.00</td>
+                  <td className="py-3">£540.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Paid</span>
                   </td>
@@ -291,7 +291,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">New invoice created</p>
-                <p className="text-xs text-muted-foreground">INV-001 for East Branch ($1,250.00)</p>
+                <p className="text-xs text-muted-foreground">INV-001 for East Branch (£1,250.00)</p>
                 <p className="text-xs text-muted-foreground">15 May 2025, 10:45 AM</p>
               </div>
             </div>
@@ -302,7 +302,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">Payment received</p>
-                <p className="text-xs text-muted-foreground">INV-004 from North Branch ($540.00)</p>
+                <p className="text-xs text-muted-foreground">INV-004 from North Branch (£540.00)</p>
                 <p className="text-xs text-muted-foreground">15 May 2025, 09:30 AM</p>
               </div>
             </div>
@@ -313,7 +313,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">Expense recorded</p>
-                <p className="text-xs text-muted-foreground">Utilities payment for West Branch ($320.00)</p>
+                <p className="text-xs text-muted-foreground">Utilities payment for West Branch (£320.00)</p>
                 <p className="text-xs text-muted-foreground">14 May 2025, 04:15 PM</p>
               </div>
             </div>
