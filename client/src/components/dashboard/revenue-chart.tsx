@@ -1,97 +1,134 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Legend 
+} from "recharts";
+import { useState } from "react";
 
-// This component would ideally fetch data from an API
-// For now, we'll use some demo data to display the chart
-const demoData = [
-  { month: 'Jan', revenue: 65000, expenses: 45000 },
-  { month: 'Feb', revenue: 59000, expenses: 40000 },
-  { month: 'Mar', revenue: 80000, expenses: 55000 },
-  { month: 'Apr', revenue: 81000, expenses: 60000 },
-  { month: 'May', revenue: 56000, expenses: 45000 },
-  { month: 'Jun', revenue: 55000, expenses: 35000 },
-  { month: 'Jul', revenue: 40000, expenses: 30000 },
-  { month: 'Aug', revenue: 94000, expenses: 65000 },
-  { month: 'Sep', revenue: 75000, expenses: 55000 },
-  { month: 'Oct', revenue: 110000, expenses: 80000 },
-  { month: 'Nov', revenue: 90000, expenses: 65000 },
-  { month: 'Dec', revenue: 95000, expenses: 70000 },
+const data = [
+  { month: "Jan", revenue: 14000, expenses: 11200 },
+  { month: "Feb", revenue: 18500, expenses: 13000 },
+  { month: "Mar", revenue: 16800, expenses: 12800 },
+  { month: "Apr", revenue: 21000, expenses: 14500 },
+  { month: "May", revenue: 24500, expenses: 16200 },
+  { month: "Jun", revenue: 22000, expenses: 15800 },
+  { month: "Jul", revenue: 25000, expenses: 17500 },
+  { month: "Aug", revenue: 27800, expenses: 18300 },
+  { month: "Sep", revenue: 26500, expenses: 19000 },
+  { month: "Oct", revenue: 29000, expenses: 20500 },
+  { month: "Nov", revenue: 31500, expenses: 21200 },
+  { month: "Dec", revenue: 34000, expenses: 23000 },
 ];
 
 export function RevenueChart() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["/api/financial-summary/yearly"],
-    enabled: false, // Disable actual API call for now
-  });
+  const [period, setPeriod] = useState("yearly");
   
-  // Use demo data for now, in a real app we'd use the data from the API
-  const chartData = data || demoData;
+  // Format numbers as GBP currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: "GBP",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
   return (
-    <Card className="col-span-2">
+    <Card className="col-span-4">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base font-medium">Monthly Revenue & Expenses</CardTitle>
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-primary"></span>
-            <span>Revenue</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-destructive"></span>
-            <span>Expenses</span>
-          </div>
+        <div className="space-y-1">
+          <CardTitle className="text-base font-medium">Revenue & Expenses</CardTitle>
+          <CardDescription>Financial overview for the selected period</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={period}
+            onValueChange={(value) => setPeriod(value)}
+          >
+            <SelectTrigger className="w-[120px] h-8">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="quarterly">Quarterly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
-      <CardContent className="h-64 w-full pt-4">
-        {isLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <Skeleton className="h-full w-full" />
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="month" 
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: '#e2e8f0' }}
-              />
-              <YAxis 
-                tickFormatter={(value) => `$${value / 1000}k`}
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: '#e2e8f0' }}
-              />
-              <Tooltip
-                formatter={(value: number) => [`$${value.toLocaleString()}`, undefined]}
-                labelStyle={{ fontWeight: 'bold' }}
-                contentStyle={{
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'white',
-                }}
-              />
-              <Bar 
-                dataKey="revenue" 
-                name="Revenue" 
-                fill="hsl(var(--primary))" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar 
-                dataKey="expenses" 
-                name="Expenses" 
-                fill="hsl(var(--destructive))" 
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+      <CardContent className="pt-2">
+        <ResponsiveContainer width="100%" height={340}>
+          <AreaChart
+            data={data}
+            margin={{
+              top: 5,
+              right: 10,
+              left: 10,
+              bottom: 5,
+            }}
+          >
+            <defs>
+              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis 
+              dataKey="month" 
+              tick={{ fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis 
+              tick={{ fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => `£${value / 1000}k`}
+            />
+            <Tooltip 
+              formatter={(value: number) => formatCurrency(value)}
+              labelStyle={{ fontWeight: "bold" }}
+              contentStyle={{ 
+                borderRadius: "8px", 
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                border: "none",
+              }}
+            />
+            <Legend 
+              iconType="circle" 
+              iconSize={8}
+              formatter={(value) => <span style={{ color: value === "revenue" ? "#2563eb" : "#ef4444", fontWeight: "500" }}>{value === "revenue" ? "Revenue" : "Expenses"}</span>}
+            />
+            <Area
+              type="monotone"
+              dataKey="revenue"
+              stroke="#2563eb"
+              fillOpacity={1}
+              fill="url(#colorRevenue)"
+              strokeWidth={2}
+            />
+            <Area
+              type="monotone"
+              dataKey="expenses"
+              stroke="#ef4444"
+              fillOpacity={1}
+              fill="url(#colorExpenses)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );

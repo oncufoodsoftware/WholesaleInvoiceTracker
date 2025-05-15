@@ -1,109 +1,106 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Receipt } from "lucide-react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Invoice } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { ChevronRight, Eye } from "lucide-react";
-
-interface InvoiceStatusProps {
-  status: string;
-}
-
-function InvoiceStatus({ status }: InvoiceStatusProps) {
-  return (
-    <Badge 
-      className={cn(
-        "capitalize",
-        status === "paid" ? "bg-success/10 text-success hover:bg-success/20" :
-        status === "partially_paid" ? "bg-warning/10 text-warning hover:bg-warning/20" :
-        "bg-destructive/10 text-destructive hover:bg-destructive/20"
-      )}
-      variant="outline"
-    >
-      {status.replace('_', ' ')}
-    </Badge>
-  );
-}
 
 export function RecentInvoices() {
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoices, isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
   });
 
-  // Get only the most recent 4 invoices
-  const recentInvoices = invoices ? invoices.slice(0, 4) : [];
+  // Format currency (£)
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Status badge color based on invoice status
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-emerald-100 text-emerald-700';
+      case 'unpaid':
+        return 'bg-red-100 text-red-700';
+      case 'partially_paid':
+        return 'bg-amber-100 text-amber-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'Paid';
+      case 'unpaid':
+        return 'Unpaid';
+      case 'partially_paid':
+        return 'Partial';
+      default:
+        return status;
+    }
+  };
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium">Recent Invoices</CardTitle>
-        <Link 
-          href="/invoices" 
-          className="text-primary text-sm flex items-center hover:underline"
-        >
-          <span>View All</span>
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <CardDescription>Latest transactions</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="text-left">
-              <tr>
-                <th className="p-3 bg-muted/50 text-muted-foreground text-sm font-medium">Invoice #</th>
-                <th className="p-3 bg-muted/50 text-muted-foreground text-sm font-medium">Supplier</th>
-                <th className="p-3 bg-muted/50 text-muted-foreground text-sm font-medium">Date</th>
-                <th className="p-3 bg-muted/50 text-muted-foreground text-sm font-medium">Amount</th>
-                <th className="p-3 bg-muted/50 text-muted-foreground text-sm font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array(4).fill(0).map((_, i) => (
-                  <tr key={i}>
-                    <td className="p-3 border-t border-gray-200">
-                      <Skeleton className="h-4 w-24" />
-                    </td>
-                    <td className="p-3 border-t border-gray-200">
-                      <Skeleton className="h-4 w-32" />
-                    </td>
-                    <td className="p-3 border-t border-gray-200">
-                      <Skeleton className="h-4 w-20" />
-                    </td>
-                    <td className="p-3 border-t border-gray-200">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                    <td className="p-3 border-t border-gray-200">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                  </tr>
-                ))
-              ) : recentInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-3 text-center text-muted-foreground">
-                    No recent invoices found
-                  </td>
-                </tr>
-              ) : (
-                recentInvoices.map((invoice: any) => (
-                  <tr key={invoice.id} className="hover:bg-muted/50">
-                    <td className="p-3 border-t border-gray-200">{invoice.invoiceNumber}</td>
-                    <td className="p-3 border-t border-gray-200">{invoice.supplier?.name || "Unknown"}</td>
-                    <td className="p-3 border-t border-gray-200">
-                      {new Date(invoice.invoiceDate).toLocaleDateString()}
-                    </td>
-                    <td className="p-3 border-t border-gray-200">${invoice.amount.toLocaleString()}</td>
-                    <td className="p-3 border-t border-gray-200">
-                      <InvoiceStatus status={invoice.status} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between py-2">
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-6 w-14 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : invoices && invoices.length > 0 ? (
+          <div className="space-y-4">
+            {invoices.slice(0, 5).map((invoice) => (
+              <div key={invoice.id} className="flex items-center justify-between py-2">
+                <div className="space-y-1">
+                  <div className="flex items-center">
+                    <Receipt className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{invoice.invoiceNumber}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(invoice.invoiceDate).toLocaleDateString('en-GB')}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <p className="font-medium">{formatCurrency(invoice.amount)}</p>
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClasses(invoice.status)}`}>
+                    {getStatusLabel(invoice.status)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center py-6 text-muted-foreground">No invoice data available</p>
+        )}
       </CardContent>
+      <CardFooter>
+        <Link href="/invoices">
+          <Button variant="outline" className="w-full">View All Invoices</Button>
+        </Link>
+      </CardFooter>
     </Card>
   );
 }

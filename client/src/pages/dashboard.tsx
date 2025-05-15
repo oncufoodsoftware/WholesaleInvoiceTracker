@@ -136,48 +136,10 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts and Reports */}
+      {/* Charts and Revenue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
-          <Card className="p-4">
-            <h3 className="text-lg font-semibold mb-4">Branch Outstanding Debts</h3>
-            <div className="overflow-x-auto">
-              {isSummaryLoading ? (
-                <div className="flex items-center justify-center p-6">
-                  <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
-                </div>
-              ) : summaryData?.branchData?.length ? (
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left border-b">
-                      <th className="pb-2 font-medium">Branch</th>
-                      <th className="pb-2 font-medium">Total</th>
-                      <th className="pb-2 font-medium">Outstanding</th>
-                      <th className="pb-2 font-medium">Paid %</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {summaryData.branchData.slice(0, 5).map((branch: any) => (
-                      <tr key={branch.id} className="hover:bg-muted/50">
-                        <td className="py-3">{branch.name}</td>
-                        <td className="py-3">{formatCurrency(branch.totalAmount)}</td>
-                        <td className="py-3">{formatCurrency(branch.outstandingAmount)}</td>
-                        <td className="py-3">
-                          {branch.totalAmount ? 
-                            Math.round(((branch.totalAmount - branch.outstandingAmount) / branch.totalAmount) * 100) + '%' 
-                            : '0%'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
-                  <p className="text-muted-foreground">No branch debt data available</p>
-                </div>
-              )}
-            </div>
-          </Card>
+          <RevenueChart />
         </div>
         <div>
           <Card className="p-4">
@@ -220,122 +182,53 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Branch Data */}
+      <div className="mb-6">
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-4">Branch Outstanding Debts</h3>
+          <div className="overflow-x-auto">
+            {isSummaryLoading ? (
+              <div className="flex items-center justify-center p-6">
+                <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
+              </div>
+            ) : summaryData?.branchData?.length ? (
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left border-b">
+                    <th className="pb-2 font-medium">Branch</th>
+                    <th className="pb-2 font-medium">Total</th>
+                    <th className="pb-2 font-medium">Outstanding</th>
+                    <th className="pb-2 font-medium">Paid %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {summaryData.branchData.slice(0, 5).map((branch: any) => (
+                    <tr key={branch.id} className="hover:bg-muted/50">
+                      <td className="py-3">{branch.name}</td>
+                      <td className="py-3">{formatCurrency(branch.totalAmount)}</td>
+                      <td className="py-3">{formatCurrency(branch.outstandingAmount)}</td>
+                      <td className="py-3">
+                        {branch.totalAmount ? 
+                          Math.round(((branch.totalAmount - branch.outstandingAmount) / branch.totalAmount) * 100) + '%' 
+                          : '0%'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
+                <p className="text-muted-foreground">No branch debt data available</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
       {/* Recent Invoices and Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-2">Recent Invoices</h3>
-          <p className="text-sm text-muted-foreground mb-4">Latest transactions</p>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left border-b">
-                  <th className="pb-2 font-medium">Invoice</th>
-                  <th className="pb-2 font-medium">Branch</th>
-                  <th className="pb-2 font-medium">Amount</th>
-                  <th className="pb-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                <tr className="hover:bg-muted/50">
-                  <td className="py-3">INV-001</td>
-                  <td className="py-3">East Branch</td>
-                  <td className="py-3">£1,250.00</td>
-                  <td className="py-3">
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Paid</span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-muted/50">
-                  <td className="py-3">INV-002</td>
-                  <td className="py-3">West Branch</td>
-                  <td className="py-3">£860.00</td>
-                  <td className="py-3">
-                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Pending</span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-muted/50">
-                  <td className="py-3">INV-003</td>
-                  <td className="py-3">South Branch</td>
-                  <td className="py-3">£1,430.00</td>
-                  <td className="py-3">
-                    <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">Overdue</span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-muted/50">
-                  <td className="py-3">INV-004</td>
-                  <td className="py-3">North Branch</td>
-                  <td className="py-3">£540.00</td>
-                  <td className="py-3">
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Paid</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <div className="mt-4">
-            <Link href="/invoices">
-              <Button variant="outline" className="w-full">View All Invoices</Button>
-            </Link>
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-2">Recent Activities</h3>
-          <p className="text-sm text-muted-foreground mb-4">Latest system events</p>
-          
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600 dark:text-blue-400">
-                <Receipt className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">New invoice created</p>
-                <p className="text-xs text-muted-foreground">INV-001 for East Branch (£1,250.00)</p>
-                <p className="text-xs text-muted-foreground">15 May 2025, 10:45 AM</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-full text-emerald-600 dark:text-emerald-400">
-                <ArrowUpRight className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Payment received</p>
-                <p className="text-xs text-muted-foreground">INV-004 from North Branch (£540.00)</p>
-                <p className="text-xs text-muted-foreground">15 May 2025, 09:30 AM</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-full text-amber-600 dark:text-amber-400">
-                <ArrowDownRight className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Expense recorded</p>
-                <p className="text-xs text-muted-foreground">Utilities payment for West Branch (£320.00)</p>
-                <p className="text-xs text-muted-foreground">14 May 2025, 04:15 PM</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-full text-red-600 dark:text-red-400">
-                <ArrowDownRight className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Supplier payment</p>
-                <p className="text-xs text-muted-foreground">To Premium Foods Ltd (£2,850.00)</p>
-                <p className="text-xs text-muted-foreground">14 May 2025, 02:20 PM</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-4">
-            <Link href="/finances">
-              <Button variant="outline" className="w-full">View All Activities</Button>
-            </Link>
-          </div>
-        </Card>
+        <RecentInvoices />
+        <RecentActivities />
       </div>
     </div>
   );

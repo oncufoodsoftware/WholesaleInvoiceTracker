@@ -1,108 +1,139 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  RefreshCw, 
+  FileEdit, 
+  Trash2,
+  UserPlus
+} from "lucide-react";
 import { Link } from "wouter";
-import { ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { UserAction } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface Activity {
-  id: number;
-  type: "invoice" | "payment" | "update" | "alert";
-  message: string;
-  timestamp: string;
-  iconBg: string;
-  icon: string;
-}
-
-// This would normally come from an API
-const demoActivities: Activity[] = [
-  {
-    id: 1,
-    type: "invoice",
-    message: "New invoice INV-2023-056 added by Mark Wilson",
-    timestamp: "24 Oct 2023, 14:35",
-    iconBg: "bg-primary/10",
-    icon: "receipt"
-  },
-  {
-    id: 2,
-    type: "payment",
-    message: "Payment of $3,420.50 received for invoice INV-2023-055",
-    timestamp: "22 Oct 2023, 10:22",
-    iconBg: "bg-success/10",
-    icon: "payments"
-  },
-  {
-    id: 3,
-    type: "update",
-    message: "Sarah Johnson updated daily financial report for Downtown Branch",
-    timestamp: "21 Oct 2023, 16:45",
-    iconBg: "bg-warning/10",
-    icon: "edit_note"
-  },
-  {
-    id: 4,
-    type: "alert",
-    message: "Overdue payment reminder sent for invoice INV-2023-054",
-    timestamp: "20 Oct 2023, 09:15",
-    iconBg: "bg-destructive/10",
-    icon: "report_problem"
-  }
-];
-
 export function RecentActivities() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["/api/activities"],
-    enabled: false // Disable actual API call for now
+  const { data: actions, isLoading } = useQuery<UserAction[]>({
+    queryKey: ["/api/user-actions"],
   });
 
-  // Use demo data for now
-  const activities = data || demoActivities;
+  // Function to get appropriate icon for action type
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'create':
+        return <UserPlus className="h-4 w-4" />;
+      case 'update':
+        return <FileEdit className="h-4 w-4" />;
+      case 'delete':
+        return <Trash2 className="h-4 w-4" />;
+      case 'login':
+        return <ArrowUpRight className="h-4 w-4" />;
+      case 'logout':
+        return <ArrowDownRight className="h-4 w-4" />;
+      default:
+        return <RefreshCw className="h-4 w-4" />;
+    }
+  };
+
+  // Function to get appropriate style for action type
+  const getActionStyle = (type: string) => {
+    switch (type) {
+      case 'create':
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
+      case 'update':
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
+      case 'delete':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
+      case 'login':
+        return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
+      case 'logout':
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
+      default:
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  // Format action description
+  const formatActionDescription = (action: UserAction) => {
+    const entityName = action.entityType.charAt(0).toUpperCase() + action.entityType.slice(1);
+    const actionName = action.actionType.charAt(0).toUpperCase() + action.actionType.slice(1);
+    
+    if (action.details) {
+      return `${actionName}d ${entityName} - ${action.details}`;
+    }
+    
+    return `${actionName}d ${entityName} #${action.entityId || ''}`;
+  };
+
+  // Format relative time
+  const formatRelativeTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMins / 60);
+    const diffDays = Math.round(diffHours / 24);
+
+    if (diffMins < 60) {
+      return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+    } else {
+      return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+  };
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium">Recent Activities</CardTitle>
-        <Link 
-          href="#" // This would link to a full activities page
-          className="text-primary text-sm flex items-center hover:underline"
-        >
-          <span>View All</span>
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <CardDescription>Latest system events</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         {isLoading ? (
-          // Skeleton loading state
-          Array(4).fill(0).map((_, i) => (
-            <div key={i} className="flex gap-3">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <div className="flex-1 space-y-1">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-24" />
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
               </div>
-            </div>
-          ))
-        ) : activities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No recent activities</p>
+            ))}
+          </div>
+        ) : actions && actions.length > 0 ? (
+          <div className="space-y-4">
+            {actions.slice(0, 5).map((action) => (
+              <div key={action.id} className="flex gap-3">
+                <div className={`p-2 rounded-full ${getActionStyle(action.actionType)}`}>
+                  {getActionIcon(action.actionType)}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{formatActionDescription(action)}</p>
+                  <p className="text-xs text-muted-foreground">By User #{action.userId}</p>
+                  <p className="text-xs text-muted-foreground">{action.timestamp ? formatRelativeTime(action.timestamp.toString()) : 'N/A'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
-          activities.map((activity) => (
-            <div key={activity.id} className="flex gap-3">
-              <div className={`h-8 w-8 rounded-full ${activity.iconBg} flex items-center justify-center`}>
-                <span className={`material-icons text-sm ${activity.type === "invoice" ? "text-primary" : 
-                                 activity.type === "payment" ? "text-success" : 
-                                 activity.type === "update" ? "text-warning" : 
-                                 "text-destructive"}`}>
-                  {activity.icon}
-                </span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm">{activity.message}</p>
-                <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-              </div>
-            </div>
-          ))
+          <p className="text-center py-6 text-muted-foreground">No activity data available</p>
         )}
       </CardContent>
+      <CardFooter>
+        <Link href="/user-actions">
+          <Button variant="outline" className="w-full">View All Activities</Button>
+        </Link>
+      </CardFooter>
     </Card>
   );
 }
