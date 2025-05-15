@@ -16,6 +16,7 @@ import {
   Store,
   Users,
   X,
+  Activity,
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -75,12 +76,17 @@ export function Sidebar({ className }: SidebarNavProps) {
     },
   ];
 
-  // Only show the Users nav item for admin users
+  // Only show the admin nav items for admin users
   const adminNavItems = user?.role === "admin" ? [
     {
       title: "Users",
       href: "/users",
       icon: <Users className="mr-2 h-4 w-4" />,
+    },
+    {
+      title: "User Actions",
+      href: "/user-actions",
+      icon: <Activity className="mr-2 h-4 w-4" />,
     }
   ] : [];
 
