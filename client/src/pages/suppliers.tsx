@@ -49,6 +49,11 @@ const supplierSchema = insertSupplierSchema.extend({
   notes: z.string().optional().or(z.literal("")),
 });
 
+// Define an interface that extends Supplier with debt information
+interface SupplierWithDebt extends Supplier {
+  outstandingAmount: number;
+}
+
 export default function Suppliers() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -109,6 +114,7 @@ export default function Suppliers() {
       setIsAddDialogOpen(false);
       addForm.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
     },
     onError: (error: Error) => {
       toast({
@@ -134,6 +140,7 @@ export default function Suppliers() {
       setSelectedSupplier(null);
       editForm.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
     },
     onError: (error: Error) => {
       toast({
@@ -157,6 +164,7 @@ export default function Suppliers() {
         description: "The supplier has been deleted successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
     },
     onError: (error: Error) => {
       toast({
@@ -370,9 +378,20 @@ export default function Suppliers() {
           {suppliers.map((supplier: Supplier) => (
             <Card key={supplier.id} className="overflow-hidden border border-border">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center">
-                  <Building className="h-5 w-5 mr-2 text-primary" />
-                  {supplier.name}
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Building className="h-5 w-5 mr-2 text-primary" />
+                    {supplier.name}
+                  </div>
+                  {'outstandingAmount' in supplier && supplier.outstandingAmount > 0 && (
+                    <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full ml-2">
+                      {new Intl.NumberFormat('en-GB', {
+                        style: 'currency',
+                        currency: 'GBP',
+                        maximumFractionDigits: 0
+                      }).format(supplier.outstandingAmount)}
+                    </div>
+                  )}
                 </CardTitle>
                 {supplier.contactPerson && (
                   <CardDescription>Contact: {supplier.contactPerson}</CardDescription>
@@ -396,6 +415,21 @@ export default function Suppliers() {
                     <div className="flex items-start">
                       <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
                       <span className="line-clamp-2">{supplier.address}</span>
+                    </div>
+                  )}
+                  
+                  {/* Total Debt Information */}
+                  {'outstandingAmount' in supplier && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Total Outstanding:</span>
+                        <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {new Intl.NumberFormat('en-GB', {
+                            style: 'currency',
+                            currency: 'GBP'
+                          }).format(supplier.outstandingAmount || 0)}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
