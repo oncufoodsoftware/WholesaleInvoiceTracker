@@ -62,15 +62,20 @@ export default function Suppliers() {
   
   // Get all suppliers with total debt information
   const {
-    data: suppliers = [],
+    data: suppliers = [] as SupplierWithDebt[],
     isLoading,
     isError,
-  } = useQuery({
+  } = useQuery<SupplierWithDebt[]>({
     queryKey: ["/api/suppliers", { includeSummary: true }],
     queryFn: async () => {
       const res = await fetch("/api/suppliers?includeSummary=true");
       if (!res.ok) throw new Error("Failed to fetch suppliers");
-      return res.json();
+      const data = await res.json();
+      // Ensure each supplier has an outstandingAmount property
+      return data.map((supplier: any) => ({
+        ...supplier,
+        outstandingAmount: supplier.outstandingAmount || 0
+      }));
     },
   });
 
@@ -375,7 +380,7 @@ export default function Suppliers() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {suppliers.map((supplier: Supplier) => (
+          {suppliers.map((supplier: SupplierWithDebt) => (
             <Card key={supplier.id} className="overflow-hidden border border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
@@ -383,7 +388,7 @@ export default function Suppliers() {
                     <Building className="h-5 w-5 mr-2 text-primary" />
                     {supplier.name}
                   </div>
-                  {'outstandingAmount' in supplier && supplier.outstandingAmount > 0 && (
+                  {supplier.outstandingAmount > 0 && (
                     <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full ml-2">
                       {new Intl.NumberFormat('en-GB', {
                         style: 'currency',
@@ -419,19 +424,17 @@ export default function Suppliers() {
                   )}
                   
                   {/* Total Debt Information */}
-                  {'outstandingAmount' in supplier && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Total Outstanding:</span>
-                        <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                          {new Intl.NumberFormat('en-GB', {
-                            style: 'currency',
-                            currency: 'GBP'
-                          }).format(supplier.outstandingAmount || 0)}
-                        </span>
-                      </div>
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Total Outstanding:</span>
+                      <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {new Intl.NumberFormat('en-GB', {
+                          style: 'currency',
+                          currency: 'GBP'
+                        }).format(supplier.outstandingAmount)}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="pt-2">
