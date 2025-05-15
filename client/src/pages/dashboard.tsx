@@ -24,24 +24,61 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState("month");
   
-  // In a real application, we would fetch this data from the API
-  const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
+  // Define types for API response
+  interface BranchSummary {
+    id: number;
+    name: string;
+    totalAmount: number;
+    outstandingAmount: number;
+  }
+  
+  interface SupplierSummary {
+    id: number;
+    name: string;
+    totalAmount: number;
+    outstandingAmount: number;
+  }
+  
+  interface DashboardSummary {
+    totalInvoiceAmount: number;
+    totalOutstandingAmount: number;
+    branchData: BranchSummary[];
+    supplierData: SupplierSummary[];
+  }
+
+  // Fetch summary data from the API
+  const { data: summaryData, isLoading: isSummaryLoading } = useQuery<DashboardSummary>({
     queryKey: ["/api/dashboard/summary"],
-    enabled: false, // Disable actual API call for now
   });
 
-  // Sample data for the dashboard
+  // Format numbers as currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+  
+  // Sample trends data (would be calculated from historical data in a full implementation)
+  const trends = {
+    revenue: { value: "8.2%", direction: "up" as const, text: "vs last month" },
+    expenses: { value: "12.5%", direction: "up" as const, text: "vs last month" },
+    invoices: { value: "3.7%", direction: "down" as const, text: "vs last month" },
+    cashFlow: { value: "5.3%", direction: "up" as const, text: "vs last month" }
+  };
+  
+  // Dashboard data with real or fallback values
   const dashboardData = {
-    totalRevenue: "£124,563.00",
-    totalExpenses: "£86,423.50",
-    outstandingInvoices: "£34,285.75",
-    cashFlow: "£38,139.50",
-    trends: {
-      revenue: { value: "8.2%", direction: "up" as const, text: "vs last month" },
-      expenses: { value: "12.5%", direction: "up" as const, text: "vs last month" },
-      invoices: { value: "3.7%", direction: "down" as const, text: "vs last month" },
-      cashFlow: { value: "5.3%", direction: "up" as const, text: "vs last month" }
-    }
+    totalRevenue: summaryData 
+      ? formatCurrency(summaryData.totalInvoiceAmount) 
+      : "$124,563.00",
+    totalExpenses: "$86,423.50", // Would be from financial transactions in full implementation
+    outstandingInvoices: summaryData 
+      ? formatCurrency(summaryData.totalOutstandingAmount) 
+      : "$34,285.75",
+    cashFlow: "$38,139.50", // Would be calculated in full implementation
+    trends: trends
   };
 
   return (
@@ -103,57 +140,81 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
           <Card className="p-4">
-            <h3 className="text-lg font-semibold mb-4">Revenue Trend</h3>
-            <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
-              <p className="text-muted-foreground">Revenue chart will be displayed here</p>
+            <h3 className="text-lg font-semibold mb-4">Branch Outstanding Debts</h3>
+            <div className="overflow-x-auto">
+              {isSummaryLoading ? (
+                <div className="flex items-center justify-center p-6">
+                  <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
+                </div>
+              ) : summaryData?.branchData?.length ? (
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left border-b">
+                      <th className="pb-2 font-medium">Branch</th>
+                      <th className="pb-2 font-medium">Total</th>
+                      <th className="pb-2 font-medium">Outstanding</th>
+                      <th className="pb-2 font-medium">Paid %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {summaryData.branchData.slice(0, 5).map((branch: any) => (
+                      <tr key={branch.id} className="hover:bg-muted/50">
+                        <td className="py-3">{branch.name}</td>
+                        <td className="py-3">{formatCurrency(branch.totalAmount)}</td>
+                        <td className="py-3">{formatCurrency(branch.outstandingAmount)}</td>
+                        <td className="py-3">
+                          {branch.totalAmount ? 
+                            Math.round(((branch.totalAmount - branch.outstandingAmount) / branch.totalAmount) * 100) + '%' 
+                            : '0%'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
+                  <p className="text-muted-foreground">No branch debt data available</p>
+                </div>
+              )}
             </div>
           </Card>
         </div>
         <div>
           <Card className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Branch Performance</h3>
-            <p className="text-sm text-muted-foreground mb-4">Revenue by branch</p>
+            <h3 className="text-lg font-semibold mb-2">Supplier Outstanding Debts</h3>
+            <p className="text-sm text-muted-foreground mb-4">Top suppliers by outstanding amount</p>
             
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">East Branch</span>
-                  <span className="text-sm font-medium">£42,560</span>
+              {isSummaryLoading ? (
+                <div className="flex items-center justify-center p-6">
+                  <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{ width: "85%" }}></div>
+              ) : summaryData?.supplierData?.length ? (
+                summaryData.supplierData.slice(0, 4).map((supplier: any) => {
+                  // Calculate percentage of outstanding debt
+                  const percentage = supplier.totalAmount ? 
+                    Math.round((supplier.outstandingAmount / supplier.totalAmount) * 100) : 0;
+                  
+                  return (
+                    <div key={supplier.id}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">{supplier.name}</span>
+                        <span className="text-sm font-medium">{formatCurrency(supplier.outstandingAmount)}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-amber-500 h-2 rounded-full" 
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  No supplier debt data available
                 </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">West Branch</span>
-                  <span className="text-sm font-medium">£38,800</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{ width: "77%" }}></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">North Branch</span>
-                  <span className="text-sm font-medium">£26,320</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{ width: "52%" }}></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">South Branch</span>
-                  <span className="text-sm font-medium">£16,883</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-primary h-2 rounded-full" style={{ width: "33%" }}></div>
-                </div>
-              </div>
+              )}
             </div>
           </Card>
         </div>
@@ -179,7 +240,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-001</td>
                   <td className="py-3">East Branch</td>
-                  <td className="py-3">£1,250.00</td>
+                  <td className="py-3">$1,250.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Paid</span>
                   </td>
@@ -187,7 +248,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-002</td>
                   <td className="py-3">West Branch</td>
-                  <td className="py-3">£860.00</td>
+                  <td className="py-3">$860.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Pending</span>
                   </td>
@@ -195,7 +256,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-003</td>
                   <td className="py-3">South Branch</td>
-                  <td className="py-3">£1,430.00</td>
+                  <td className="py-3">$1,430.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">Overdue</span>
                   </td>
@@ -203,7 +264,7 @@ export default function Dashboard() {
                 <tr className="hover:bg-muted/50">
                   <td className="py-3">INV-004</td>
                   <td className="py-3">North Branch</td>
-                  <td className="py-3">£540.00</td>
+                  <td className="py-3">$540.00</td>
                   <td className="py-3">
                     <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Paid</span>
                   </td>
@@ -230,7 +291,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">New invoice created</p>
-                <p className="text-xs text-muted-foreground">INV-001 for East Branch (£1,250.00)</p>
+                <p className="text-xs text-muted-foreground">INV-001 for East Branch ($1,250.00)</p>
                 <p className="text-xs text-muted-foreground">15 May 2025, 10:45 AM</p>
               </div>
             </div>
@@ -241,7 +302,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">Payment received</p>
-                <p className="text-xs text-muted-foreground">INV-004 from North Branch (£540.00)</p>
+                <p className="text-xs text-muted-foreground">INV-004 from North Branch ($540.00)</p>
                 <p className="text-xs text-muted-foreground">15 May 2025, 09:30 AM</p>
               </div>
             </div>
@@ -252,7 +313,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium">Expense recorded</p>
-                <p className="text-xs text-muted-foreground">Utilities payment for West Branch (£320.00)</p>
+                <p className="text-xs text-muted-foreground">Utilities payment for West Branch ($320.00)</p>
                 <p className="text-xs text-muted-foreground">14 May 2025, 04:15 PM</p>
               </div>
             </div>

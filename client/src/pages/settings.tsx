@@ -114,11 +114,11 @@ export default function Settings() {
     },
   });
   
-  // App settings form with GBP as default currency
+  // App settings form with USD as default currency
   const appSettingsForm = useForm<z.infer<typeof appSettingsSchema>>({
     resolver: zodResolver(appSettingsSchema),
     defaultValues: {
-      currency: "GBP", // Default to GBP as requested
+      currency: "USD", // Default to USD for consistency
       language: "en",
       theme: "light",
       enableNotifications: true,

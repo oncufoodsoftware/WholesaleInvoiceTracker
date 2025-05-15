@@ -662,6 +662,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: `Error fetching user actions: ${err}` });
     }
   });
+  
+  // Dashboard summary API endpoint
+  app.get('/api/dashboard/summary', async (req, res) => {
+    try {
+      // Get total and outstanding invoice amounts by branch
+      const invoices = await storage.getAllInvoices();
+      
+      // Calculate total invoice amount and outstanding amount per branch
+      const branchSummary = {};
+      const supplierSummary = {};
+      let totalInvoiceAmount = 0;
+      let totalOutstandingAmount = 0;
+      
+      // Process all invoices
+      for (const invoice of invoices) {
+        // Add to total
+        totalInvoiceAmount += invoice.amount;
+        
+        // Add to outstanding if not paid
+        if (invoice.status !== 'paid') {
+          totalOutstandingAmount += invoice.amount;
+        }
+        
+        // Branch summary
+        if (!branchSummary[invoice.branchId]) {
+          const branch = await storage.getBranch(invoice.branchId);
+          branchSummary[invoice.branchId] = {
+            id: invoice.branchId,
+            name: branch?.name || `Branch ${invoice.branchId}`,
+            totalAmount: 0,
+            outstandingAmount: 0
+          };
+        }
+        
+        branchSummary[invoice.branchId].totalAmount += invoice.amount;
+        if (invoice.status !== 'paid') {
+          branchSummary[invoice.branchId].outstandingAmount += invoice.amount;
+        }
+        
+        // Supplier summary
+        if (!supplierSummary[invoice.supplierId]) {
+          const supplier = await storage.getSupplier(invoice.supplierId);
+          supplierSummary[invoice.supplierId] = {
+            id: invoice.supplierId,
+            name: supplier?.name || `Supplier ${invoice.supplierId}`,
+            totalAmount: 0,
+            outstandingAmount: 0
+          };
+        }
+        
+        supplierSummary[invoice.supplierId].totalAmount += invoice.amount;
+        if (invoice.status !== 'paid') {
+          supplierSummary[invoice.supplierId].outstandingAmount += invoice.amount;
+        }
+      }
+      
+      // Convert to arrays
+      const branchData = Object.values(branchSummary);
+      const supplierData = Object.values(supplierSummary);
+      
+      // Sort by outstanding amount (highest first)
+      branchData.sort((a, b) => b.outstandingAmount - a.outstandingAmount);
+      supplierData.sort((a, b) => b.outstandingAmount - a.outstandingAmount);
+      
+      res.json({
+        totalInvoiceAmount,
+        totalOutstandingAmount,
+        branchData,
+        supplierData
+      });
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching dashboard summary: ${err}` });
+    }
+  });
 
   // Serve uploaded files
   app.use('/uploads', (req, res, next) => {
