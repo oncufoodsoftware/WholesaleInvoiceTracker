@@ -1,10 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { ReactNode } from "react";
 
 interface StatCardProps {
   title: string;
   value: string;
-  icon: string;
+  icon: ReactNode;
   trend?: {
     value: string;
     direction: "up" | "down" | "neutral";
@@ -30,22 +32,20 @@ export function StatCard({
           <h3 className="text-2xl font-bold">{value}</h3>
           {trend && (
             <p className={cn(
-              "text-xs flex items-center",
-              trend.direction === "up" ? "text-success" : 
-              trend.direction === "down" ? "text-destructive" : 
+              "text-xs flex items-center mt-1",
+              trend.direction === "up" ? "text-emerald-500" : 
+              trend.direction === "down" ? "text-red-500" : 
               "text-muted-foreground"
             )}>
-              <span className="material-icons text-sm">
-                {trend.direction === "up" ? "arrow_upward" : 
-                trend.direction === "down" ? "arrow_downward" : 
-                "remove"}
-              </span>
+              {trend.direction === "up" && <ArrowUp className="h-3 w-3 mr-1" />}
+              {trend.direction === "down" && <ArrowDown className="h-3 w-3 mr-1" />}
+              {trend.direction === "neutral" && <Minus className="h-3 w-3 mr-1" />}
               <span>{trend.value} {trend.text}</span>
             </p>
           )}
         </div>
         <div className={cn("p-2 rounded-lg", iconBgClass)}>
-          <span className={cn("material-icons", iconColorClass)}>{icon}</span>
+          <div className={cn(iconColorClass)}>{icon}</div>
         </div>
       </div>
     </Card>
