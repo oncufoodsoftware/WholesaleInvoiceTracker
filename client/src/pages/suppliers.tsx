@@ -55,15 +55,15 @@ export default function Suppliers() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   
-  // Get all suppliers
+  // Get all suppliers with total debt information
   const {
     data: suppliers = [],
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["/api/suppliers"],
+    queryKey: ["/api/suppliers", { includeSummary: true }],
     queryFn: async () => {
-      const res = await fetch("/api/suppliers");
+      const res = await fetch("/api/suppliers?includeSummary=true");
       if (!res.ok) throw new Error("Failed to fetch suppliers");
       return res.json();
     },

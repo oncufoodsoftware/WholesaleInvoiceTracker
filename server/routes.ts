@@ -142,8 +142,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Supplier API endpoints
   app.get('/api/suppliers', async (req, res) => {
     try {
+      // Get all suppliers
       const suppliers = await storage.getAllSuppliers();
-      res.json(suppliers);
+      
+      // If summary flag is not set, return just the suppliers
+      if (req.query.includeSummary !== 'true') {
+        return res.json(suppliers);
+      }
+      
+      // Get all invoices to calculate debt
+      const invoices = await storage.getAllInvoices();
+      
+      // Calculate total and outstanding amounts per supplier
+      const supplierSummaries = {};
+      
+      // Initialize summaries for all suppliers
+      for (const supplier of suppliers) {
+        supplierSummaries[supplier.id] = {
+          ...supplier,
+          totalAmount: 0,
+          outstandingAmount: 0
+        };
+      }
+      
+      // Calculate from invoices
+      for (const invoice of invoices) {
+        if (supplierSummaries[invoice.supplierId]) {
+          supplierSummaries[invoice.supplierId].totalAmount += invoice.amount;
+          if (invoice.status !== 'paid') {
+            supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
+          }
+        }
+      }
+      
+      // Convert to array
+      const suppliersWithSummary = Object.values(supplierSummaries);
+      
+      res.json(suppliersWithSummary);
     } catch (err) {
       res.status(500).json({ message: `Error fetching suppliers: ${err}` });
     }
