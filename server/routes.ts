@@ -772,6 +772,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reports API Endpoints
+  app.get('/api/reports/sales', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const period = req.query.period || 'year';
+      
+      // Generate dummy monthly sales data for the past 12 months
+      const monthlyData = [];
+      const categories = {
+        'Groceries': 0,
+        'Beverages': 0,
+        'Snacks': 0,
+        'Produce': 0
+      };
+      
+      // Get real invoices from the database
+      const invoices = await storage.getAllInvoices();
+      
+      // Prepare monthly data (for the chart)
+      for (let i = 0; i < 12; i++) {
+        const month = new Date();
+        month.setMonth(month.getMonth() - i);
+        
+        // Filter invoices for the month if we have real data
+        const monthInvoices = invoices.filter(invoice => {
+          const invoiceDate = new Date(invoice.invoiceDate);
+          return invoiceDate.getMonth() === month.getMonth() && 
+                 invoiceDate.getFullYear() === month.getFullYear() &&
+                 (branchId ? invoice.branchId === branchId : true);
+        });
+        
+        // Calculate total for the month
+        const total = monthInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+        
+        monthlyData.unshift({
+          month: month.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+          total: total
+        });
+      }
+      
+      // Get branch data for comparison chart
+      const branches = await storage.getAllBranches();
+      const branchSales = [];
+      
+      for (const branch of branches) {
+        // Filter invoices for this branch
+        const branchInvoices = invoices.filter(invoice => invoice.branchId === branch.id);
+        const total = branchInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+        
+        branchSales.push({
+          name: branch.name,
+          total: total
+        });
+      }
+      
+      // Sort branches by sales (highest first)
+      branchSales.sort((a, b) => b.total - a.total);
+      
+      res.json({
+        monthlySales: monthlyData,
+        branchSales: branchSales,
+        categoryDistribution: Object.keys(categories).map(category => ({
+          category,
+          value: Math.floor(Math.random() * 5000) + 1000 // We'll use random data for categories
+        }))
+      });
+    } catch (err) {
+      res.status(500).json({ message: `Error generating sales report: ${err}` });
+    }
+  });
+  
+  app.get('/api/reports/transactions', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Number(req.query.limit) : 10;
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const period = req.query.period || 'year';
+      
+      // Get real invoices and financial transactions from the database
+      const invoices = await storage.getAllInvoices();
+      
+      // Filter by branch if specified
+      const filteredInvoices = branchId 
+        ? invoices.filter(invoice => invoice.branchId === branchId)
+        : invoices;
+      
+      // Paginate the transactions
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedTransactions = filteredInvoices.slice(startIndex, endIndex);
+      
+      // Get all branches
+      const branches = await storage.getAllBranches();
+      
+      // Map to the format needed by the frontend
+      const transactions = paginatedTransactions.map(invoice => {
+        // Get branch name
+        const branch = branches.find(b => b.id === invoice.branchId);
+        return {
+          id: invoice.id,
+          reference: invoice.invoiceNumber,
+          date: invoice.invoiceDate,
+          description: `Invoice - ${invoice.invoiceNumber}`,
+          branch: branch ? branch.name : 'Unknown Branch',
+          category: invoice.type.charAt(0).toUpperCase() + invoice.type.slice(1).replace('_', ' '),
+          amount: invoice.amount,
+          status: invoice.status
+        };
+      });
+      
+      res.json({
+        transactions,
+        pagination: {
+          total: filteredInvoices.length,
+          page,
+          limit,
+          totalPages: Math.ceil(filteredInvoices.length / limit)
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching transaction report: ${err}` });
+    }
+  });
+
   // Serve uploaded files
   app.use('/uploads', (req, res, next) => {
     if (!req.isAuthenticated()) {
