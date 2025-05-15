@@ -4,6 +4,7 @@ import {
   suppliers, 
   invoices, 
   financialTransactions,
+  userActions,
   type User, 
   type InsertUser, 
   type Branch,
@@ -13,7 +14,9 @@ import {
   type Invoice,
   type InsertInvoice,
   type FinancialTransaction,
-  type InsertFinancialTransaction
+  type InsertFinancialTransaction,
+  type UserAction,
+  type InsertUserAction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray } from "drizzle-orm";
@@ -71,6 +74,13 @@ export interface IStorage {
   getTransactionsByDateRange(branchId: number, startDate: Date, endDate: Date): Promise<FinancialTransaction[]>;
   getMonthlySummary(branchId: number, year: number, month: number): Promise<MonthlySummary>;
 
+  // User actions methods
+  logUserAction(action: InsertUserAction): Promise<UserAction>;
+  getUserActions(limit?: number): Promise<UserAction[]>;
+  getUserActionsByUser(userId: number, limit?: number): Promise<UserAction[]>;
+  getUserActionsByEntityType(entityType: string, limit?: number): Promise<UserAction[]>;
+  getUserActionsByEntityId(entityType: string, entityId: number, limit?: number): Promise<UserAction[]>;
+  
   // Session store for authentication
   sessionStore: session.SessionStore;
 }
@@ -473,6 +483,55 @@ export class DatabaseStorage implements IStorage {
     summary.netBalance = summary.totalSales - summary.totalExpenses;
     
     return summary;
+  }
+
+  // User actions methods
+  async logUserAction(action: InsertUserAction): Promise<UserAction> {
+    const [newAction] = await db
+      .insert(userActions)
+      .values(action)
+      .returning();
+    return newAction;
+  }
+
+  async getUserActions(limit: number = 100): Promise<UserAction[]> {
+    return db
+      .select()
+      .from(userActions)
+      .orderBy(desc(userActions.timestamp))
+      .limit(limit);
+  }
+
+  async getUserActionsByUser(userId: number, limit: number = 100): Promise<UserAction[]> {
+    return db
+      .select()
+      .from(userActions)
+      .where(eq(userActions.userId, userId))
+      .orderBy(desc(userActions.timestamp))
+      .limit(limit);
+  }
+
+  async getUserActionsByEntityType(entityType: string, limit: number = 100): Promise<UserAction[]> {
+    return db
+      .select()
+      .from(userActions)
+      .where(eq(userActions.entityType, entityType))
+      .orderBy(desc(userActions.timestamp))
+      .limit(limit);
+  }
+
+  async getUserActionsByEntityId(entityType: string, entityId: number, limit: number = 100): Promise<UserAction[]> {
+    return db
+      .select()
+      .from(userActions)
+      .where(
+        and(
+          eq(userActions.entityType, entityType),
+          eq(userActions.entityId, entityId)
+        )
+      )
+      .orderBy(desc(userActions.timestamp))
+      .limit(limit);
   }
 }
 

@@ -106,6 +106,24 @@ export const insertFinancialTransactionSchema = createInsertSchema(financialTran
 // The Drizzle relations need to be defined later when setting up relations in the database
 // For now, we'll define types only and implement real relations when needed
 
+// User actions for logging all activities
+export const userActions = pgTable("user_actions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  actionType: actionTypeEnum("action_type").notNull(),
+  entityType: text("entity_type").notNull(), // users, branches, invoices, etc
+  entityId: integer("entity_id"), // Can be null for login/logout
+  details: text("details"), // JSON string with details of the action
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const insertUserActionSchema = createInsertSchema(userActions).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -121,3 +139,6 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type InsertFinancialTransaction = z.infer<typeof insertFinancialTransactionSchema>;
+
+export type UserAction = typeof userActions.$inferSelect;
+export type InsertUserAction = z.infer<typeof insertUserActionSchema>;
