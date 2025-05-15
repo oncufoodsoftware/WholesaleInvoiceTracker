@@ -363,7 +363,7 @@ export default function Finances() {
                     <FormLabel>Amount</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
                         <Input className="pl-8" type="number" step="0.01" min="0" {...field} />
                       </div>
                     </FormControl>

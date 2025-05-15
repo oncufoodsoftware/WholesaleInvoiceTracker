@@ -206,9 +206,9 @@ export function TransactionList({
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'GBP',
     }).format(amount);
   };
 
@@ -482,7 +482,7 @@ export function TransactionList({
                     <FormLabel>Amount</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
                         <Input className="pl-8" type="number" step="0.01" min="0" {...field} />
                       </div>
                     </FormControl>
