@@ -12,7 +12,9 @@ import {
   insertBranchSchema,
   insertSupplierSchema,
   insertFinancialTransactionSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertUserActionSchema,
+  actionTypeEnum
 } from "@shared/schema";
 
 // Setup multer storage for file uploads
@@ -47,6 +49,25 @@ const upload = multer({
     }
   }
 });
+
+// Helper function to log user actions
+const logUserAction = async (req: Request, actionType: typeof actionTypeEnum.enumValues[number], entityType: string, entityId?: number, details?: string) => {
+  if (!req.user || !req.user.id) return;
+  
+  try {
+    await storage.logUserAction({
+      userId: req.user.id,
+      actionType,
+      entityType,
+      entityId,
+      details: details || JSON.stringify(req.body),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+  } catch (error) {
+    console.error('Error logging user action:', error);
+  }
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -594,6 +615,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: `Error deleting user: ${err}` });
+    }
+  });
+
+  // User actions API endpoints
+  app.get('/api/user-actions', requireRole(['admin']), async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const actions = await storage.getUserActions(limit);
+      res.json(actions);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching user actions: ${err}` });
+    }
+  });
+  
+  app.get('/api/user-actions/user/:userId', requireRole(['admin']), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const actions = await storage.getUserActionsByUser(userId, limit);
+      res.json(actions);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching user actions: ${err}` });
+    }
+  });
+  
+  app.get('/api/user-actions/entity/:entityType', requireRole(['admin']), async (req, res) => {
+    try {
+      const entityType = req.params.entityType;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const actions = await storage.getUserActionsByEntityType(entityType, limit);
+      res.json(actions);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching user actions: ${err}` });
+    }
+  });
+  
+  app.get('/api/user-actions/entity/:entityType/:entityId', requireRole(['admin']), async (req, res) => {
+    try {
+      const entityType = req.params.entityType;
+      const entityId = parseInt(req.params.entityId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const actions = await storage.getUserActionsByEntityId(entityType, entityId, limit);
+      res.json(actions);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching user actions: ${err}` });
     }
   });
 
