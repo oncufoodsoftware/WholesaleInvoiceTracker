@@ -122,7 +122,7 @@ export default function Suppliers() {
   // Mutation for editing a supplier
   const editSupplierMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof supplierSchema> }) => {
-      const res = await apiRequest("PATCH", `/api/suppliers/${id}`, data);
+      const res = await apiRequest("PUT", `/api/suppliers/${id}`, data);
       return await res.json();
     },
     onSuccess: () => {

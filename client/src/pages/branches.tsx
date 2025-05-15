@@ -115,7 +115,7 @@ export default function Branches() {
   // Mutation for editing a branch
   const editBranchMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof branchSchema> }) => {
-      const res = await apiRequest("PATCH", `/api/branches/${id}`, data);
+      const res = await apiRequest("PUT", `/api/branches/${id}`, data);
       return await res.json();
     },
     onSuccess: () => {

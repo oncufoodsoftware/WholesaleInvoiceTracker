@@ -17,6 +17,7 @@ export const invoiceStatusEnum = pgEnum('invoice_status', ['paid', 'unpaid', 'pa
 export const invoiceTypeEnum = pgEnum('invoice_type', ['standard', 'credit_note', 'cash']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'cash']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['income', 'expense']);
+export const actionTypeEnum = pgEnum('action_type', ['create', 'update', 'delete', 'login', 'logout']);
 
 // Users table
 export const users = pgTable("users", {
