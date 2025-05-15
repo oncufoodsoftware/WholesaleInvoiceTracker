@@ -37,6 +37,8 @@ export const branches = pgTable("branches", {
   address: text("address").notNull(),
   contactNumber: text("contact_number").notNull(),
   manager: text("manager"),
+  location: text("location"),
+  contactInfo: text("contact_info"),
 });
 
 // Suppliers table
