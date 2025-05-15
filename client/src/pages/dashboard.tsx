@@ -37,10 +37,10 @@ export default function Dashboard() {
     outstandingInvoices: "£34,285.75",
     cashFlow: "£38,139.50",
     trends: {
-      revenue: { value: "8.2%", direction: "up", text: "vs last month" },
-      expenses: { value: "12.5%", direction: "up", text: "vs last month" },
-      invoices: { value: "3.7%", direction: "down", text: "vs last month" },
-      cashFlow: { value: "5.3%", direction: "up", text: "vs last month" }
+      revenue: { value: "8.2%", direction: "up" as const, text: "vs last month" },
+      expenses: { value: "12.5%", direction: "up" as const, text: "vs last month" },
+      invoices: { value: "3.7%", direction: "down" as const, text: "vs last month" },
+      cashFlow: { value: "5.3%", direction: "up" as const, text: "vs last month" }
     }
   };
 

@@ -32,10 +32,10 @@ interface InvoiceFiltersProps {
 export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFiltersProps) {
   const form = useForm({
     defaultValues: {
-      supplierId: "",
-      branchId: "",
-      status: "",
-      type: "",
+      supplierId: "all",
+      branchId: "all",
+      status: "all",
+      type: "all",
       startDate: "",
       endDate: "",
     },
@@ -50,9 +50,9 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
   });
 
   const handleSubmit = (data: any) => {
-    // Convert empty strings to undefined for better API filtering
+    // Convert "all" values to undefined for better API filtering
     const filters = Object.entries(data).reduce((acc: any, [key, value]) => {
-      if (value !== "") {
+      if (value !== "" && value !== "all") {
         acc[key] = value;
       }
       return acc;
@@ -90,7 +90,7 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">All Suppliers</SelectItem>
+                      <SelectItem value="all">All Suppliers</SelectItem>
                       {suppliers.map((supplier: any) => (
                         <SelectItem key={supplier.id} value={supplier.id.toString()}>
                           {supplier.name}
@@ -118,7 +118,7 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">All Branches</SelectItem>
+                      <SelectItem value="all">All Branches</SelectItem>
                       {branches.map((branch: any) => (
                         <SelectItem key={branch.id} value={branch.id.toString()}>
                           {branch.name}
@@ -146,7 +146,7 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">All Statuses</SelectItem>
+                      <SelectItem value="all">All Statuses</SelectItem>
                       <SelectItem value="paid">Paid</SelectItem>
                       <SelectItem value="partially_paid">Partially Paid</SelectItem>
                       <SelectItem value="unpaid">Unpaid</SelectItem>
@@ -172,7 +172,7 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="standard">Standard Invoice</SelectItem>
                       <SelectItem value="credit_note">Credit Note</SelectItem>
                       <SelectItem value="cash">Cash Invoice</SelectItem>
