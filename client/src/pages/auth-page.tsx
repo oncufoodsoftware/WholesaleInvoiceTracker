@@ -36,12 +36,7 @@ export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect if already logged in
-  if (user) {
-    return <Redirect to="/" />;
-  }
-
-  // Login form
+  // Login form - initialize before any conditionals
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -50,7 +45,7 @@ export default function AuthPage() {
     },
   });
 
-  // Register form
+  // Register form - initialize before any conditionals
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -61,6 +56,11 @@ export default function AuthPage() {
       role: "branch_manager",
     },
   });
+
+  // Redirect if already logged in - AFTER all hooks are called
+  if (user) {
+    return <Redirect to="/" />;
+  }
 
   // Login form submit handler
   function onLoginSubmit(values: z.infer<typeof loginSchema>) {
