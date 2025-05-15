@@ -270,7 +270,14 @@ export default function Branches() {
                     <FormItem>
                       <FormLabel>Branch Manager</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Smith" {...field} />
+                        <Input 
+                          placeholder="John Smith" 
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormDescription>
                         The name of the person managing this branch
