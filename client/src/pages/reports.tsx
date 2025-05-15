@@ -154,13 +154,25 @@ export default function Reports() {
   };
 
   const handleExportPDF = () => {
-    // Would normally export as PDF
-    console.log("Exporting as PDF");
+    toast({
+      title: "PDF Export",
+      description: "PDF export functionality will be implemented in a future update. Using CSV export instead.",
+      variant: "default"
+    });
+    if (reportType === "sales") {
+      exportSalesReportToCSV();
+    } else {
+      exportTransactionsToCSV();
+    }
   };
   
   const handleExportExcel = () => {
-    // Would normally export as Excel
-    console.log("Exporting as Excel");
+    // Use CSV export as Excel alternative
+    if (reportType === "sales") {
+      exportSalesReportToCSV();
+    } else {
+      exportTransactionsToCSV();
+    }
   };
 
   const handlePrint = () => {
