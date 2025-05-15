@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -48,6 +49,72 @@ export default function Reports() {
   const [reportType, setReportType] = useState<string>("sales");
   const [dateRange, setDateRange] = useState<string>("year");
   const [branchId, setBranchId] = useState<string>("all");
+  const { toast } = useToast();
+  
+  // CSV export functions
+  const exportSalesReportToCSV = () => {
+    if (!salesReportData || !salesReportData.monthlySales || salesReportData.monthlySales.length === 0) {
+      toast({
+        title: "Export Failed",
+        description: "No sales data available to export",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const headers = ["Month", "Total Sales (£)"];
+    const rows = salesReportData.monthlySales.map((item: any) => [
+      item.month,
+      item.total || 0
+    ]);
+    
+    generateCSV("sales_report", headers, rows);
+  };
+  
+  const exportTransactionsToCSV = () => {
+    if (!transactionsData || !transactionsData.transactions || transactionsData.transactions.length === 0) {
+      toast({
+        title: "Export Failed",
+        description: "No transaction data available to export",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const headers = ["Date", "Reference", "Description", "Branch", "Category", "Amount (£)", "Status"];
+    const rows = transactionsData.transactions.map((transaction: any) => [
+      formatDate(transaction.date),
+      transaction.reference,
+      transaction.description,
+      transaction.branch,
+      transaction.category,
+      transaction.amount.toFixed(2),
+      transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1).replace('_', ' ')
+    ]);
+    
+    generateCSV("transactions_report", headers, rows);
+  };
+  
+  const generateCSV = (filename: string, headers: string[], rows: any[][]) => {
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export Successful",
+      description: `Your report has been exported as ${filename}_${new Date().toISOString().split('T')[0]}.csv`,
+    });
+  };
   
   // Fetch branches
   const { data: branches = [], isLoading: branchesLoading } = useQuery({
@@ -282,9 +349,76 @@ export default function Reports() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
-                  <p className="text-muted-foreground">Category distribution chart will be displayed here</p>
-                </div>
+                {salesReportLoading ? (
+                  <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
+                    <p className="text-muted-foreground">Loading category data...</p>
+                  </div>
+                ) : salesReportData?.categoryDistribution && salesReportData.categoryDistribution.length > 0 ? (
+                  <div className="h-[300px] p-4 border rounded-md">
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                      <div className="flex flex-col justify-center items-center">
+                        <div className="flex flex-wrap justify-center gap-2 mb-4">
+                          {salesReportData.categoryDistribution.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center">
+                              <div 
+                                className="w-3 h-3 rounded-full mr-1" 
+                                style={{ 
+                                  backgroundColor: `hsl(${index * 60}, 70%, 50%)` 
+                                }}
+                              />
+                              <span className="text-xs">{item.category}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="relative w-40 h-40">
+                          {salesReportData.categoryDistribution.map((item: any, index: number) => {
+                            const total = salesReportData.categoryDistribution.reduce((sum: number, i: any) => sum + i.value, 0);
+                            const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                            const cumulativePercentage = salesReportData.categoryDistribution
+                              .slice(0, index)
+                              .reduce((sum: number, i: any) => sum + (i.value / total) * 100, 0);
+                            
+                            return (
+                              <div 
+                                key={index}
+                                className="absolute top-0 left-0 w-40 h-40"
+                                style={{
+                                  clipPath: `conic-gradient(from ${cumulativePercentage * 3.6}deg, transparent 0%, transparent ${percentage * 3.6}deg, currentColor 0deg)`,
+                                  color: `hsl(${index * 60}, 70%, 50%)`,
+                                  opacity: 0.8
+                                }}
+                              />
+                            );
+                          })}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-background rounded-full" />
+                        </div>
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <h4 className="text-sm font-medium mb-2">Category Distribution</h4>
+                        <ul className="space-y-2">
+                          {salesReportData.categoryDistribution.map((item: any, index: number) => {
+                            const total = salesReportData.categoryDistribution.reduce((sum: number, i: any) => sum + i.value, 0);
+                            const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
+                            
+                            return (
+                              <li key={index} className="flex justify-between items-center text-sm">
+                                <span>{item.category}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">£{item.value.toLocaleString()}</span>
+                                  <span className="bg-muted px-1.5 py-0.5 rounded text-xs">{percentage}%</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
+                    <p className="text-muted-foreground">No category data available</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
             <Card>
