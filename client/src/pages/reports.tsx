@@ -487,7 +487,7 @@ export default function Reports() {
                       <ChevronDown className="h-4 w-4 mr-2" />
                       Filter
                     </Button>
-                    <Button variant="outline" size="sm">Export</Button>
+                    <Button variant="outline" size="sm" onClick={exportTransactionsToCSV}>Export</Button>
                   </div>
                 </div>
                 {transactionsLoading ? (
