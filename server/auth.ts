@@ -22,10 +22,30 @@ export async function hashPassword(password: string) {
 }
 
 export async function comparePasswords(supplied: string, stored: string) {
+  console.log("Comparing passwords");
+  
+  if (!stored || !stored.includes(".")) {
+    console.error("Invalid stored password format:", stored);
+    return false;
+  }
+  
   const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  
+  if (!hashed || !salt) {
+    console.error("Missing hash or salt in stored password");
+    return false;
+  }
+  
+  try {
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    const isMatch = timingSafeEqual(hashedBuf, suppliedBuf);
+    console.log("Password match result:", isMatch);
+    return isMatch;
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
+    return false;
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -92,9 +112,31 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Login endpoint
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+  // Login endpoint with detailed error handling
+  app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt for username:", req.body.username);
+    
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+      if (err) {
+        console.error("Login error:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.log("Authentication failed - user not found or password incorrect");
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Login session error:", loginErr);
+          return next(loginErr);
+        }
+        
+        console.log("Login successful for user:", user.username, "with role:", user.role);
+        return res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 
   // Logout endpoint
