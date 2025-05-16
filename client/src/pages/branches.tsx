@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBranchSchema, type Branch } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 
 import {
   Card,
@@ -48,6 +49,7 @@ const branchSchema = insertBranchSchema.extend({
 
 export default function Branches() {
   const { toast } = useToast();
+  const { checkAchievement } = useAchievements();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
@@ -94,14 +96,21 @@ export default function Branches() {
       const res = await apiRequest("POST", "/api/branches", data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newBranch) => {
       toast({
         title: "Branch added",
         description: "The branch has been added successfully.",
       });
       setIsAddDialogOpen(false);
       addForm.reset();
-      queryClient.invalidateQueries({ queryKey: ["/api/branches"] });
+      
+      // Trigger branch added achievement
+      checkAchievement(AchievementTrigger.BRANCH_ADDED);
+      
+      // Add a slight delay to allow the achievement to be visible
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/branches"] });
+      }, 1000);
     },
     onError: (error: Error) => {
       toast({

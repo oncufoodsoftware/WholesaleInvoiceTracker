@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertSupplierSchema, type Supplier } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 
 import {
   Card,
@@ -64,6 +65,7 @@ interface SupplierWithDebt extends Supplier {
 
 export default function Suppliers() {
   const { toast } = useToast();
+  const { checkAchievement } = useAchievements();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -229,13 +231,28 @@ export default function Suppliers() {
       const res = await apiRequest("POST", "/api/suppliers", supplierData);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newSupplier) => {
       toast({
         title: "Supplier added",
         description: "The supplier has been added successfully.",
       });
       setIsAddDialogOpen(false);
       addForm.reset();
+      
+      // Trigger achievement celebrations
+      checkAchievement(AchievementTrigger.SUPPLIER_ADDED);
+      
+      // Get current supplier count for milestone achievement
+      queryClient.getQueryData(["/api/suppliers"])
+        .then((suppliers: any[]) => {
+          if (suppliers && Array.isArray(suppliers)) {
+            // Trigger milestone achievement if applicable
+            checkAchievement(AchievementTrigger.SUPPLIER_COUNT_MILESTONE, { 
+              count: suppliers.length + 1 // +1 for the one we just added
+            });
+          }
+        })
+        .catch(error => console.error("Error checking supplier milestones:", error));
       
       // Invalidate general supplier list
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
@@ -252,7 +269,10 @@ export default function Suppliers() {
       }
       
       // Refresh the page to ensure all data is up-to-date
-      window.location.reload();
+      // Use longer timeout to allow achievement celebration to be visible
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     },
     onError: (error: Error) => {
       toast({

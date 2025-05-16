@@ -22,9 +22,11 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { checkAchievement } = useAchievements();
   const [timeframe, setTimeframe] = useState("month");
   
   // Define types for API response
