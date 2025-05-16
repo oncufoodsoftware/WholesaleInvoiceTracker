@@ -423,13 +423,18 @@ export default function Suppliers() {
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Total Outstanding:</span>
-                      <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
                         {new Intl.NumberFormat('en-GB', {
                           style: 'currency',
                           currency: 'GBP'
                         }).format(supplier.outstandingAmount)}
                       </span>
                     </div>
+                    {supplier.outstandingAmount < 0 && (
+                      <div className="text-xs text-green-600 mt-1">
+                        Credit in your favor (credit notes exceed outstanding invoices)
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
