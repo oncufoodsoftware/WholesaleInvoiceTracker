@@ -243,6 +243,29 @@ export function InvoiceList({
                     <TableCell className={invoice.type === "credit_note" ? "text-destructive font-medium" : ""}>
                       {invoice.type === "credit_note" ? "-" : ""}£{invoice.amount.toLocaleString()}
                     </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <span className={
+                          invoice.paidAmount > invoice.amount
+                            ? "text-green-600 font-medium"
+                            : invoice.paidAmount < invoice.amount && invoice.paidAmount > 0
+                              ? "text-amber-600 font-medium"
+                              : ""
+                        }>
+                          £{(invoice.paidAmount || 0).toLocaleString()}
+                        </span>
+                        {invoice.paidAmount > invoice.amount && (
+                          <span className="ml-1 text-xs text-green-600">
+                            (+£{(invoice.paidAmount - invoice.amount).toLocaleString()})
+                          </span>
+                        )}
+                        {invoice.paidAmount < invoice.amount && invoice.paidAmount > 0 && (
+                          <span className="ml-1 text-xs text-amber-600">
+                            (-£{(invoice.amount - invoice.paidAmount).toLocaleString()})
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatStatus(invoice.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center">

@@ -40,6 +40,7 @@ const invoiceSchema = z.object({
   supplierId: z.string().min(1, "Supplier is required"),
   branchId: z.string().min(1, "Branch is required"),
   amount: z.string().min(1, "Amount is required"),
+  paidAmount: z.string().default("0").optional(),
   status: z.enum(["paid", "unpaid", "partially_paid"]),
   type: z.enum(["standard", "credit_note", "cash"]),
   notes: z.string().optional(),
@@ -342,12 +343,48 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
               control={form.control}
               name="amount"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Amount</FormLabel>
+                <FormItem className="md:col-span-1">
+                  <FormLabel>Invoice Amount</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
                       <Input className="pl-8" type="number" step="0.01" min="0" {...field} />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="paidAmount"
+              render={({ field }) => (
+                <FormItem className="md:col-span-1">
+                  <FormLabel>Paid Amount</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                      <Input 
+                        className="pl-8" 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          // Auto-update status based on paid amount
+                          const paidAmount = parseFloat(e.target.value) || 0;
+                          const amount = parseFloat(form.getValues().amount) || 0;
+                          if (paidAmount === 0) {
+                            form.setValue("status", "unpaid");
+                          } else if (paidAmount >= amount) {
+                            form.setValue("status", "paid");
+                          } else {
+                            form.setValue("status", "partially_paid");
+                          }
+                        }}
+                      />
                     </div>
                   </FormControl>
                   <FormMessage />
