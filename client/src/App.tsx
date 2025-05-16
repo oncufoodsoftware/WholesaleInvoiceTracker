@@ -17,6 +17,7 @@ import Branches from "@/pages/branches";
 import Suppliers from "@/pages/suppliers";
 import UserActions from "@/pages/user-actions";
 import SupplierRisk from "@/pages/supplier-risk";
+import DebugAuth from "@/pages/debug-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 
 import { Layout } from "@/components/layout/layout";
@@ -25,6 +26,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/debug-auth" component={DebugAuth} />
       
       <Route path="/:rest*">
         {(params) => {
