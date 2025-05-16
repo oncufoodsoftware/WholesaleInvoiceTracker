@@ -381,6 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let invoiceData: any = { ...req.body };
       if (req.body.invoiceDate) invoiceData.invoiceDate = new Date(req.body.invoiceDate);
       if (req.body.amount) invoiceData.amount = parseFloat(req.body.amount);
+      if (req.body.paidAmount) invoiceData.paidAmount = parseFloat(req.body.paidAmount);
       if (req.body.supplierId) invoiceData.supplierId = parseInt(req.body.supplierId);
       if (req.body.branchId) invoiceData.branchId = parseInt(req.body.branchId);
       if (fileUrl) invoiceData.fileUrl = fileUrl;

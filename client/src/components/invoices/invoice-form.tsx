@@ -106,6 +106,7 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
         supplierId: invoice.supplierId.toString(),
         branchId: invoice.branchId.toString(),
         amount: invoice.amount.toString(),
+        paidAmount: invoice.paidAmount?.toString() || "0",
         status: invoice.status,
         type: invoice.type,
         notes: invoice.notes || "",
