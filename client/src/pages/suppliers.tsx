@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, Building, Mail, Phone, FileText, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Extend the supplier schema with additional validation
 const supplierSchema = insertSupplierSchema.extend({
@@ -146,6 +147,7 @@ export default function Suppliers() {
       phone: "",
       address: "",
       notes: "",
+      branchId: isBranchManager && user?.branchId ? Number(user.branchId) : undefined,
     },
   });
 
@@ -165,7 +167,14 @@ export default function Suppliers() {
   // Mutation for adding a supplier
   const addSupplierMutation = useMutation({
     mutationFn: async (data: z.infer<typeof supplierSchema>) => {
-      const res = await apiRequest("POST", "/api/suppliers", data);
+      // For branch managers, automatically set the branchId to their branch
+      const supplierData = {
+        ...data,
+        // If branch manager, set to their branch; otherwise use the selected branch from form
+        branchId: isBranchManager && user?.branchId ? Number(user.branchId) : data.branchId
+      };
+      
+      const res = await apiRequest("POST", "/api/suppliers", supplierData);
       return await res.json();
     },
     onSuccess: () => {
@@ -175,8 +184,20 @@ export default function Suppliers() {
       });
       setIsAddDialogOpen(false);
       addForm.reset();
+      
+      // Invalidate general supplier list
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
+      
+      // Invalidate branch-specific list if we're a branch manager
+      if (isBranchManager && user?.branchId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/suppliers/branch/${user.branchId}`] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/suppliers/branch/${user.branchId}`, { includeSummary: true }] 
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -190,7 +211,14 @@ export default function Suppliers() {
   // Mutation for editing a supplier
   const editSupplierMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof supplierSchema> }) => {
-      const res = await apiRequest("PUT", `/api/suppliers/${id}`, data);
+      // For branch managers, automatically set the branchId to their branch
+      const supplierData = {
+        ...data,
+        // If branch manager, set to their branch; otherwise use the selected branch from form
+        branchId: isBranchManager && user?.branchId ? Number(user.branchId) : data.branchId
+      };
+      
+      const res = await apiRequest("PUT", `/api/suppliers/${id}`, supplierData);
       return await res.json();
     },
     onSuccess: () => {
@@ -201,8 +229,20 @@ export default function Suppliers() {
       setIsEditDialogOpen(false);
       setSelectedSupplier(null);
       editForm.reset();
+      
+      // Invalidate general supplier lists
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
+      
+      // Invalidate branch-specific lists if we're a branch manager
+      if (isBranchManager && user?.branchId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/suppliers/branch/${user.branchId}`] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/suppliers/branch/${user.branchId}`, { includeSummary: true }] 
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -225,8 +265,20 @@ export default function Suppliers() {
         title: "Supplier deleted",
         description: "The supplier has been deleted successfully.",
       });
+      
+      // Invalidate general supplier lists
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
+      
+      // Invalidate branch-specific lists if we're a branch manager
+      if (isBranchManager && user?.branchId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/suppliers/branch/${user.branchId}`] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/suppliers/branch/${user.branchId}`, { includeSummary: true }] 
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -255,6 +307,11 @@ export default function Suppliers() {
       phone: supplier.phone || "",
       address: supplier.address || "",
       notes: supplier.notes || "",
+      // For branch managers, always use their branch ID
+      // For admin users, use the supplier's branch ID or undefined if not set
+      branchId: isBranchManager && user?.branchId 
+        ? Number(user.branchId) 
+        : (supplier as any).branchId,
     });
     setIsEditDialogOpen(true);
   }
@@ -479,11 +536,18 @@ export default function Suppliers() {
                     <Building className="h-5 w-5 mr-2 text-primary" />
                     {supplier.name}
                   </div>
-                  {supplier.outstandingAmount > 0 && (
-                    <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full ml-2">
-                      Outstanding
-                    </div>
-                  )}
+                  <div className="flex items-center">
+                    {!isBranchManager && supplier.branchName && (
+                      <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded mr-2">
+                        {supplier.branchName}
+                      </div>
+                    )}
+                    {supplier.outstandingAmount > 0 && (
+                      <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full">
+                        Outstanding
+                      </div>
+                    )}
+                  </div>
                 </CardTitle>
                 {supplier.contactPerson && (
                   <CardDescription>Contact: {supplier.contactPerson}</CardDescription>
@@ -651,6 +715,40 @@ export default function Suppliers() {
                   </FormItem>
                 )}
               />
+              
+              {/* Branch selection - only for admin users */}
+              {!isBranchManager && (
+                <FormField
+                  control={editForm.control}
+                  name="branchId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        defaultValue={field.value?.toString() || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select branch" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {branches.map((branch: any) => (
+                            <SelectItem key={branch.id} value={branch.id.toString()}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        The branch this supplier belongs to
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <DialogFooter>
                 <Button
                   type="button"
