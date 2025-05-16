@@ -115,8 +115,10 @@ const RiskIndicator = ({
 export default function SupplierRiskDashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { checkAchievement } = useAchievements();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedPeriod, setSelectedPeriod] = useState("30days");
+  const [previousRiskScores, setPreviousRiskScores] = useState<Record<number, number>>({});
   const isBranchManager = user?.role === "branch_manager";
 
   // Calculate dates for period filters
@@ -249,6 +251,31 @@ export default function SupplierRiskDashboard() {
     },
     refetchOnWindowFocus: false
   });
+
+  // Track previous risk scores and check for improvements
+  useEffect(() => {
+    if (suppliersRiskData.length > 0) {
+      // Compare with previous risk scores and check for significant improvements
+      suppliersRiskData.forEach(supplier => {
+        const prevScore = previousRiskScores[supplier.id] || 0;
+        
+        // If we have a previous score and it improved significantly (by at least 15 points)
+        if (prevScore > 0 && prevScore - supplier.riskScore >= 15) {
+          // Trigger achievement
+          checkAchievement(AchievementTrigger.SUPPLIER_RISK_REDUCED, {
+            reduction: prevScore - supplier.riskScore,
+            supplier: supplier.name
+          });
+        }
+        
+        // Update the previous score for this supplier
+        setPreviousRiskScores(prev => ({
+          ...prev,
+          [supplier.id]: supplier.riskScore
+        }));
+      });
+    }
+  }, [suppliersRiskData]);
 
   // Handle refresh
   const handleRefresh = () => {
