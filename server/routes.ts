@@ -16,6 +16,7 @@ import {
   insertUserActionSchema,
   actionTypeEnum
 } from "@shared/schema";
+import { getAnalyticsData, getRevenueForecast } from "./analytics";
 
 // Setup multer storage for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -850,6 +851,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (err) {
       res.status(500).json({ message: `Error fetching dashboard summary: ${err}` });
+    }
+  });
+  
+  // Advanced Financial Analytics API Endpoints
+  app.get('/api/analytics', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Call the analytics data function from analytics.ts
+      await getAnalyticsData(req, res);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching analytics data: ${err}` });
+    }
+  });
+  
+  app.get('/api/reports/revenue', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Call the revenue forecast function from analytics.ts
+      await getRevenueForecast(req, res);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching revenue forecast data: ${err}` });
     }
   });
 

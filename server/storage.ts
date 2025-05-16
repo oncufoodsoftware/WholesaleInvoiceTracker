@@ -66,6 +66,7 @@ export interface IStorage {
 
   // Financial transaction methods
   getFinancialTransaction(id: number): Promise<FinancialTransaction | undefined>;
+  getAllFinancialTransactions(): Promise<FinancialTransaction[]>;
   getDailyTransactions(branchId: number, date: Date): Promise<FinancialTransaction[]>;
   getSummarizedDailyTransactions(branchId: number, date: Date): Promise<DailyFinancialSummary>;
   createFinancialTransaction(transaction: InsertFinancialTransaction): Promise<FinancialTransaction>;
@@ -356,6 +357,11 @@ export class DatabaseStorage implements IStorage {
   async getFinancialTransaction(id: number): Promise<FinancialTransaction | undefined> {
     const [transaction] = await db.select().from(financialTransactions).where(eq(financialTransactions.id, id));
     return transaction || undefined;
+  }
+  
+  async getAllFinancialTransactions(): Promise<FinancialTransaction[]> {
+    const transactions = await db.select().from(financialTransactions);
+    return transactions;
   }
 
   async getDailyTransactions(branchId: number, date: Date): Promise<FinancialTransaction[]> {
