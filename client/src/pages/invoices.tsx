@@ -40,7 +40,25 @@ export default function Invoices() {
   // Delete invoice mutation
   const deleteInvoiceMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/invoices/${id}`);
+      try {
+        const response = await apiRequest("DELETE", `/api/invoices/${id}`);
+        return response;
+      } catch (error: any) {
+        // Check if it's a 404 error (invoice not found)
+        if (error.status === 404) {
+          // If the invoice is already gone, we consider this a success
+          // and refresh the invoice list to show accurate data
+          queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+          toast({
+            title: "Invoice already removed",
+            description: "The invoice has already been deleted or doesn't exist",
+          });
+          // Return success to prevent onError from firing
+          return new Response();
+        }
+        // For other errors, let the normal error handling take place
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
