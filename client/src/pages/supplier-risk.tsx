@@ -20,6 +20,31 @@ const RISK_LEVELS = {
   HIGH: { color: "#dc2626", label: "High Risk" }
 };
 
+// Function to generate a color gradient based on risk score (0-100)
+const getRiskScoreColor = (score: number): string => {
+  // Ensure score is within bounds
+  const boundedScore = Math.max(0, Math.min(100, score));
+  
+  if (boundedScore < 40) {
+    // Green (low risk) to Yellow (medium risk) gradient
+    const ratio = boundedScore / 40;
+    const r = Math.round(22 + ratio * (245 - 22));
+    const g = Math.round(163 + ratio * (158 - 163));
+    const b = Math.round(74 + ratio * (11 - 74));
+    return `rgb(${r}, ${g}, ${b})`;
+  } else if (boundedScore < 70) {
+    // Yellow (medium risk) to Red (high risk) gradient
+    const ratio = (boundedScore - 40) / 30;
+    const r = Math.round(245 + ratio * (220 - 245));
+    const g = Math.round(158 + ratio * (38 - 158));
+    const b = Math.round(11 + ratio * (38 - 11));
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    // High risk red
+    return RISK_LEVELS.HIGH.color;
+  }
+};
+
 interface SupplierRiskData extends Supplier {
   riskScore: number;
   paymentDelay: number;
@@ -46,7 +71,13 @@ const RiskIndicator = ({
 }) => {
   const percentage = Math.min((value / maxValue) * 100, 100);
   
-  // Determine risk level based on percentage
+  // Get color based on the actual percentage value for smooth gradient
+  // Use our gradient function directly rather than discrete risk levels
+  const colorValue = !isGoodWhenHigh 
+    ? getRiskScoreColor(percentage) // Higher percentage = higher risk
+    : getRiskScoreColor(100 - percentage); // Lower percentage = higher risk
+    
+  // Still determine risk level for label text
   let riskLevel = RISK_LEVELS.LOW;
   if (!isGoodWhenHigh) {
     if (percentage > 70) riskLevel = RISK_LEVELS.HIGH;
@@ -62,7 +93,7 @@ const RiskIndicator = ({
         <span className="text-sm font-medium">{label}</span>
         <span 
           className="text-sm font-bold" 
-          style={{ color: riskLevel.color }}
+          style={{ color: colorValue }}
         >
           {format(value)}
         </span>
@@ -72,7 +103,7 @@ const RiskIndicator = ({
           className="h-full rounded-full" 
           style={{ 
             width: `${percentage}%`, 
-            backgroundColor: riskLevel.color 
+            backgroundColor: colorValue 
           }}
         />
       </div>
@@ -381,10 +412,19 @@ export default function SupplierRiskDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Average Risk Score</p>
-                <h3 className="text-2xl font-bold mt-1">{averageRiskScore}</h3>
+                <h3 
+                  className="text-2xl font-bold mt-1" 
+                  style={{ color: getRiskScoreColor(averageRiskScore) }}
+                >
+                  {averageRiskScore}
+                </h3>
               </div>
-              <div className="p-2 bg-amber-500/10 rounded-full">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <div className="p-2 rounded-full" style={{ 
+                backgroundColor: `${getRiskScoreColor(averageRiskScore)}20` 
+              }}>
+                <AlertTriangle className="h-5 w-5" style={{ 
+                  color: getRiskScoreColor(averageRiskScore) 
+                }} />
               </div>
             </div>
             <div className="h-1 bg-muted rounded-full mt-4">
