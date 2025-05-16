@@ -56,6 +56,10 @@ const supplierSchema = insertSupplierSchema.extend({
 interface SupplierWithDebt extends Supplier {
   outstandingAmount: number;
   branchName?: string;
+  // Track balances by branch
+  branchBalances?: {[branchId: number]: {name: string, amount: number}};
+  // Count of branches working with this supplier
+  branchCount?: number;
 }
 
 export default function Suppliers() {
@@ -123,19 +127,54 @@ export default function Suppliers() {
       // For admin users, enrich supplier data with branch names from invoices
       if (!isBranchManager && branches.length > 0 && invoices.length > 0) {
         data = data.map((supplier: any) => {
-          // Find the most recent invoice for this supplier to determine its primary branch
-          const supplierInvoices = invoices
-            .filter((inv: any) => inv.supplierId === supplier.id)
-            .sort((a: any, b: any) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
+          // Find all invoices for this supplier
+          const supplierInvoices = invoices.filter((inv: any) => inv.supplierId === supplier.id);
           
-          const primaryBranchId = supplierInvoices.length > 0 ? supplierInvoices[0].branchId : null;
+          // Calculate balances by branch
+          const branchBalances: {[branchId: number]: {name: string, amount: number}} = {};
+          let totalOutstanding = 0;
+          
+          // Process all invoices to calculate branch-specific balances
+          supplierInvoices.forEach((invoice: any) => {
+            const branchId = invoice.branchId;
+            if (!branchId) return;
+            
+            // Find branch name
+            const branch = branches.find((b: any) => b.id === branchId);
+            if (!branch) return;
+            
+            // Initialize branch balance if not exists
+            if (!branchBalances[branchId]) {
+              branchBalances[branchId] = {
+                name: branch.name,
+                amount: 0
+              };
+            }
+            
+            // Calculate amount based on invoice type
+            const invoiceAmount = (invoice.totalAmount - (invoice.paidAmount || 0));
+            const amountToAdd = invoice.type === 'credit_note' ? -invoiceAmount : invoiceAmount;
+            
+            // Add to branch balance
+            branchBalances[branchId].amount += amountToAdd;
+            totalOutstanding += amountToAdd;
+          });
+          
+          // Find the most recent invoice for this supplier to determine its primary branch
+          const sortedInvoices = [...supplierInvoices].sort((a: any, b: any) => 
+            new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()
+          );
+          
+          const primaryBranchId = sortedInvoices.length > 0 ? sortedInvoices[0].branchId : null;
           const branch = branches.find((b: any) => b.id === primaryBranchId);
           
           return {
             ...supplier,
             branchId: primaryBranchId,
             branchName: branch ? branch.name : 'No Branch',
-            outstandingAmount: supplier.outstandingAmount || 0
+            outstandingAmount: supplier.outstandingAmount || 0,
+            branchBalances: branchBalances,
+            branchCount: Object.keys(branchBalances).length
           };
         });
       } else {
@@ -467,39 +506,7 @@ export default function Suppliers() {
                   )}
                 />
                 
-                {/* Branch selection - only for admin users */}
-                {!isBranchManager && (
-                  <FormField
-                    control={addForm.control}
-                    name="branchId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Branch</FormLabel>
-                        <Select 
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value?.toString() || ''}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select branch" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {branches.map((branch: any) => (
-                              <SelectItem key={branch.id} value={branch.id.toString()}>
-                                {branch.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          The branch this supplier belongs to
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                {/* Branch field removed - suppliers can work with multiple branches */}
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
@@ -602,20 +609,51 @@ export default function Suppliers() {
                   
                   {/* Branch Balance Information */}
                   <div className="mt-3 pt-3 border-t border-border">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        Letchworth Balance:
-                      </span>
-                      <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                        {new Intl.NumberFormat('en-GB', {
-                          style: 'currency',
-                          currency: 'GBP'
-                        }).format(supplier.outstandingAmount)}
-                      </span>
-                    </div>
-                    {supplier.outstandingAmount < 0 && (
-                      <div className="text-xs text-green-600 mt-1">
-                        Credit in your favor (credit notes exceed outstanding invoices)
+                    {/* Display branch count for admin users */}
+                    {!isBranchManager && supplier.branchCount !== undefined && (
+                      <div className="flex items-center mb-2">
+                        <span className="text-xs text-muted-foreground">
+                          Working with {supplier.branchCount} {supplier.branchCount === 1 ? 'branch' : 'branches'}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Display individual branch balances if we have them */}
+                    {supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(supplier.branchBalances).map(([branchId, data]) => (
+                          <div key={branchId} className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {data.name}:
+                            </span>
+                            <span className={`text-sm font-bold ${data.amount > 0 ? 'text-destructive' : data.amount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                              {new Intl.NumberFormat('en-GB', {
+                                style: 'currency',
+                                currency: 'GBP'
+                              }).format(data.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      // Default to showing overall balance if branch balances not available
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            {supplier.branchName || 'Balance'}:
+                          </span>
+                          <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                            {new Intl.NumberFormat('en-GB', {
+                              style: 'currency',
+                              currency: 'GBP'
+                            }).format(supplier.outstandingAmount)}
+                          </span>
+                        </div>
+                        {supplier.outstandingAmount < 0 && (
+                          <div className="text-xs text-green-600 mt-1">
+                            Credit in your favor (credit notes exceed outstanding invoices)
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -736,39 +774,7 @@ export default function Suppliers() {
                 )}
               />
               
-              {/* Branch selection - only for admin users */}
-              {!isBranchManager && (
-                <FormField
-                  control={editForm.control}
-                  name="branchId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Branch</FormLabel>
-                      <Select 
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        defaultValue={field.value?.toString() || ''}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select branch" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {branches.map((branch: any) => (
-                            <SelectItem key={branch.id} value={branch.id.toString()}>
-                              {branch.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        The branch this supplier belongs to
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              {/* Branch field removed - suppliers can work with multiple branches */}
               <DialogFooter>
                 <Button
                   type="button"
