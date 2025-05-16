@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/use-auth";
+import { AchievementProvider } from "@/hooks/use-achievements";
 
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -65,7 +66,9 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <AuthProvider>
-          <Router />
+          <AchievementProvider>
+            <Router />
+          </AchievementProvider>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>
