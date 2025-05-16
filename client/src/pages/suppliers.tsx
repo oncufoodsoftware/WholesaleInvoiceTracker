@@ -198,6 +198,9 @@ export default function Suppliers() {
           queryKey: [`/api/suppliers/branch/${user.branchId}`, { includeSummary: true }] 
         });
       }
+      
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
@@ -243,6 +246,9 @@ export default function Suppliers() {
           queryKey: [`/api/suppliers/branch/${user.branchId}`, { includeSummary: true }] 
         });
       }
+      
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
@@ -279,6 +285,9 @@ export default function Suppliers() {
           queryKey: [`/api/suppliers/branch/${user.branchId}`, { includeSummary: true }] 
         });
       }
+      
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
@@ -582,10 +591,10 @@ export default function Suppliers() {
                     </div>
                   )}
                   
-                  {/* Total Debt Information */}
+                  {/* Branch Balance Information */}
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Total Outstanding:</span>
+                      <span className="text-sm font-medium">Branch Balance:</span>
                       <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
                         {new Intl.NumberFormat('en-GB', {
                           style: 'currency',
