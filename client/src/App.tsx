@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
 import Finances from "@/pages/finances";
 import Reports from "@/pages/reports";
+import Analytics from "@/pages/analytics";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 import Branches from "@/pages/branches";
@@ -38,6 +39,7 @@ function Router() {
                 <ProtectedRoute path="/invoices" component={Invoices} />
                 <ProtectedRoute path="/finances" component={Finances} />
                 <ProtectedRoute path="/reports" component={Reports} />
+                <ProtectedRoute path="/analytics" component={Analytics} />
                 <ProtectedRoute path="/users" component={Users} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/user-actions" component={UserActions} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/settings" component={Settings} />

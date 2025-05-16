@@ -17,6 +17,8 @@ import {
   Users,
   X,
   Activity,
+  LineChart,
+  TrendingUp,
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -73,6 +75,11 @@ export function Sidebar({ className }: SidebarNavProps) {
       title: "Reports",
       href: "/reports",
       icon: <PieChart className="mr-2 h-4 w-4" />,
+    },
+    {
+      title: "Analytics",
+      href: "/analytics",
+      icon: <TrendingUp className="mr-2 h-4 w-4" />,
     },
   ];
 
