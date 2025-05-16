@@ -106,6 +106,35 @@ export default function Dashboard() {
   // Financial metrics
   const financialData = branchSpecificData();
   
+  // Check for financial achievements when data loads
+  useEffect(() => {
+    if (financialData.totalRevenue > 0) {
+      // Check sales milestone achievement
+      checkAchievement(AchievementTrigger.SALES_MILESTONE, {
+        value: financialData.totalRevenue,
+        period: 'this period'
+      });
+      
+      // Check for positive cash flow achievement
+      const cashFlowAmount = financialData.totalRevenue * 0.35;
+      if (cashFlowAmount > 0) {
+        checkAchievement(AchievementTrigger.POSITIVE_CASH_FLOW, {
+          period: 'this month',
+          amount: cashFlowAmount
+        });
+      }
+      
+      // Check payment rate achievement (fully paid invoices)
+      const paymentRate = financialData.totalRevenue 
+        ? ((financialData.totalRevenue - financialData.outstandingAmount) / financialData.totalRevenue) * 100
+        : 0;
+        
+      if (paymentRate >= 95) {
+        checkAchievement(AchievementTrigger.ALL_INVOICES_PAID);
+      }
+    }
+  }, [financialData, checkAchievement]);
+  
   // Format dashboard data based on user role and branch
   const dashboardData = {
     totalRevenue: formatCurrency(financialData.totalRevenue),
