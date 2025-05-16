@@ -1,14 +1,39 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Receipt } from "lucide-react";
+import { Receipt, Building, ArrowDown } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Invoice } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
 
-export function RecentInvoices() {
+interface RecentInvoicesProps {
+  branchId?: number;
+}
+
+export function RecentInvoices({ branchId }: RecentInvoicesProps) {
+  const { user } = useAuth();
+  
+  // Fetch invoices with optional branch filter
   const { data: invoices, isLoading } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
+    queryKey: ["/api/invoices", branchId],
+    queryFn: async () => {
+      // If branch manager, filter by their branch
+      const url = branchId 
+        ? `/api/invoices/filter`
+        : "/api/invoices";
+        
+      const fetchOptions = branchId ? {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchId })
+      } : undefined;
+      
+      const res = await fetch(url, fetchOptions);
+      if (!res.ok) throw new Error("Failed to fetch invoices");
+      return res.json();
+    },
   });
 
   // Format currency (£)
@@ -48,11 +73,33 @@ export function RecentInvoices() {
     }
   };
 
+  // Get title based on branch filter
+  const getTitle = () => {
+    if (branchId && user?.role === "branch_manager") {
+      return "Branch Invoices";
+    }
+    return "Recent Invoices";
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Recent Invoices</CardTitle>
-        <CardDescription>Latest transactions</CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-base font-medium">{getTitle()}</CardTitle>
+            <CardDescription>
+              {branchId 
+                ? "Latest branch transactions" 
+                : "Latest transactions across all branches"}
+            </CardDescription>
+          </div>
+          {branchId && (
+            <Badge variant="outline" className="text-xs">
+              <Building className="h-3 w-3 mr-1" />
+              Branch View
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -72,29 +119,46 @@ export function RecentInvoices() {
           </div>
         ) : invoices && invoices.length > 0 ? (
           <div className="space-y-4">
-            {invoices.slice(0, 5).map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between py-2">
-                <div className="space-y-1">
-                  <div className="flex items-center">
-                    <Receipt className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{invoice.invoiceNumber}</span>
+            {invoices.slice(0, 5).map((invoice) => {
+              // Check if this is a credit note (to show in red text)
+              const isCredit = invoice.type === 'credit_note';
+              
+              return (
+                <div key={invoice.id} className="flex items-center justify-between py-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Receipt className={`mr-2 h-4 w-4 ${isCredit ? 'text-red-500' : 'text-muted-foreground'}`} />
+                      <span className={`font-medium ${isCredit ? 'text-red-500' : ''}`}>{invoice.invoiceNumber}</span>
+                      {isCredit && (
+                        <span className="ml-2 text-xs text-red-500">(Credit)</span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(invoice.invoiceDate).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      {!branchId && (
+                        <p className="text-xs text-muted-foreground">
+                          Branch #{invoice.branchId}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(invoice.invoiceDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })}
-                  </p>
+                  <div className="flex items-center space-x-4">
+                    <p className={`font-medium ${isCredit ? 'text-red-500' : ''}`}>
+                      {isCredit ? '-' : ''}{formatCurrency(Math.abs(invoice.amount))}
+                    </p>
+                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClasses(invoice.status)}`}>
+                      {getStatusLabel(invoice.status)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <p className="font-medium">{formatCurrency(invoice.amount)}</p>
-                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusClasses(invoice.status)}`}>
-                    {getStatusLabel(invoice.status)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-center py-6 text-muted-foreground">No invoice data available</p>

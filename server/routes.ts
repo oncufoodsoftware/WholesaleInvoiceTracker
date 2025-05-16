@@ -719,8 +719,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard summary API endpoint
   app.get('/api/dashboard/summary', async (req, res) => {
     try {
-      // Get total and outstanding invoice amounts by branch
-      const invoices = await storage.getAllInvoices();
+      // Check if we need to filter by branch
+      const branchId = req.query.branchId ? parseInt(req.query.branchId as string) : null;
+      
+      // Get invoices - either all or filtered by branch
+      let invoices;
+      if (branchId) {
+        invoices = await storage.getInvoicesByBranch(branchId);
+      } else {
+        invoices = await storage.getAllInvoices();
+      }
       
       // Calculate total invoice amount and outstanding amount per branch
       const branchSummary = {};
@@ -732,13 +740,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const invoice of invoices) {
         // Calculate amount based on invoice type (credit notes are negative)
         const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
+        const paidAmount = invoice.paidAmount || 0;
+        const outstandingAmount = invoice.type === 'credit_note' 
+          ? -(invoice.amount - paidAmount) // Credit note outstanding is negative
+          : (invoice.amount - paidAmount); // Normal invoice outstanding is positive
         
         // Add to totals
         totalInvoiceAmount += calculatedAmount;
         
         // Add to outstanding if not paid
         if (invoice.status !== 'paid') {
-          totalOutstandingAmount += calculatedAmount;
+          totalOutstandingAmount += outstandingAmount;
         }
         
         // Branch summary
@@ -754,33 +766,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         branchSummary[invoice.branchId].totalAmount += calculatedAmount;
         if (invoice.status !== 'paid') {
-          branchSummary[invoice.branchId].outstandingAmount += calculatedAmount;
+          branchSummary[invoice.branchId].outstandingAmount += outstandingAmount;
         }
         
-        // Supplier summary
-        if (!supplierSummary[invoice.supplierId]) {
-          const supplier = await storage.getSupplier(invoice.supplierId);
-          supplierSummary[invoice.supplierId] = {
-            id: invoice.supplierId,
-            name: supplier?.name || `Supplier ${invoice.supplierId}`,
-            totalAmount: 0,
-            outstandingAmount: 0
-          };
-        }
-        
-        supplierSummary[invoice.supplierId].totalAmount += calculatedAmount;
-        if (invoice.status !== 'paid') {
-          supplierSummary[invoice.supplierId].outstandingAmount += calculatedAmount;
+        // Supplier summary - only include suppliers related to the filtered branch if branchId is provided
+        if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
+          if (!supplierSummary[invoice.supplierId]) {
+            const supplier = await storage.getSupplier(invoice.supplierId);
+            supplierSummary[invoice.supplierId] = {
+              id: invoice.supplierId,
+              name: supplier?.name || `Supplier ${invoice.supplierId}`,
+              totalAmount: 0,
+              outstandingAmount: 0
+            };
+          }
+          
+          supplierSummary[invoice.supplierId].totalAmount += calculatedAmount;
+          if (invoice.status !== 'paid') {
+            supplierSummary[invoice.supplierId].outstandingAmount += outstandingAmount;
+          }
         }
       }
       
       // Convert to arrays
-      const branchData = Object.values(branchSummary);
-      const supplierData = Object.values(supplierSummary);
+      let branchData = Object.values(branchSummary);
+      let supplierData = Object.values(supplierSummary);
       
       // Sort by outstanding amount (highest first)
-      branchData.sort((a, b) => b.outstandingAmount - a.outstandingAmount);
-      supplierData.sort((a, b) => b.outstandingAmount - a.outstandingAmount);
+      branchData.sort((a: any, b: any) => b.outstandingAmount - a.outstandingAmount);
+      supplierData.sort((a: any, b: any) => b.outstandingAmount - a.outstandingAmount);
+      
+      // If we're filtering by branch, we should only include that branch in the branch data
+      if (branchId) {
+        branchData = branchData.filter((branch: any) => branch.id === branchId);
+      }
       
       res.json({
         totalInvoiceAmount,

@@ -6,16 +6,34 @@ import {
   RefreshCw, 
   FileEdit, 
   Trash2,
-  UserPlus
+  UserPlus,
+  Building
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { UserAction } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
 
-export function RecentActivities() {
+interface RecentActivitiesProps {
+  branchId?: number;
+}
+
+export function RecentActivities({ branchId }: RecentActivitiesProps) {
+  const { user } = useAuth();
+  
+  // Fetch activities with optional branch filter
   const { data: actions, isLoading } = useQuery<UserAction[]>({
-    queryKey: ["/api/user-actions"],
+    queryKey: ["/api/user-actions", branchId],
+    queryFn: async () => {
+      const url = branchId 
+        ? `/api/user-actions?branchId=${branchId}&limit=10`
+        : "/api/user-actions?limit=10";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch user actions");
+      return res.json();
+    },
   });
 
   // Function to get appropriate icon for action type
