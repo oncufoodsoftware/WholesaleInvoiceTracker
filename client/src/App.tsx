@@ -32,6 +32,7 @@ function Router() {
             <Layout>
               <Switch>
                 <ProtectedRoute path="/" component={Dashboard} />
+                <ProtectedRoute path="/dashboard" component={Dashboard} />
                 <ProtectedRoute path="/branches" component={Branches} />
                 <ProtectedRoute path="/suppliers" component={Suppliers} />
                 <ProtectedRoute path="/invoices" component={Invoices} />

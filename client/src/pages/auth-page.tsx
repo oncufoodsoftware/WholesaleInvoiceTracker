@@ -59,14 +59,14 @@ export default function AuthPage() {
 
   // Redirect if already logged in - AFTER all hooks are called
   if (user) {
-    return <Redirect to="/" />;
+    return <Redirect to="/dashboard" />;
   }
 
   // Login form submit handler
   function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate(values, {
       onSuccess: () => {
-        setLocation("/");
+        setLocation("/dashboard");
       },
     });
   }
@@ -75,7 +75,7 @@ export default function AuthPage() {
   function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
     registerMutation.mutate(values, {
       onSuccess: () => {
-        setLocation("/");
+        setLocation("/dashboard");
       },
     });
   }
