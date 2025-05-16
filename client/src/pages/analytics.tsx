@@ -159,8 +159,15 @@ export default function Analytics() {
     return [...historicalData, ...forecast];
   };
 
-  // Generate expense forecast
+  // Generate expense forecast using API data when available
   const generateExpenseForecast = () => {
+    // If we have API forecast data, use it
+    if (forecastData?.forecast?.expenses) {
+      const historicalExpenses = forecastData.historical.expenses || [];
+      return [...historicalExpenses, ...forecastData.forecast.expenses];
+    }
+    
+    // Fallback to client-side calculation
     if (!revenueData?.expenses) return [];
     
     const historicalData = [...revenueData.expenses];
@@ -168,7 +175,7 @@ export default function Analytics() {
     
     // Simple forecasting using moving average
     const lastThreeMonths = historicalData.slice(-3);
-    const averageLastThree = lastThreeMonths.reduce((sum, item) => sum + item.amount, 0) / 3;
+    const averageLastThree = lastThreeMonths.reduce((sum: number, item: any) => sum + item.amount, 0) / 3;
     
     // Calculate the trend
     const trend = lastThreeMonths.length > 1 
@@ -190,7 +197,7 @@ export default function Analytics() {
       forecast.push({
         month: forecastDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
         amount: Math.max(0, forecastedAmount),
-        forecast: true
+        isForecast: true
       });
     }
     
@@ -199,6 +206,13 @@ export default function Analytics() {
 
   // Calculate cash flow forecast (revenue - expenses)
   const generateCashFlowForecast = () => {
+    // If we have API forecast data, use it
+    if (forecastData?.forecast?.cashFlow) {
+      const historicalCashFlow = forecastData.historical.cashFlow || [];
+      return [...historicalCashFlow, ...forecastData.forecast.cashFlow];
+    }
+    
+    // Fallback to client-side calculation
     const revenueForecast = generateRevenueForecast();
     const expenseForecast = generateExpenseForecast();
     
@@ -211,7 +225,7 @@ export default function Analytics() {
       return {
         month: revenue.month,
         amount: revenue.amount - matchingExpense.amount,
-        forecast: revenue.forecast || false
+        isForecast: revenue.isForecast || false
       };
     });
   };
@@ -514,7 +528,12 @@ export default function Analytics() {
                         formatter={(value: any) => [`£${Number(value).toLocaleString('en-UK', { minimumFractionDigits: 2 })}`, 'Revenue']}
                         labelFormatter={(label) => `Month: ${label}`}
                       />
-                      <Legend />
+                      <Legend 
+                        payload={[
+                          { value: 'Historical Revenue', type: 'line', color: '#0ea5e9' },
+                          { value: 'Forecasted Revenue', type: 'line', color: '#16a34a', strokeDasharray: '5 5' }
+                        ]} 
+                      />
                       <Line
                         type="monotone"
                         dataKey="amount"
@@ -525,16 +544,18 @@ export default function Analytics() {
                         activeDot={{ r: 6 }}
                         isAnimationActive={true}
                         animationDuration={1000}
+                        data={revenueForecast.filter((item: any) => !item.isForecast)}
                       />
                       <Line
                         type="monotone"
-                        dataKey={(data) => data.forecast ? data.amount : null}
-                        name="Forecast Revenue"
-                        stroke="#7c3aed"
+                        dataKey="amount"
+                        name="Forecasted Revenue"
+                        stroke="#16a34a"
                         strokeWidth={2}
                         strokeDasharray="5 5"
                         dot={{ r: 4 }}
                         isAnimationActive={true}
+                        data={revenueForecast.filter((item: any) => item.isForecast)}
                         animationDuration={1000}
                       />
                     </ReLineChart>
@@ -554,7 +575,7 @@ export default function Analytics() {
                   </li>
                   <li className="flex items-start gap-2">
                     <LineChart className="h-4 w-4 mt-0.5 text-purple-500" />
-                    <span>Based on current trends, expected total revenue for the forecast period: {formatCurrency(revenueForecast.filter(d => d.forecast).reduce((sum, d) => sum + d.amount, 0))}</span>
+                    <span>Based on current trends, expected total revenue for the forecast period: {formatCurrency(revenueForecast.filter(d => d.isForecast).reduce((sum: number, d: any) => sum + d.amount, 0))}</span>
                   </li>
                 </ul>
               </div>
@@ -589,21 +610,28 @@ export default function Analytics() {
                         formatter={(value: any) => [`£${Number(value).toLocaleString('en-UK', { minimumFractionDigits: 2 })}`, 'Expenses']}
                         labelFormatter={(label) => `Month: ${label}`}
                       />
-                      <Legend />
+                      <Legend 
+                        payload={[
+                          { value: 'Historical Expenses', type: 'rect', color: '#f97316' },
+                          { value: 'Forecasted Expenses', type: 'rect', color: '#f97316', fillOpacity: 0.5 }
+                        ]} 
+                      />
                       <Bar
                         dataKey="amount"
                         name="Historical Expenses"
                         fill="#f97316"
                         isAnimationActive={true}
                         animationDuration={1000}
+                        data={expenseForecast.filter((item: any) => !item.isForecast)}
                       />
                       <Bar
-                        dataKey={(data) => data.forecast ? data.amount : null}
-                        name="Forecast Expenses"
+                        dataKey="amount"
+                        name="Forecasted Expenses"
                         fill="#f97316"
                         fillOpacity={0.5}
                         isAnimationActive={true}
                         animationDuration={1000}
+                        data={expenseForecast.filter((item: any) => item.isForecast)}
                       />
                     </ReBarChart>
                   </ResponsiveContainer>
@@ -667,27 +695,34 @@ export default function Analytics() {
                         formatter={(value: any) => [`£${Number(value).toLocaleString('en-UK', { minimumFractionDigits: 2 })}`, 'Cash Flow']}
                         labelFormatter={(label) => `Month: ${label}`}
                       />
-                      <Legend />
+                      <Legend 
+                        payload={[
+                          { value: 'Historical Cash Flow', type: 'line', color: '#10b981' },
+                          { value: 'Forecasted Cash Flow', type: 'line', color: '#6366f1', strokeDasharray: '5 5' }
+                        ]} 
+                      />
                       <Area
                         type="monotone"
-                        dataKey={(data) => !data.forecast ? data.amount : null}
+                        dataKey="amount"
                         name="Historical Cash Flow"
                         stroke="#10b981"
                         fillOpacity={1}
                         fill="url(#colorHistorical)"
                         isAnimationActive={true}
                         animationDuration={1000}
+                        data={cashFlowForecast.filter((item: any) => !item.isForecast)}
                       />
                       <Area
                         type="monotone"
-                        dataKey={(data) => data.forecast ? data.amount : null}
-                        name="Forecast Cash Flow"
+                        dataKey="amount"
+                        name="Forecasted Cash Flow"
                         stroke="#6366f1"
                         strokeDasharray="5 5"
                         fillOpacity={1}
                         fill="url(#colorForecast)"
                         isAnimationActive={true}
                         animationDuration={1000}
+                        data={cashFlowForecast.filter((item: any) => item.isForecast)}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -698,7 +733,7 @@ export default function Analytics() {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
                     <LineChart className="h-4 w-4 mt-0.5 text-emerald-500" />
-                    <span>Net cash flow for forecast period: {formatCurrency(cashFlowForecast.filter(d => d.forecast).reduce((sum, d) => sum + d.amount, 0))}</span>
+                    <span>Net cash flow for forecast period: {formatCurrency(cashFlowForecast.filter(d => d.isForecast).reduce((sum: number, d: any) => sum + d.amount, 0))}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <TrendingUp className="h-4 w-4 mt-0.5 text-indigo-500" />
