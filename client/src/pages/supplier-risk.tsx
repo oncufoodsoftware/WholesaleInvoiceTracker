@@ -432,11 +432,7 @@ export default function SupplierRiskDashboard() {
                 className="h-full rounded-full" 
                 style={{ 
                   width: `${averageRiskScore}%`, 
-                  backgroundColor: averageRiskScore >= 70 
-                    ? RISK_LEVELS.HIGH.color 
-                    : averageRiskScore >= 40 
-                      ? RISK_LEVELS.MEDIUM.color 
-                      : RISK_LEVELS.LOW.color 
+                  backgroundColor: getRiskScoreColor(averageRiskScore)
                 }}
               />
             </div>
@@ -561,9 +557,25 @@ export default function SupplierRiskDashboard() {
                       />
                       <Bar 
                         dataKey="riskScore" 
-                        name="Risk Score" 
-                        fill="#ef4444"
+                        name="Risk Score"
                         background={{ fill: '#f3f4f6' }}
+                        fill="#ef4444"
+                        // Apply gradient colors based on risk score
+                        {...{
+                          shape: (props: any) => {
+                            const { x, y, width, height, value } = props;
+                            return (
+                              <rect
+                                x={x}
+                                y={y}
+                                width={width}
+                                height={height}
+                                fill={getRiskScoreColor(value)}
+                                radius={[4, 4, 0, 0]}
+                              />
+                            );
+                          }
+                        }}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -605,14 +617,12 @@ export default function SupplierRiskDashboard() {
                               <div 
                                 className="w-3 h-3 rounded-full" 
                                 style={{ 
-                                  backgroundColor: supplier.riskScore >= 70 
-                                    ? RISK_LEVELS.HIGH.color 
-                                    : supplier.riskScore >= 40 
-                                      ? RISK_LEVELS.MEDIUM.color 
-                                      : RISK_LEVELS.LOW.color
+                                  backgroundColor: getRiskScoreColor(supplier.riskScore)
                                 }}
                               />
-                              <span>{supplier.riskScore}</span>
+                              <span style={{ color: getRiskScoreColor(supplier.riskScore) }}>
+                                {supplier.riskScore}
+                              </span>
                             </div>
                           </td>
                           <td className="p-4">

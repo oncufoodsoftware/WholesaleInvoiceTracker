@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
@@ -35,7 +35,9 @@ function Router() {
           return (
             <Layout>
               <Switch>
-                <ProtectedRoute path="/" component={Dashboard} />
+                <Route path="/">
+                  {() => <Redirect to="/dashboard" />}
+                </Route>
                 <ProtectedRoute path="/dashboard" component={Dashboard} />
                 <ProtectedRoute path="/branches" component={Branches} />
                 <ProtectedRoute path="/suppliers" component={Suppliers} />
