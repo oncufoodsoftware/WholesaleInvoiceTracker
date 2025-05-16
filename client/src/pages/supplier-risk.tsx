@@ -11,7 +11,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, Clock, TrendingUp, RefreshCw } from "lucide-react";
+import { AlertTriangle, Clock, TrendingUp, RefreshCw, Building, Store } from "lucide-react";
 
 // Define the risk indicators and their thresholds
 const RISK_LEVELS = {
@@ -370,7 +370,7 @@ export default function SupplierRiskDashboard() {
                 <h3 className="text-2xl font-bold mt-1">{totalSuppliers}</h3>
               </div>
               <div className="p-2 bg-primary/10 rounded-full">
-                <Building className="h-5 w-5 text-primary" />
+                <Store className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -609,8 +609,8 @@ export default function SupplierRiskDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topRiskSuppliers.slice(0, 3).map(supplier => (
-                    <div key={supplier.id} className="space-y-2">
+                  {topRiskSuppliers.slice(0, 3).map((supplier, index) => (
+                    <div key={index} className="space-y-2">
                       <h4 className="font-medium">{supplier.name}</h4>
                       <RiskIndicator 
                         value={supplier.riskScore} 
@@ -628,7 +628,7 @@ export default function SupplierRiskDashboard() {
                       />
                       <RiskIndicator 
                         value={
-                          suppliersRiskData.find(s => s.id === supplier.id)?.paymentDelay || 0
+                          suppliersRiskData.find(s => s.name === supplier.name)?.paymentDelay || 0
                         } 
                         maxValue={30}
                         label="Average Payment Delay" 
@@ -750,8 +750,8 @@ export default function SupplierRiskDashboard() {
                   {suppliersRiskData
                     .filter(s => s.riskScore >= 70)
                     .slice(0, 3)
-                    .map(supplier => (
-                      <div key={supplier.id} className="border rounded-lg p-4 space-y-3">
+                    .map((supplier, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
                             <h4 className="font-medium">{supplier.name}</h4>
@@ -808,8 +808,8 @@ export default function SupplierRiskDashboard() {
                   {suppliersRiskData
                     .filter(s => s.riskScore >= 40 && s.riskScore < 70)
                     .slice(0, 2)
-                    .map(supplier => (
-                      <div key={supplier.id} className="border rounded-lg p-4 space-y-3">
+                    .map((supplier, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
                             <h4 className="font-medium">{supplier.name}</h4>
