@@ -17,6 +17,7 @@ import {
   actionTypeEnum
 } from "@shared/schema";
 import { getAnalyticsData, getRevenueForecast } from "./analytics";
+import { getSupplierRiskData, getRiskHistory } from "./risk-analytics";
 
 // Setup multer storage for file uploads
 const uploadDir = path.join(process.cwd(), "uploads");
