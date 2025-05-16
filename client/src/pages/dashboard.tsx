@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
+import { AchievementDemo } from "@/components/dashboard/achievement-demo";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -358,6 +359,13 @@ export default function Dashboard() {
         <RecentInvoices branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : undefined} />
         <RecentActivities branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : undefined} />
       </div>
+      
+      {/* Achievement Demo Section */}
+      {user?.role === "admin" && (
+        <div className="mt-6">
+          <AchievementDemo />
+        </div>
+      )}
     </div>
   );
 }
