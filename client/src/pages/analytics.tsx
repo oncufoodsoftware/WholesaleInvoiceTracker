@@ -646,11 +646,11 @@ export default function Analytics() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Wallet className="h-4 w-4 mt-0.5 text-red-500" />
-                    <span>Average monthly expenses: {formatCurrency(expenseForecast.filter(d => !d.forecast).reduce((sum, d) => sum + d.amount, 0) / expenseForecast.filter(d => !d.forecast).length)}</span>
+                    <span>Average monthly expenses: {formatCurrency(expenseForecast.filter(d => !d.isForecast).reduce((sum: number, d: any) => sum + d.amount, 0) / expenseForecast.filter(d => !d.isForecast).length)}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <BarChart className="h-4 w-4 mt-0.5 text-amber-500" />
-                    <span>Projected total expenses for forecast period: {formatCurrency(expenseForecast.filter(d => d.forecast).reduce((sum, d) => sum + d.amount, 0))}</span>
+                    <span>Projected total expenses for forecast period: {formatCurrency(expenseForecast.filter(d => d.isForecast).reduce((sum: number, d: any) => sum + d.amount, 0))}</span>
                   </li>
                 </ul>
               </div>
@@ -742,8 +742,8 @@ export default function Analytics() {
                   <li className="flex items-start gap-2">
                     <Calendar className="h-4 w-4 mt-0.5 text-blue-500" />
                     <span>{
-                      cashFlowForecast.filter(d => d.forecast).some(d => d.amount < 0)
-                        ? `Potential cash flow issues in ${cashFlowForecast.filter(d => d.forecast && d.amount < 0).map(d => d.month).join(', ')}`
+                      cashFlowForecast.filter(d => d.isForecast).some(d => d.amount < 0)
+                        ? `Potential cash flow issues in ${cashFlowForecast.filter(d => d.isForecast && d.amount < 0).map(d => d.month).join(', ')}`
                         : 'No negative cash flow periods projected in the forecast'
                     }</span>
                   </li>
