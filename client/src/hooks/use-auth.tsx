@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Login successful",
         description: `Welcome back, ${user.fullName || user.username}!`,
       });
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
@@ -63,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Registration successful",
         description: `Welcome, ${user.fullName || user.username}!`,
       });
+      // Refresh the page after registration
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
@@ -83,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
+      // Refresh the page after logout
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast({
