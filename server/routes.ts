@@ -176,7 +176,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Update outstanding amount based on status and paidAmount
           if (invoice.status === 'paid') {
-            // Fully paid invoices don't contribute to outstanding amount
+            // Credit notes that are paid should still be deducted from outstanding amounts
+            if (invoice.type === 'credit_note') {
+              supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
+            }
+            // Other paid invoices don't contribute to outstanding amount
           } else if (invoice.status === 'partially_paid') {
             // For partially paid, consider the difference between invoice amount and paid amount
             const paidAmount = invoice.paidAmount || 0;

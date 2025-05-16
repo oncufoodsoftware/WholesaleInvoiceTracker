@@ -142,18 +142,32 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
   // Update invoice mutation
   const updateInvoiceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: FormData }) => {
-      return await fetch(`/api/invoices/${id}`, {
+      const response = await fetch(`/api/invoices/${id}`, {
         method: "PUT",
         body: data,
         credentials: "include",
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update invoice");
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       toast({
         title: "Invoice updated",
         description: "The invoice has been updated successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       onSuccess();
+      
+      // Automatically refresh the page
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error) => {
       toast({
