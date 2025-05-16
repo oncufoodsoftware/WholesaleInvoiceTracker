@@ -49,7 +49,7 @@ const supplierSchema = insertSupplierSchema.extend({
   phone: z.string().min(5, { message: "Phone must be at least 5 characters" }).optional().or(z.literal("")),
   address: z.string().min(5, { message: "Address must be at least 5 characters" }).optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
-  branchId: z.number().optional(),
+  // branchId field removed as suppliers can work with multiple branches
 });
 
 // Define an interface that extends Supplier with debt information and branch data
@@ -203,7 +203,7 @@ export default function Suppliers() {
       phone: "",
       address: "",
       notes: "",
-      branchId: isBranchManager && user?.branchId ? Number(user.branchId) : undefined,
+      // branchId field removed as suppliers can work with multiple branches
     },
   });
 
@@ -223,12 +223,8 @@ export default function Suppliers() {
   // Mutation for adding a supplier
   const addSupplierMutation = useMutation({
     mutationFn: async (data: z.infer<typeof supplierSchema>) => {
-      // For branch managers, automatically set the branchId to their branch
-      const supplierData = {
-        ...data,
-        // If branch manager, set to their branch; otherwise use the selected branch from form
-        branchId: isBranchManager && user?.branchId ? Number(user.branchId) : data.branchId
-      };
+      // Suppliers can work with multiple branches, so no branch ID is needed
+      const supplierData = { ...data };
       
       const res = await apiRequest("POST", "/api/suppliers", supplierData);
       return await res.json();
@@ -270,12 +266,8 @@ export default function Suppliers() {
   // Mutation for editing a supplier
   const editSupplierMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof supplierSchema> }) => {
-      // For branch managers, automatically set the branchId to their branch
-      const supplierData = {
-        ...data,
-        // If branch manager, set to their branch; otherwise use the selected branch from form
-        branchId: isBranchManager && user?.branchId ? Number(user.branchId) : data.branchId
-      };
+      // Suppliers can work with multiple branches, so no branch ID is needed
+      const supplierData = { ...data };
       
       const res = await apiRequest("PUT", `/api/suppliers/${id}`, supplierData);
       return await res.json();
@@ -372,11 +364,7 @@ export default function Suppliers() {
       phone: supplier.phone || "",
       address: supplier.address || "",
       notes: supplier.notes || "",
-      // For branch managers, always use their branch ID
-      // For admin users, use the supplier's branch ID or undefined if not set
-      branchId: isBranchManager && user?.branchId 
-        ? Number(user.branchId) 
-        : (supplier as any).branchId,
+      // Branch field removed as suppliers can work with multiple branches
     });
     setIsEditDialogOpen(true);
   }
