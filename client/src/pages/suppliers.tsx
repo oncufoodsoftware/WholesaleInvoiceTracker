@@ -97,6 +97,12 @@ export default function Suppliers() {
     };
   }, []);
   
+  // Get additional data - invoices to determine branch associations
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["/api/invoices"],
+    enabled: !isBranchManager, // Only fetch for admin users
+  });
+  
   // Get all suppliers with total debt information
   const {
     data: suppliers = [] as SupplierWithDebt[],
@@ -114,12 +120,20 @@ export default function Suppliers() {
       if (!res.ok) throw new Error("Failed to fetch suppliers");
       let data = await res.json();
       
-      // For admin users, enrich supplier data with branch names
-      if (!isBranchManager && branches.length > 0) {
+      // For admin users, enrich supplier data with branch names from invoices
+      if (!isBranchManager && branches.length > 0 && invoices.length > 0) {
         data = data.map((supplier: any) => {
-          const branch = branches.find((b: any) => b.id === supplier.branchId);
+          // Find the most recent invoice for this supplier to determine its primary branch
+          const supplierInvoices = invoices
+            .filter((inv: any) => inv.supplierId === supplier.id)
+            .sort((a: any, b: any) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
+          
+          const primaryBranchId = supplierInvoices.length > 0 ? supplierInvoices[0].branchId : null;
+          const branch = branches.find((b: any) => b.id === primaryBranchId);
+          
           return {
             ...supplier,
+            branchId: primaryBranchId,
             branchName: branch ? branch.name : 'No Branch',
             outstandingAmount: supplier.outstandingAmount || 0
           };
@@ -128,6 +142,9 @@ export default function Suppliers() {
         // For branch managers or if branches not loaded yet
         data = data.map((supplier: any) => ({
           ...supplier,
+          branchName: isBranchManager && user?.branchId && branches.length > 0 
+            ? branches.find((b: any) => b.id === Number(user.branchId))?.name || 'Your Branch'
+            : 'No Branch',
           outstandingAmount: supplier.outstandingAmount || 0
         }));
       }
