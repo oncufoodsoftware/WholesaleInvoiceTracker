@@ -174,7 +174,8 @@ export function InvoiceList({
                 <TableHead>Branch</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead>Invoice Amount</TableHead>
+                <TableHead>Paid</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-16">Actions</TableHead>
               </TableRow>
@@ -239,7 +240,9 @@ export function InvoiceList({
                     <TableCell>{getBranchName(invoice.branchId)}</TableCell>
                     <TableCell>{formatDate(invoice.invoiceDate)}</TableCell>
                     <TableCell>{formatType(invoice.type)}</TableCell>
-                    <TableCell>£{invoice.amount.toLocaleString()}</TableCell>
+                    <TableCell className={invoice.type === "credit_note" ? "text-destructive font-medium" : ""}>
+                      {invoice.type === "credit_note" ? "-" : ""}£{invoice.amount.toLocaleString()}
+                    </TableCell>
                     <TableCell>{formatStatus(invoice.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center">

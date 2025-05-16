@@ -60,6 +60,7 @@ export const invoices = pgTable("invoices", {
   supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
   branchId: integer("branch_id").references(() => branches.id).notNull(),
   amount: doublePrecision("amount").notNull(),
+  paidAmount: doublePrecision("paid_amount").default(0),
   status: invoiceStatusEnum("status").notNull().default('unpaid'),
   type: invoiceTypeEnum("type").notNull().default('standard'),
   notes: text("notes"),
