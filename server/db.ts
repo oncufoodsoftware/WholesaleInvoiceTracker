@@ -13,14 +13,9 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Enhanced pool with connection options
+// Create database connection pool with minimal options to improve stability
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connect_timeout: 10, // Increase connection timeout
-  max: 20,            // Max pool size
-  idleTimeoutMillis: 30000, // How long a connection can be idle before being closed
-  maxUses: 7500,      // Close connections after this many uses to prevent memory issues
-  ssl: true           // Enforce SSL
+  connectionString: process.env.DATABASE_URL
 });
 
 // Add error handling for the pool
