@@ -62,6 +62,11 @@ export function Sidebar({ className }: SidebarNavProps) {
       icon: <Layers className="mr-2 h-4 w-4" />,
     },
     {
+      title: "Supplier Risk",
+      href: "/supplier-risk", 
+      icon: <AlertTriangle className="mr-2 h-4 w-4" />,
+    },
+    {
       title: "Invoices",
       href: "/invoices",
       icon: <FileText className="mr-2 h-4 w-4" />,

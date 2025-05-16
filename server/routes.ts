@@ -899,6 +899,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: `Error fetching analytics forecast data: ${err}` });
     }
   });
+  
+  // Supplier Risk Dashboard API Endpoints
+  app.get('/api/suppliers/risk', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Call the supplier risk data function from risk-analytics.ts
+      await getSupplierRiskData(req, res);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching supplier risk data: ${err}` });
+    }
+  });
+  
+  app.get('/api/suppliers/risk/history/:supplierId', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Call the risk history function from risk-analytics.ts
+      await getRiskHistory(req, res);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching supplier risk history: ${err}` });
+    }
+  });
 
   // Reports API Endpoints
   app.get('/api/reports/sales', async (req, res) => {

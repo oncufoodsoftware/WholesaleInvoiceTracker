@@ -16,6 +16,7 @@ import Settings from "@/pages/settings";
 import Branches from "@/pages/branches";
 import Suppliers from "@/pages/suppliers";
 import UserActions from "@/pages/user-actions";
+import SupplierRisk from "@/pages/supplier-risk";
 import { ProtectedRoute } from "./lib/protected-route";
 
 import { Layout } from "@/components/layout/layout";
@@ -36,6 +37,7 @@ function Router() {
                 <ProtectedRoute path="/dashboard" component={Dashboard} />
                 <ProtectedRoute path="/branches" component={Branches} />
                 <ProtectedRoute path="/suppliers" component={Suppliers} />
+                <ProtectedRoute path="/supplier-risk" component={SupplierRisk} />
                 <ProtectedRoute path="/invoices" component={Invoices} />
                 <ProtectedRoute path="/finances" component={Finances} />
                 <ProtectedRoute path="/reports" component={Reports} />
