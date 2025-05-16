@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertSupplierSchema, type Supplier } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 import {
   Card,
@@ -49,9 +50,10 @@ const supplierSchema = insertSupplierSchema.extend({
   notes: z.string().optional().or(z.literal("")),
 });
 
-// Define an interface that extends Supplier with debt information
+// Define an interface that extends Supplier with debt information and branch data
 interface SupplierWithDebt extends Supplier {
   outstandingAmount: number;
+  branchName?: string;
 }
 
 export default function Suppliers() {
@@ -59,6 +61,39 @@ export default function Suppliers() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  
+  // Get user info for role-based filtering
+  const { user } = useAuth();
+  const isBranchManager = user?.role === "branch_manager";
+  
+  // Get branches data for display
+  const { data: branches = [] } = useQuery({
+    queryKey: ["/api/branches"],
+    enabled: !isBranchManager, // Only fetch all branches for admin users
+  });
+  
+  // Implement auto-refresh on page focus
+  useEffect(() => {
+    const refreshData = () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/suppliers"]
+      });
+    };
+    
+    // Refresh when page becomes visible
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        refreshData();
+      }
+    });
+    
+    // Refresh once on initial component mount
+    refreshData();
+    
+    return () => {
+      document.removeEventListener("visibilitychange", refreshData);
+    };
+  }, []);
   
   // Get all suppliers with total debt information
   const {
@@ -68,15 +103,36 @@ export default function Suppliers() {
   } = useQuery<SupplierWithDebt[]>({
     queryKey: ["/api/suppliers", { includeSummary: true }],
     queryFn: async () => {
-      const res = await fetch("/api/suppliers?includeSummary=true");
+      // If branch manager, need to filter by their branch
+      const url = isBranchManager 
+        ? `/api/suppliers/branch/${user?.branchId}?includeSummary=true`
+        : "/api/suppliers?includeSummary=true";
+        
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch suppliers");
-      const data = await res.json();
-      // Ensure each supplier has an outstandingAmount property
-      return data.map((supplier: any) => ({
-        ...supplier,
-        outstandingAmount: supplier.outstandingAmount || 0
-      }));
+      let data = await res.json();
+      
+      // For admin users, enrich supplier data with branch names
+      if (!isBranchManager && branches.length > 0) {
+        data = data.map((supplier: any) => {
+          const branch = branches.find((b: any) => b.id === supplier.branchId);
+          return {
+            ...supplier,
+            branchName: branch ? branch.name : 'No Branch',
+            outstandingAmount: supplier.outstandingAmount || 0
+          };
+        });
+      } else {
+        // For branch managers or if branches not loaded yet
+        data = data.map((supplier: any) => ({
+          ...supplier,
+          outstandingAmount: supplier.outstandingAmount || 0
+        }));
+      }
+      
+      return data;
     },
+    refetchOnWindowFocus: true, // Auto-refresh when tab is focused again
   });
 
   // Form for adding a new supplier
@@ -416,6 +472,14 @@ export default function Suppliers() {
                     <div className="flex items-start">
                       <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
                       <span className="line-clamp-2">{supplier.address}</span>
+                    </div>
+                  )}
+                  
+                  {/* Branch Information - only show for admin users */}
+                  {!isBranchManager && supplier.branchName && (
+                    <div className="flex items-center mt-2">
+                      <Building className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm">Branch: <span className="font-medium">{supplier.branchName}</span></span>
                     </div>
                   )}
                   
