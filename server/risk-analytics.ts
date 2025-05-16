@@ -164,7 +164,7 @@ export async function getSupplierRiskData(req: Request, res: Response) {
     return res.status(200).json(suppliersRiskData);
   } catch (error) {
     console.error("Error generating supplier risk data:", error);
-    return res.status(500).json({ error: "Failed to generate supplier risk data" });
+    return res.status(500).json({ message: `Error fetching supplier risk data: ${error}` });
   }
 }
 
