@@ -583,18 +583,12 @@ export default function Suppliers() {
                     </div>
                   )}
                   
-                  {/* Branch Information - only show for admin users */}
-                  {!isBranchManager && supplier.branchName && (
-                    <div className="flex items-center mt-2">
-                      <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="text-sm">Branch: <span className="font-medium">{supplier.branchName}</span></span>
-                    </div>
-                  )}
-                  
                   {/* Branch Balance Information */}
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Branch Balance:</span>
+                      <span className="text-sm font-medium">
+                        {supplier.branchName ? `${supplier.branchName} Balance:` : 'Branch Balance:'}
+                      </span>
                       <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
                         {new Intl.NumberFormat('en-GB', {
                           style: 'currency',
