@@ -139,6 +139,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to calculate supplier summaries with debt information
+  const calculateSupplierSummaries = async (suppliers, invoices) => {
+    // Calculate total and outstanding amounts per supplier
+    const supplierSummaries = {};
+    
+    // Initialize summaries for all suppliers
+    for (const supplier of suppliers) {
+      supplierSummaries[supplier.id] = {
+        ...supplier,
+        totalAmount: 0,
+        outstandingAmount: 0
+      };
+    }
+    
+    // Calculate from invoices
+    for (const invoice of invoices) {
+      if (supplierSummaries[invoice.supplierId]) {
+        // Calculate amount based on invoice type (credit notes are negative)
+        const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
+        
+        // Update total amount
+        supplierSummaries[invoice.supplierId].totalAmount += calculatedAmount;
+        
+        // Update outstanding amount based on status and paidAmount
+        if (invoice.status === 'paid') {
+          // Credit notes that are paid should still be deducted from outstanding amounts
+          if (invoice.type === 'credit_note') {
+            supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
+          }
+          // Other paid invoices don't contribute to outstanding amount
+        } else if (invoice.status === 'partially_paid') {
+          // For partially paid, consider the difference between invoice amount and paid amount
+          const paidAmount = invoice.paidAmount || 0;
+          supplierSummaries[invoice.supplierId].outstandingAmount += (calculatedAmount - paidAmount);
+        } else {
+          // Unpaid invoices contribute full amount to outstanding amount
+          supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
+        }
+      }
+    }
+    
+    // Convert to array
+    return Object.values(supplierSummaries);
+  };
+
   // Supplier API endpoints
   app.get('/api/suppliers', async (req, res) => {
     try {
@@ -153,51 +198,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all invoices to calculate debt
       const invoices = await storage.getAllInvoices();
       
-      // Calculate total and outstanding amounts per supplier
-      const supplierSummaries = {};
-      
-      // Initialize summaries for all suppliers
-      for (const supplier of suppliers) {
-        supplierSummaries[supplier.id] = {
-          ...supplier,
-          totalAmount: 0,
-          outstandingAmount: 0
-        };
-      }
-      
-      // Calculate from invoices
-      for (const invoice of invoices) {
-        if (supplierSummaries[invoice.supplierId]) {
-          // Calculate amount based on invoice type (credit notes are negative)
-          const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
-          
-          // Update total amount
-          supplierSummaries[invoice.supplierId].totalAmount += calculatedAmount;
-          
-          // Update outstanding amount based on status and paidAmount
-          if (invoice.status === 'paid') {
-            // Credit notes that are paid should still be deducted from outstanding amounts
-            if (invoice.type === 'credit_note') {
-              supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
-            }
-            // Other paid invoices don't contribute to outstanding amount
-          } else if (invoice.status === 'partially_paid') {
-            // For partially paid, consider the difference between invoice amount and paid amount
-            const paidAmount = invoice.paidAmount || 0;
-            supplierSummaries[invoice.supplierId].outstandingAmount += (calculatedAmount - paidAmount);
-          } else {
-            // Unpaid invoices contribute full amount to outstanding amount
-            supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
-          }
-        }
-      }
-      
-      // Convert to array
-      const suppliersWithSummary = Object.values(supplierSummaries);
+      // Calculate summaries
+      const suppliersWithSummary = await calculateSupplierSummaries(suppliers, invoices);
       
       res.json(suppliersWithSummary);
     } catch (err) {
       res.status(500).json({ message: `Error fetching suppliers: ${err}` });
+    }
+  });
+  
+  // Get suppliers for a specific branch - for branch managers
+  app.get('/api/suppliers/branch/:branchId', async (req, res) => {
+    try {
+      const branchId = parseInt(req.params.branchId);
+      
+      // If user is branch manager, validate they're accessing their own branch
+      if (req.user && req.user.role === 'branch_manager' && req.user.branchId !== branchId) {
+        return res.status(403).json({ 
+          message: 'You do not have permission to access suppliers for this branch' 
+        });
+      }
+      
+      // Get all suppliers
+      const allSuppliers = await storage.getAllSuppliers();
+      
+      // Filter suppliers by branch
+      const branchSuppliers = allSuppliers.filter(supplier => supplier.branchId === branchId);
+      
+      // If summary flag is not set, return just the suppliers
+      if (req.query.includeSummary !== 'true') {
+        return res.json(branchSuppliers);
+      }
+      
+      // Get branch invoices to calculate debt
+      const branchInvoices = await storage.getInvoicesByBranch(branchId);
+      
+      // Calculate summaries
+      const suppliersWithSummary = await calculateSupplierSummaries(branchSuppliers, branchInvoices);
+      
+      res.json(suppliersWithSummary);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching branch suppliers: ${err}` });
     }
   });
 

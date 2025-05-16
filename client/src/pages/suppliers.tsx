@@ -48,6 +48,7 @@ const supplierSchema = insertSupplierSchema.extend({
   phone: z.string().min(5, { message: "Phone must be at least 5 characters" }).optional().or(z.literal("")),
   address: z.string().min(5, { message: "Address must be at least 5 characters" }).optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
+  branchId: z.number().optional(),
 });
 
 // Define an interface that extends Supplier with debt information and branch data
@@ -101,11 +102,11 @@ export default function Suppliers() {
     isLoading,
     isError,
   } = useQuery<SupplierWithDebt[]>({
-    queryKey: ["/api/suppliers", { includeSummary: true }],
+    queryKey: ["/api/suppliers", { includeSummary: true, branchId: isBranchManager ? user?.branchId : undefined }],
     queryFn: async () => {
-      // If branch manager, need to filter by their branch
-      const url = isBranchManager 
-        ? `/api/suppliers/branch/${user?.branchId}?includeSummary=true`
+      // If branch manager, filter by their branch - use the branch-specific endpoint
+      const url = isBranchManager && user?.branchId
+        ? `/api/suppliers/branch/${user.branchId}?includeSummary=true`
         : "/api/suppliers?includeSummary=true";
         
       const res = await fetch(url);
@@ -382,6 +383,40 @@ export default function Suppliers() {
                     </FormItem>
                   )}
                 />
+                
+                {/* Branch selection - only for admin users */}
+                {!isBranchManager && (
+                  <FormField
+                    control={addForm.control}
+                    name="branchId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Branch</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          defaultValue={field.value?.toString() || ''}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select branch" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {branches.map((branch: any) => (
+                              <SelectItem key={branch.id} value={branch.id.toString()}>
+                                {branch.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          The branch this supplier belongs to
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
