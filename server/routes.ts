@@ -168,9 +168,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate from invoices
       for (const invoice of invoices) {
         if (supplierSummaries[invoice.supplierId]) {
-          supplierSummaries[invoice.supplierId].totalAmount += invoice.amount;
-          if (invoice.status !== 'paid') {
-            supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
+          // Calculate amount based on invoice type (credit notes are negative)
+          const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
+          
+          // Update total amount
+          supplierSummaries[invoice.supplierId].totalAmount += calculatedAmount;
+          
+          // Update outstanding amount based on status and paidAmount
+          if (invoice.status === 'paid') {
+            // Fully paid invoices don't contribute to outstanding amount
+          } else if (invoice.status === 'partially_paid') {
+            // For partially paid, consider the difference between invoice amount and paid amount
+            const paidAmount = invoice.paidAmount || 0;
+            supplierSummaries[invoice.supplierId].outstandingAmount += (calculatedAmount - paidAmount);
+          } else {
+            // Unpaid invoices contribute full amount to outstanding amount
+            supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
           }
         }
       }
@@ -712,12 +725,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process all invoices
       for (const invoice of invoices) {
-        // Add to total
-        totalInvoiceAmount += invoice.amount;
+        // Calculate amount based on invoice type (credit notes are negative)
+        const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
+        
+        // Add to totals
+        totalInvoiceAmount += calculatedAmount;
         
         // Add to outstanding if not paid
         if (invoice.status !== 'paid') {
-          totalOutstandingAmount += invoice.amount;
+          totalOutstandingAmount += calculatedAmount;
         }
         
         // Branch summary
@@ -731,9 +747,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
         
-        branchSummary[invoice.branchId].totalAmount += invoice.amount;
+        branchSummary[invoice.branchId].totalAmount += calculatedAmount;
         if (invoice.status !== 'paid') {
-          branchSummary[invoice.branchId].outstandingAmount += invoice.amount;
+          branchSummary[invoice.branchId].outstandingAmount += calculatedAmount;
         }
         
         // Supplier summary
@@ -747,9 +763,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
         
-        supplierSummary[invoice.supplierId].totalAmount += invoice.amount;
+        supplierSummary[invoice.supplierId].totalAmount += calculatedAmount;
         if (invoice.status !== 'paid') {
-          supplierSummary[invoice.supplierId].outstandingAmount += invoice.amount;
+          supplierSummary[invoice.supplierId].outstandingAmount += calculatedAmount;
         }
       }
       

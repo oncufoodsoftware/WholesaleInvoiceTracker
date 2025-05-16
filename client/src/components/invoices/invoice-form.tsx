@@ -376,12 +376,26 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                           // Auto-update status based on paid amount
                           const paidAmount = parseFloat(e.target.value) || 0;
                           const amount = parseFloat(form.getValues().amount) || 0;
-                          if (paidAmount === 0) {
-                            form.setValue("status", "unpaid");
-                          } else if (paidAmount >= amount) {
-                            form.setValue("status", "paid");
+                          const type = form.getValues().type;
+                          
+                          // Handle credit notes differently (payment against a credit)
+                          if (type === "credit_note") {
+                            if (paidAmount === 0) {
+                              form.setValue("status", "unpaid");
+                            } else if (paidAmount < amount) {
+                              form.setValue("status", "partially_paid");
+                            } else if (paidAmount >= amount) {
+                              form.setValue("status", "paid");
+                            }
                           } else {
-                            form.setValue("status", "partially_paid");
+                            // Standard and Cash invoices
+                            if (paidAmount === 0) {
+                              form.setValue("status", "unpaid");
+                            } else if (paidAmount >= amount) {
+                              form.setValue("status", "paid");
+                            } else {
+                              form.setValue("status", "partially_paid");
+                            }
                           }
                         }}
                       />
