@@ -93,9 +93,36 @@ export default function Analytics() {
       return res.json();
     },
   });
+  
+  // Fetch advanced analytics data
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["/api/analytics", branchId],
+    queryFn: async () => {
+      const res = await fetch(`/api/analytics?branchId=${branchId !== 'all' ? branchId : ''}`);
+      if (!res.ok) throw new Error("Failed to fetch analytics data");
+      return res.json();
+    },
+  });
+  
+  // Fetch forecast data
+  const { data: forecastData, isLoading: forecastLoading } = useQuery({
+    queryKey: ["/api/analytics/forecast", branchId, forecastPeriod],
+    queryFn: async () => {
+      const res = await fetch(`/api/analytics/forecast?branchId=${branchId !== 'all' ? branchId : ''}`);
+      if (!res.ok) throw new Error("Failed to fetch forecast data");
+      return res.json();
+    },
+  });
 
-  // Generate revenue forecast based on historical data
+  // Generate revenue forecast based on historical data or API data
   const generateRevenueForecast = () => {
+    // If we have API forecast data, use it
+    if (forecastData?.forecast?.revenue) {
+      const historicalRevenue = forecastData.historical.revenue || [];
+      return [...historicalRevenue, ...forecastData.forecast.revenue];
+    }
+    
+    // Fallback to client-side calculation
     if (!revenueData?.revenue) return [];
     
     const historicalData = [...revenueData.revenue];
@@ -103,7 +130,7 @@ export default function Analytics() {
     
     // Simple forecasting using moving average and trend
     const lastThreeMonths = historicalData.slice(-3);
-    const averageLastThree = lastThreeMonths.reduce((sum, item) => sum + item.amount, 0) / 3;
+    const averageLastThree = lastThreeMonths.reduce((sum: number, item: any) => sum + item.amount, 0) / 3;
     
     // Calculate the trend (average month-over-month change)
     const trend = lastThreeMonths.length > 1 
@@ -125,7 +152,7 @@ export default function Analytics() {
       forecast.push({
         month: forecastDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
         amount: Math.max(0, forecastedAmount), // Ensure no negative values
-        forecast: true
+        isForecast: true
       });
     }
     

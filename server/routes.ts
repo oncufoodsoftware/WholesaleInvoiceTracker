@@ -882,6 +882,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: `Error fetching revenue forecast data: ${err}` });
     }
   });
+  
+  // Advanced analytics forecast endpoint
+  app.get('/api/analytics/forecast', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Call the revenue forecast function from analytics.ts with forecast flag
+      const forecastRequest = { ...req, query: { ...req.query, forecast: 'true' } };
+      await getRevenueForecast(forecastRequest, res);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching analytics forecast data: ${err}` });
+    }
+  });
 
   // Reports API Endpoints
   app.get('/api/reports/sales', async (req, res) => {
