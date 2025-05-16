@@ -40,7 +40,7 @@ const invoiceSchema = z.object({
   supplierId: z.string().min(1, "Supplier is required"),
   branchId: z.string().min(1, "Branch is required"),
   amount: z.string().min(1, "Amount is required"),
-  paidAmount: z.string().default("0").optional(),
+  paidAmount: z.string().transform(val => val === "" ? "0" : val).optional(),
   status: z.enum(["paid", "unpaid", "partially_paid"]),
   type: z.enum(["standard", "credit_note", "cash"]),
   notes: z.string().optional(),
