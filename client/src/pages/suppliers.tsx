@@ -625,8 +625,8 @@ export default function Suppliers() {
                         </div>
                       )}
                       {supplier.outstandingAmount > 0 && (
-                        <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full">
-                          Outstanding
+                        <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md">
+                          No Branch
                         </div>
                       )}
                     </div>
@@ -650,31 +650,21 @@ export default function Suppliers() {
                       </div>
                     )}
                     {supplier.address && (
-                      <div className="flex items-start">
-                        <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                        <span className="line-clamp-2">{supplier.address}</span>
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{supplier.address}</span>
                       </div>
                     )}
                     
-                    <div className="mt-3 pt-3 border-t border-border">
-                      {/* Display branch count for admin users */}
-                      {!isBranchManager && supplier.branchBalances && (
-                        <div className="text-xs text-muted-foreground mb-2">
-                          {supplier.branchCount && supplier.branchCount > 1 ? (
-                            <>Used by {supplier.branchCount} branches</>
-                          ) : (
-                            <>Used by 1 branch</>
-                          )}
-                        </div>
-                      )}
+                    <div className="mt-5 pt-5 border-t border-border">
                       
                       {/* Display branch-by-branch balances */}
                       {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                        <div className="mt-2 space-y-2">
+                        <div className="space-y-4">
                           {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
                             <div key={branchId} className="flex justify-between items-center">
-                              <span className="font-medium">{name} Branch Balance:</span>
-                              <span className={amount > 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}>
+                              <span>{name} Balance:</span>
+                              <span className={amount > 0 ? 'text-destructive' : ''}>
                                 {new Intl.NumberFormat('en-GB', {
                                   style: 'currency',
                                   currency: 'GBP'
@@ -685,9 +675,9 @@ export default function Suppliers() {
                         </div>
                       ) : (
                         /* Display total outstanding amount if no branch breakdown */
-                        <div className="flex justify-between items-center mt-2">
-                          <span className="font-medium">Outstanding:</span>
-                          <span className={`font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        <div className="flex justify-between items-center">
+                          <span>Outstanding:</span>
+                          <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
                             {new Intl.NumberFormat('en-GB', {
                               style: 'currency',
                               currency: 'GBP'
