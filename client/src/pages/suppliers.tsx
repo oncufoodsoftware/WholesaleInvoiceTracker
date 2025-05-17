@@ -630,7 +630,7 @@ export default function Suppliers() {
                           <div className="mt-3">
                             {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
                               <div key={branchId} className="flex justify-between items-center mt-2">
-                                <span>No Branch Balance:</span>
+                                <span>{name} Balance:</span>
                                 <span className={amount > 0 ? 'text-destructive' : ''}>
                                   {new Intl.NumberFormat('en-GB', {
                                     style: 'currency',
