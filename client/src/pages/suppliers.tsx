@@ -630,24 +630,18 @@ export default function Suppliers() {
                           <div className="mt-3">
                             {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
                               <div key={branchId} className="flex justify-between items-center mt-2">
-                                <span>{name} Balance:</span>
+                                <span>{name} Balance: </span>
                                 <span className={amount > 0 ? 'text-destructive' : ''}>
-                                  {new Intl.NumberFormat('en-GB', {
-                                    style: 'currency',
-                                    currency: 'GBP'
-                                  }).format(amount)}
+                                  £{Math.abs(amount).toFixed(2)}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
                           <div className="flex justify-between items-center mt-3">
-                            <span>No Branch Balance:</span>
+                            <span>No Branch Balance: </span>
                             <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
-                              {new Intl.NumberFormat('en-GB', {
-                                style: 'currency',
-                                currency: 'GBP'
-                              }).format(supplier.outstandingAmount)}
+                              £{Math.abs(supplier.outstandingAmount).toFixed(2)}
                             </span>
                           </div>
                         )}
