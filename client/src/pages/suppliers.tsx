@@ -669,9 +669,9 @@ export default function Suppliers() {
                           ))}
                         </div>
                       ) : (
-                        /* Display total outstanding amount if no branch breakdown */
+                        /* Display total outstanding amount with branch name if no branch breakdown */
                         <div className="flex justify-between items-center">
-                          <span>Outstanding:</span>
+                          <span>{supplier.branchName || 'Total'} Balance:</span>
                           <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
                             {new Intl.NumberFormat('en-GB', {
                               style: 'currency',
