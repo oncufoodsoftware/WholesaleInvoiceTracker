@@ -225,6 +225,11 @@ export default function Suppliers() {
     }
   });
 
+  // Toggle sort order function
+  const toggleSortOrder = () => {
+    setSortOrder(current => current === 'asc' ? 'desc' : 'asc');
+  };
+
   // Form for adding a new supplier
   const addForm = useForm<z.infer<typeof supplierSchema>>({
     resolver: zodResolver(supplierSchema),
@@ -273,16 +278,13 @@ export default function Suppliers() {
       checkAchievement(AchievementTrigger.SUPPLIER_ADDED);
       
       // Get current supplier count for milestone achievement
-      queryClient.getQueryData(["/api/suppliers"])
-        .then((suppliers: any[]) => {
-          if (suppliers && Array.isArray(suppliers)) {
-            // Trigger milestone achievement if applicable
-            checkAchievement(AchievementTrigger.SUPPLIER_COUNT_MILESTONE, { 
-              count: suppliers.length + 1 // +1 for the one we just added
-            });
-          }
-        })
-        .catch(error => console.error("Error checking supplier milestones:", error));
+      const currentSuppliers = queryClient.getQueryData(["/api/suppliers"]) as any[];
+      if (currentSuppliers && Array.isArray(currentSuppliers)) {
+        // Trigger milestone achievement if applicable
+        checkAchievement(AchievementTrigger.SUPPLIER_COUNT_MILESTONE, { 
+          count: currentSuppliers.length + 1 // +1 for the one we just added
+        });
+      }
       
       // Invalidate general supplier list
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
@@ -304,7 +306,7 @@ export default function Suppliers() {
         window.location.reload();
       }, 1000);
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -348,7 +350,7 @@ export default function Suppliers() {
       // Refresh the page to ensure all data is up-to-date
       window.location.reload();
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -387,7 +389,7 @@ export default function Suppliers() {
       // Refresh the page to ensure all data is up-to-date
       window.location.reload();
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -423,10 +425,6 @@ export default function Suppliers() {
     if (confirm("Are you sure you want to delete this supplier?")) {
       deleteSupplierMutation.mutate(id);
     }
-  }
-
-  function toggleSortOrder() {
-    setSortOrder(current => current === 'asc' ? 'desc' : 'asc');
   }
 
   if (isError) {
@@ -658,7 +656,6 @@ export default function Suppliers() {
                       </div>
                     )}
                     
-                    {/* Branch Balance Information */}
                     <div className="mt-3 pt-3 border-t border-border">
                       {/* Display branch count for admin users */}
                       {!isBranchManager && supplier.branchBalances && (
@@ -671,24 +668,13 @@ export default function Suppliers() {
                         </div>
                       )}
                       
-                      {/* Display total outstanding amount */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Outstanding:</span>
-                        <span className={`font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                          {new Intl.NumberFormat('en-GB', {
-                            style: 'currency',
-                            currency: 'GBP'
-                          }).format(supplier.outstandingAmount)}
-                        </span>
-                      </div>
-                      
-                      {/* For admin users, show balances by branch */}
-                      {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 && (
-                        <div className="mt-2 space-y-1">
+                      {/* Display branch-by-branch balances */}
+                      {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                        <div className="mt-2 space-y-2">
                           {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
-                            <div key={branchId} className="flex justify-between items-center text-xs">
-                              <span>{name}:</span>
-                              <span className={amount > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+                            <div key={branchId} className="flex justify-between items-center">
+                              <span className="font-medium">{name} Branch Balance:</span>
+                              <span className={amount > 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}>
                                 {new Intl.NumberFormat('en-GB', {
                                   style: 'currency',
                                   currency: 'GBP'
@@ -696,6 +682,17 @@ export default function Suppliers() {
                               </span>
                             </div>
                           ))}
+                        </div>
+                      ) : (
+                        /* Display total outstanding amount if no branch breakdown */
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="font-medium">Outstanding:</span>
+                          <span className={`font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            {new Intl.NumberFormat('en-GB', {
+                              style: 'currency',
+                              currency: 'GBP'
+                            }).format(supplier.outstandingAmount)}
+                          </span>
                         </div>
                       )}
                     </div>
