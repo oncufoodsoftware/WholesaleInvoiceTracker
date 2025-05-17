@@ -38,7 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Building, Mail, Phone, FileText, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Building, Mail, Phone, FileText, MapPin, Search, ArrowUpDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -69,6 +69,8 @@ export default function Suppliers() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   // Get user info for role-based filtering
   const { user } = useAuth();
@@ -193,6 +195,34 @@ export default function Suppliers() {
       return data;
     },
     refetchOnWindowFocus: true, // Auto-refresh when tab is focused again
+  });
+
+  // Filter suppliers based on search query
+  const filteredSuppliers = suppliers.filter((supplier) => {
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      supplier.name?.toLowerCase().includes(query) ||
+      (supplier.contactPerson && supplier.contactPerson.toLowerCase().includes(query)) ||
+      (supplier.email && supplier.email.toLowerCase().includes(query)) ||
+      (supplier.phone && supplier.phone.toLowerCase().includes(query)) ||
+      (supplier.address && supplier.address.toLowerCase().includes(query)) ||
+      (supplier.notes && supplier.notes.toLowerCase().includes(query)) ||
+      (supplier.branchName && supplier.branchName.toLowerCase().includes(query))
+    );
+  });
+
+  // Sort suppliers by name
+  const sortedSuppliers = [...filteredSuppliers].sort((a, b) => {
+    const nameA = a.name.toLowerCase();
+    const nameB = b.name.toLowerCase();
+    
+    if (sortOrder === 'asc') {
+      return nameA.localeCompare(nameB);
+    } else {
+      return nameB.localeCompare(nameA);
+    }
   });
 
   // Form for adding a new supplier
@@ -395,6 +425,10 @@ export default function Suppliers() {
     }
   }
 
+  function toggleSortOrder() {
+    setSortOrder(current => current === 'asc' ? 'desc' : 'asc');
+  }
+
   if (isError) {
     return (
       <div className="container">
@@ -409,295 +443,298 @@ export default function Suppliers() {
   }
 
   return (
-    <div className="container">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container py-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Supplier Management</h1>
           <p className="text-muted-foreground mt-1">
             Manage your suppliers and vendor details
           </p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Supplier
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search suppliers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 max-w-xs"
+            />
+          </div>
+          <Button variant="outline" size="icon" onClick={toggleSortOrder} title={`Sort ${sortOrder === 'asc' ? 'Z-A' : 'A-Z'}`}>
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Supplier
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Supplier</DialogTitle>
+                <DialogDescription>
+                  Add a new supplier to your business.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...addForm}>
+                <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
+                  <FormField
+                    control={addForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Supplier Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter supplier name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addForm.control}
+                    name="contactPerson"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter contact person" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={addForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={addForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter phone number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={addForm.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Enter address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Enter notes" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit" disabled={addSupplierMutation.isPending}>
+                      {addSupplierMutation.isPending ? "Adding..." : "Add Supplier"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Results summary */}
+      <div className="mb-4 text-sm text-muted-foreground">
+        {searchQuery ? 
+          `Showing ${filteredSuppliers.length} of ${suppliers.length} suppliers matching "${searchQuery}"` : 
+          `Showing all ${suppliers.length} suppliers`
+        }
+        {searchQuery && filteredSuppliers.length === 0 && (
+          <div className="mt-2">
+            <Button variant="link" className="p-0" onClick={() => setSearchQuery("")}>
+              Clear search
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Supplier</DialogTitle>
-              <DialogDescription>
-                Add a new supplier to your business.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...addForm}>
-              <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
-                <FormField
-                  control={addForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Supplier Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ABC Wholesalers" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addForm.control}
-                  name="contactPerson"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Smith" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={addForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="contact@supplier.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={addForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+44 1234 567890" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={addForm.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="123 Supplier Street, City" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={addForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Additional information about this supplier" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Branch field removed - suppliers can work with multiple branches */}
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={addSupplierMutation.isPending}
-                  >
-                    {addSupplierMutation.isPending ? "Saving..." : "Save Supplier"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="h-64">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="overflow-hidden">
               <CardHeader className="pb-2">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2 mt-2" />
               </CardHeader>
               <CardContent className="pb-2">
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-2/3 mb-2" />
-                <Skeleton className="h-4 w-3/4" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
               </CardContent>
-              <CardFooter>
-                <Skeleton className="h-9 w-20 mr-2" />
+              <CardFooter className="flex justify-between pt-2">
+                <Skeleton className="h-9 w-20" />
                 <Skeleton className="h-9 w-20" />
               </CardFooter>
             </Card>
           ))}
         </div>
-      ) : suppliers.length === 0 ? (
-        <Card className="w-full py-12">
-          <CardContent className="flex flex-col items-center justify-center text-center p-6">
-            <Building className="h-12 w-12 text-muted-foreground mb-4" />
-            <CardTitle className="text-xl mb-2">No Suppliers Yet</CardTitle>
-            <CardDescription className="mb-6">
-              You haven't added any suppliers to your system yet. <br />
-              Click the "Add Supplier" button to create your first supplier.
-            </CardDescription>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Supplier
-            </Button>
-          </CardContent>
-        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {suppliers.map((supplier: SupplierWithDebt) => (
-            <Card key={supplier.id} className="overflow-hidden border border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Building className="h-5 w-5 mr-2 text-primary" />
-                    {supplier.name}
-                  </div>
-                  <div className="flex items-center">
-                    {!isBranchManager && supplier.branchName && (
-                      <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded mr-2">
-                        {supplier.branchName}
+          {sortedSuppliers.length > 0 ? (
+            sortedSuppliers.map((supplier: SupplierWithDebt) => (
+              <Card key={supplier.id} className="overflow-hidden border border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Building className="h-5 w-5 mr-2 text-primary" />
+                      {supplier.name}
+                    </div>
+                    <div className="flex items-center">
+                      {!isBranchManager && supplier.branchName && (
+                        <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded mr-2">
+                          {supplier.branchName}
+                        </div>
+                      )}
+                      {supplier.outstandingAmount > 0 && (
+                        <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full">
+                          Outstanding
+                        </div>
+                      )}
+                    </div>
+                  </CardTitle>
+                  {supplier.contactPerson && (
+                    <CardDescription>Contact: {supplier.contactPerson}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <div className="space-y-2 text-sm">
+                    {supplier.email && (
+                      <div className="flex items-center">
+                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{supplier.email}</span>
                       </div>
                     )}
-                    {supplier.outstandingAmount > 0 && (
-                      <div className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded-full">
-                        Outstanding
+                    {supplier.phone && (
+                      <div className="flex items-center">
+                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{supplier.phone}</span>
                       </div>
                     )}
-                  </div>
-                </CardTitle>
-                {supplier.contactPerson && (
-                  <CardDescription>Contact: {supplier.contactPerson}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="pb-2">
-                <div className="space-y-2 text-sm">
-                  {supplier.email && (
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{supplier.email}</span>
-                    </div>
-                  )}
-                  {supplier.phone && (
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{supplier.phone}</span>
-                    </div>
-                  )}
-                  {supplier.address && (
-                    <div className="flex items-start">
-                      <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                      <span className="line-clamp-2">{supplier.address}</span>
-                    </div>
-                  )}
-                  
-                  {/* Branch Balance Information */}
-                  <div className="mt-3 pt-3 border-t border-border">
-                    {/* Display branch count for admin users */}
-                    {!isBranchManager && supplier.branchCount !== undefined && (
-                      <div className="flex items-center mb-2">
-                        <span className="text-xs text-muted-foreground">
-                          Working with {supplier.branchCount} {supplier.branchCount === 1 ? 'branch' : 'branches'}
-                        </span>
+                    {supplier.address && (
+                      <div className="flex items-start">
+                        <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                        <span className="line-clamp-2">{supplier.address}</span>
                       </div>
                     )}
                     
-                    {/* Display individual branch balances if we have them */}
-                    {supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                      <div className="space-y-2">
-                        {Object.entries(supplier.branchBalances).map(([branchId, data]) => (
-                          <div key={branchId} className="flex items-center justify-between">
-                            <span className="text-sm font-medium">
-                              {data.name}:
-                            </span>
-                            <span className={`text-sm font-bold ${data.amount > 0 ? 'text-destructive' : data.amount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                              {new Intl.NumberFormat('en-GB', {
-                                style: 'currency',
-                                currency: 'GBP'
-                              }).format(data.amount)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      // Default to showing overall balance if branch balances not available
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">
-                            {supplier.branchName || 'Balance'}:
-                          </span>
-                          <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                            {new Intl.NumberFormat('en-GB', {
-                              style: 'currency',
-                              currency: 'GBP'
-                            }).format(supplier.outstandingAmount)}
-                          </span>
+                    {/* Branch Balance Information */}
+                    <div className="mt-3 pt-3 border-t border-border">
+                      {/* Display branch count for admin users */}
+                      {!isBranchManager && supplier.branchBalances && (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {supplier.branchCount && supplier.branchCount > 1 ? (
+                            <>Used by {supplier.branchCount} branches</>
+                          ) : (
+                            <>Used by 1 branch</>
+                          )}
                         </div>
-                        {supplier.outstandingAmount < 0 && (
-                          <div className="text-xs text-green-600 mt-1">
-                            Credit in your favor (credit notes exceed outstanding invoices)
-                          </div>
-                        )}
+                      )}
+                      
+                      {/* Display total outstanding amount */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Outstanding:</span>
+                        <span className={`font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {new Intl.NumberFormat('en-GB', {
+                            style: 'currency',
+                            currency: 'GBP'
+                          }).format(supplier.outstandingAmount)}
+                        </span>
                       </div>
-                    )}
+                      
+                      {/* For admin users, show balances by branch */}
+                      {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
+                            <div key={branchId} className="flex justify-between items-center text-xs">
+                              <span>{name}:</span>
+                              <span className={amount > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+                                {new Intl.NumberFormat('en-GB', {
+                                  style: 'currency',
+                                  currency: 'GBP'
+                                }).format(amount)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditSupplier(supplier)}
-                  className="mr-2"
-                >
-                  <Pencil className="h-3.5 w-3.5 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDeleteSupplier(supplier.id)}
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Delete
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                </CardContent>
+                <CardFooter className="flex justify-between pt-2 border-t border-border">
+                  <Button variant="outline" size="sm" onClick={() => handleEditSupplier(supplier)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteSupplier(supplier.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-3 p-12 text-center">
+              <p className="text-lg text-muted-foreground">No suppliers found matching your search criteria.</p>
+              <Button variant="link" onClick={() => setSearchQuery("")}>Clear search</Button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Edit supplier dialog */}
+      {/* Edit Supplier Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Supplier</DialogTitle>
-            <DialogDescription>Update the supplier details.</DialogDescription>
+            <DialogDescription>
+              Update supplier details.
+            </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
@@ -735,7 +772,7 @@ export default function Suppliers() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -781,20 +818,8 @@ export default function Suppliers() {
                   </FormItem>
                 )}
               />
-              
-              {/* Branch field removed - suppliers can work with multiple branches */}
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={editSupplierMutation.isPending}
-                >
+                <Button type="submit" disabled={editSupplierMutation.isPending}>
                   {editSupplierMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </DialogFooter>
