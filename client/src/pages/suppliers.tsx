@@ -625,26 +625,33 @@ export default function Suppliers() {
                           <span>{supplier.address || "Address"}</span>
                         </div>
                         
-                        {/* Branch balances */}
-                        {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                          <div className="mt-3">
-                            {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
-                              <div key={branchId} className="flex justify-between items-center mt-2">
-                                <span>{name} Balance: </span>
+                        {/* Branch balances and total debt */}
+                        <div className="mt-3 space-y-2">
+                          {/* Total Debt */}
+                          <div className="flex justify-between items-center pb-2 border-b">
+                            <span className="font-semibold">Total Outstanding Debt:</span>
+                            <span className={supplier.outstandingAmount > 0 ? 'text-destructive font-semibold' : 'font-semibold'}>
+                              £{Math.abs(supplier.outstandingAmount).toFixed(2)}
+                            </span>
+                          </div>
+                          
+                          {/* Individual Branch Balances */}
+                          {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                            Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
+                              <div key={branchId} className="flex justify-between items-center">
+                                <span>{name} Balance:</span>
                                 <span className={amount > 0 ? 'text-destructive' : ''}>
                                   £{Math.abs(amount).toFixed(2)}
                                 </span>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex justify-between items-center mt-3">
-                            <span>No Branch Balance: </span>
-                            <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
-                              £{Math.abs(supplier.outstandingAmount).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
+                            ))
+                          ) : (
+                            <div className="flex justify-between items-center">
+                              <span>No Branch Balance:</span>
+                              <span>£0.00</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
