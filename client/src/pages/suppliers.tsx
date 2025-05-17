@@ -29,7 +29,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -50,7 +49,6 @@ const supplierSchema = insertSupplierSchema.extend({
   phone: z.string().min(5, { message: "Phone must be at least 5 characters" }).optional().or(z.literal("")),
   address: z.string().min(5, { message: "Address must be at least 5 characters" }).optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
-  // branchId field removed as suppliers can work with multiple branches
 });
 
 // Define an interface that extends Supplier with debt information and branch data
@@ -129,7 +127,7 @@ export default function Suppliers() {
       let data = await res.json();
       
       // For admin users, enrich supplier data with branch names from invoices
-      if (!isBranchManager && branches.length > 0 && invoices.length > 0) {
+      if (!isBranchManager && Array.isArray(branches) && branches.length > 0 && Array.isArray(invoices) && invoices.length > 0) {
         data = data.map((supplier: any) => {
           // Find all invoices for this supplier
           const supplierInvoices = invoices.filter((inv: any) => inv.supplierId === supplier.id);
@@ -185,7 +183,7 @@ export default function Suppliers() {
         // For branch managers or if branches not loaded yet
         data = data.map((supplier: any) => ({
           ...supplier,
-          branchName: isBranchManager && user?.branchId && branches.length > 0 
+          branchName: isBranchManager && user?.branchId && Array.isArray(branches) && branches.length > 0 
             ? branches.find((b: any) => b.id === Number(user.branchId))?.name || 'Your Branch'
             : 'No Branch',
           outstandingAmount: supplier.outstandingAmount || 0
@@ -240,7 +238,6 @@ export default function Suppliers() {
       phone: "",
       address: "",
       notes: "",
-      // branchId field removed as suppliers can work with multiple branches
     },
   });
 
@@ -306,7 +303,7 @@ export default function Suppliers() {
         window.location.reload();
       }, 1000);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -350,7 +347,7 @@ export default function Suppliers() {
       // Refresh the page to ensure all data is up-to-date
       window.location.reload();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -389,7 +386,7 @@ export default function Suppliers() {
       // Refresh the page to ensure all data is up-to-date
       window.location.reload();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -416,7 +413,6 @@ export default function Suppliers() {
       phone: supplier.phone || "",
       address: supplier.address || "",
       notes: supplier.notes || "",
-      // Branch field removed as suppliers can work with multiple branches
     });
     setIsEditDialogOpen(true);
   }
@@ -612,91 +608,86 @@ export default function Suppliers() {
           {sortedSuppliers.length > 0 ? (
             sortedSuppliers.map((supplier: SupplierWithDebt) => (
               <Card key={supplier.id} className="overflow-hidden border border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Building className="h-5 w-5 mr-2 text-primary" />
-                      {supplier.name}
+                <CardHeader className="pb-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-5 w-5 text-primary" />
+                      <CardTitle>{supplier.name}</CardTitle>
                     </div>
                     <div className="flex items-center">
-                      <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md">
-                        {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0
-                          ? Object.keys(supplier.branchBalances).length > 1 
-                            ? `${Object.keys(supplier.branchBalances).length} Branches`
-                            : "1 Branch"
-                          : "No Branch"}
+                      <div className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-md">
+                        No Branch
                       </div>
                     </div>
-                  </CardTitle>
-                  {supplier.contactPerson && (
-                    <CardDescription>Contact: {supplier.contactPerson}</CardDescription>
-                  )}
+                  </div>
+                  <CardDescription className="mt-1">
+                    Contact: {supplier.contactPerson || "Person"}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="space-y-2 text-sm">
-                    {supplier.email && (
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{supplier.email}</span>
-                      </div>
-                    )}
-                    {supplier.phone && (
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{supplier.phone}</span>
-                      </div>
-                    )}
-                    {supplier.address && (
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{supplier.address}</span>
-                      </div>
-                    )}
-                    
-                    <div className="mt-5 pt-3 border-t border-border">
-                      
-                      {/* Display branch-by-branch balances */}
-                      {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                        <div className="space-y-2">
-                          {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
-                            <div key={branchId} className="flex justify-between items-center">
-                              <span>{name} Balance:</span>
-                              <span className={amount > 0 ? 'text-destructive' : ''}>
-                                {new Intl.NumberFormat('en-GB', {
-                                  style: 'currency',
-                                  currency: 'GBP'
-                                }).format(amount)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        /* Display total outstanding amount with branch name if no branch breakdown */
-                        <div className="flex justify-between items-center">
-                          <span>{supplier.branchName || 'Total'} Balance:</span>
-                          <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
+                <CardContent className="pb-1 space-y-2 text-sm">
+                  {supplier.email && (
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{supplier.email}</span>
+                    </div>
+                  )}
+                  {supplier.phone && (
+                    <div className="flex items-center">
+                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{supplier.phone}</span>
+                    </div>
+                  )}
+                  {supplier.address ? (
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{supplier.address}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>Address</span>
+                    </div>
+                  )}
+                  
+                  {/* Balance display */}
+                  {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                    <div className="space-y-2 py-2">
+                      {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
+                        <div key={branchId} className="flex justify-between items-center">
+                          <span>No Branch Balance:</span>
+                          <span className={amount > 0 ? 'text-destructive' : ''}>
                             {new Intl.NumberFormat('en-GB', {
                               style: 'currency',
                               currency: 'GBP'
-                            }).format(supplier.outstandingAmount)}
+                            }).format(amount)}
                           </span>
                         </div>
-                      )}
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex justify-between items-center py-2">
+                      <span>No Branch Balance:</span>
+                      <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
+                        {new Intl.NumberFormat('en-GB', {
+                          style: 'currency',
+                          currency: 'GBP'
+                        }).format(supplier.outstandingAmount)}
+                      </span>
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex justify-between pt-2 border-t border-border">
-                  <Button variant="outline" size="sm" onClick={() => handleEditSupplier(supplier)}>
-                    <Pencil className="mr-2 h-4 w-4" />
+                  <Button variant="ghost" size="sm" onClick={() => handleEditSupplier(supplier)} className="px-3">
+                    <Pencil className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
                   <Button 
-                    variant="outline" 
+                    variant="ghost" 
                     size="sm"
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive px-3"
                     onClick={() => handleDeleteSupplier(supplier.id)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </Button>
                 </CardFooter>
