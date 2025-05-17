@@ -619,16 +619,11 @@ export default function Suppliers() {
                       {supplier.name}
                     </div>
                     <div className="flex items-center">
-                      {!isBranchManager && supplier.branchName && (
-                        <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded mr-2">
-                          {supplier.branchName}
-                        </div>
-                      )}
-                      {supplier.outstandingAmount > 0 && (
-                        <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md">
-                          No Branch
-                        </div>
-                      )}
+                      <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md">
+                        {!isBranchManager && supplier.branchName && supplier.branchName !== 'No Branch' 
+                          ? supplier.branchName 
+                          : "No Branch"}
+                      </div>
                     </div>
                   </CardTitle>
                   {supplier.contactPerson && (
@@ -656,11 +651,11 @@ export default function Suppliers() {
                       </div>
                     )}
                     
-                    <div className="mt-5 pt-5 border-t border-border">
+                    <div className="mt-5 pt-3 border-t border-border">
                       
                       {/* Display branch-by-branch balances */}
                       {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                           {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
                             <div key={branchId} className="flex justify-between items-center">
                               <span>{name} Balance:</span>
