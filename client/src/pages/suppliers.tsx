@@ -620,8 +620,10 @@ export default function Suppliers() {
                     </div>
                     <div className="flex items-center">
                       <div className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md">
-                        {!isBranchManager && supplier.branchName && supplier.branchName !== 'No Branch' 
-                          ? supplier.branchName 
+                        {!isBranchManager && supplier.branchCount
+                          ? supplier.branchCount > 1 
+                            ? `${supplier.branchCount} Branches`
+                            : "1 Branch"
                           : "No Branch"}
                       </div>
                     </div>
