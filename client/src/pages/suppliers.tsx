@@ -10,14 +10,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -37,9 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Building, Mail, Phone, FileText, MapPin, Search, ArrowUpDown } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Pencil, Trash2, Search, ArrowUpDown } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 // Extend the supplier schema with additional validation
 const supplierSchema = insertSupplierSchema.extend({
@@ -572,129 +563,120 @@ export default function Suppliers() {
           `Showing ${filteredSuppliers.length} of ${suppliers.length} suppliers matching "${searchQuery}"` : 
           `Showing all ${suppliers.length} suppliers`
         }
-        {searchQuery && filteredSuppliers.length === 0 && (
-          <div className="mt-2">
-            <Button variant="link" className="p-0" onClick={() => setSearchQuery("")}>
-              Clear search
-            </Button>
-          </div>
-        )}
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-              </CardHeader>
-              <CardContent className="pb-2">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-2">
-                <Skeleton className="h-9 w-20" />
-                <Skeleton className="h-9 w-20" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        <div>Loading suppliers...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div>
           {sortedSuppliers.length > 0 ? (
-            sortedSuppliers.map((supplier: SupplierWithDebt) => (
-              <Card key={supplier.id} className="overflow-hidden border border-border">
-                <CardHeader className="pb-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building className="h-5 w-5 text-primary" />
-                      <CardTitle>{supplier.name}</CardTitle>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-md">
-                        No Branch
+            <div>
+              {/* Exact match for the screenshot layout */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {sortedSuppliers.map((supplier: SupplierWithDebt) => (
+                  <div key={supplier.id} className="border border-border rounded-lg overflow-hidden">
+                    <div className="p-4">
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="text-primary bg-primary/10 p-1 rounded">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-building">
+                              <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
+                              <path d="M9 22v-4h6v4" />
+                              <path d="M8 6h.01" />
+                              <path d="M16 6h.01" />
+                              <path d="M8 10h.01" />
+                              <path d="M16 10h.01" />
+                              <path d="M8 14h.01" />
+                              <path d="M16 14h.01" />
+                            </svg>
+                          </div>
+                          <h3 className="font-semibold text-lg">{supplier.name}</h3>
+                        </div>
+                        <div className="bg-secondary text-xs px-2 py-1 rounded-md">
+                          No Branch
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Contact: {supplier.contactPerson || "Person"}
+                      </p>
+                      <div className="space-y-1 text-sm">
+                        {supplier.email && (
+                          <div className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                              <rect width="20" height="16" x="2" y="4" rx="2" />
+                              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                            </svg>
+                            <span>{supplier.email}</span>
+                          </div>
+                        )}
+                        {supplier.phone && (
+                          <div className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                            </svg>
+                            <span>{supplier.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                              <circle cx="12" cy="10" r="3" />
+                          </svg>
+                          <span>{supplier.address || "Address"}</span>
+                        </div>
+                        
+                        {/* Branch balances */}
+                        {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                          <div className="mt-3">
+                            {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
+                              <div key={branchId} className="flex justify-between items-center mt-2">
+                                <span>No Branch Balance:</span>
+                                <span className={amount > 0 ? 'text-destructive' : ''}>
+                                  {new Intl.NumberFormat('en-GB', {
+                                    style: 'currency',
+                                    currency: 'GBP'
+                                  }).format(amount)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-center mt-3">
+                            <span>No Branch Balance:</span>
+                            <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
+                              {new Intl.NumberFormat('en-GB', {
+                                style: 'currency',
+                                currency: 'GBP'
+                              }).format(supplier.outstandingAmount)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
+                    
+                    <Separator />
+                    
+                    <div className="px-4 py-3 flex justify-between">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditSupplier(supplier)} className="h-8 px-2">
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-destructive hover:text-destructive h-8 px-2"
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                  <CardDescription className="mt-1">
-                    Contact: {supplier.contactPerson || "Person"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-1 space-y-2 text-sm">
-                  {supplier.email && (
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{supplier.email}</span>
-                    </div>
-                  )}
-                  {supplier.phone && (
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{supplier.phone}</span>
-                    </div>
-                  )}
-                  {supplier.address ? (
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{supplier.address}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>Address</span>
-                    </div>
-                  )}
-                  
-                  {/* Balance display */}
-                  {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                    <div className="space-y-2 py-2">
-                      {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
-                        <div key={branchId} className="flex justify-between items-center">
-                          <span>No Branch Balance:</span>
-                          <span className={amount > 0 ? 'text-destructive' : ''}>
-                            {new Intl.NumberFormat('en-GB', {
-                              style: 'currency',
-                              currency: 'GBP'
-                            }).format(amount)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center py-2">
-                      <span>No Branch Balance:</span>
-                      <span className={supplier.outstandingAmount > 0 ? 'text-destructive' : ''}>
-                        {new Intl.NumberFormat('en-GB', {
-                          style: 'currency',
-                          currency: 'GBP'
-                        }).format(supplier.outstandingAmount)}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="flex justify-between pt-2 border-t border-border">
-                  <Button variant="ghost" size="sm" onClick={() => handleEditSupplier(supplier)} className="px-3">
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-destructive hover:text-destructive px-3"
-                    onClick={() => handleDeleteSupplier(supplier.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))
+                ))}
+              </div>
+            </div>
           ) : (
-            <div className="col-span-3 p-12 text-center">
+            <div className="p-12 text-center">
               <p className="text-lg text-muted-foreground">No suppliers found matching your search criteria.</p>
               <Button variant="link" onClick={() => setSearchQuery("")}>Clear search</Button>
             </div>
