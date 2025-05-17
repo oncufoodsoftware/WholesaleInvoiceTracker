@@ -254,9 +254,11 @@ export default function SupplierRiskDashboard() {
 
   // Track previous risk scores and check for improvements
   useEffect(() => {
-    if (suppliersRiskData.length > 0) {
+    if (suppliersRiskData && suppliersRiskData.length > 0) {
       // Compare with previous risk scores and check for significant improvements
       suppliersRiskData.forEach(supplier => {
+        if (!supplier || supplier.id === undefined) return;
+        
         const prevScore = previousRiskScores[supplier.id] || 0;
         
         // If we have a previous score and it improved significantly (by at least 15 points)
@@ -264,7 +266,7 @@ export default function SupplierRiskDashboard() {
           // Trigger achievement
           checkAchievement(AchievementTrigger.SUPPLIER_RISK_REDUCED, {
             reduction: prevScore - supplier.riskScore,
-            supplier: supplier.name
+            supplier: supplier.name || 'Supplier'
           });
         }
         
@@ -275,7 +277,7 @@ export default function SupplierRiskDashboard() {
         }));
       });
     }
-  }, [suppliersRiskData]);
+  }, [suppliersRiskData, checkAchievement]);
 
   // Handle refresh
   const handleRefresh = () => {
