@@ -608,13 +608,6 @@ export default function Suppliers() {
                           £{Math.abs(supplier.outstandingAmount).toFixed(2)}
                         </span>
                       </div>
-                      {/* Display Total Debt Prominently */}
-                      <div className="mt-2 bg-muted/50 py-1 px-2 rounded flex justify-between items-center">
-                        <span className="text-sm font-medium">Total Outstanding:</span>
-                        <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                          £{Math.abs(supplier.outstandingAmount).toFixed(2)}
-                        </span>
-                      </div>
                       <div className="space-y-1 text-sm">
                         {supplier.email && (
                           <div className="flex items-center gap-2">
