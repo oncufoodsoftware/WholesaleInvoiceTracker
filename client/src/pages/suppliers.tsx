@@ -631,10 +631,10 @@ export default function Suppliers() {
                         {/* Branch information with balances */}
                         <div className="mt-2 pt-1 border-t">
                           {supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                            <div className="space-y-1">
-                              {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
-                                <div key={branchId} className="flex justify-between">
-                                  <span className="text-sm">{name}</span>
+                            <div className="space-y-0">
+                              {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }], index) => (
+                                <div key={branchId} className={`flex justify-between py-1 ${index > 0 ? 'border-t border-dashed' : ''}`}>
+                                  <span className="text-sm">{name} Branch:</span>
                                   <span className={`text-sm ${amount > 0 ? 'text-destructive' : 'text-green-600'}`}>
                                     £{Math.abs(amount).toFixed(2)}
                                   </span>
@@ -643,7 +643,7 @@ export default function Suppliers() {
                             </div>
                           ) : (
                             <div className="flex justify-between">
-                              <span className="text-sm">{supplier.branchName || "No Branch"}</span>
+                              <span className="text-sm">{supplier.branchName || "Main"} Branch:</span>
                               <span className={`text-sm ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
                                 £{Math.abs(supplier.outstandingAmount).toFixed(2)}
                               </span>
