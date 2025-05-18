@@ -601,12 +601,39 @@ export default function Suppliers() {
                       <p className="text-sm text-muted-foreground mb-2">
                         Contact: {supplier.contactPerson || "Person"}
                       </p>
-                      {/* Display Total Debt Prominently */}
-                      <div className="mt-2 bg-muted/50 py-1 px-2 rounded flex justify-between items-center">
-                        <span className="text-sm font-medium">Total Outstanding:</span>
-                        <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                          £{Math.abs(supplier.outstandingAmount).toFixed(2)}
-                        </span>
+                      {/* Display Total Debt with Branch Information Prominently */}
+                      <div className="mt-2 bg-muted/50 py-1 px-2 rounded">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total Outstanding:</span>
+                          <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                            £{Math.abs(supplier.outstandingAmount).toFixed(2)}
+                          </span>
+                        </div>
+                        {/* Show branch details with the balance */}
+                        {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                          <div className="flex flex-col text-xs mt-1">
+                            <div className="flex flex-wrap gap-x-4">
+                              {Object.entries(supplier.branchBalances)
+                                .filter(([_, { amount }]) => amount !== 0)
+                                .slice(0, 2) // Show only first 2 branches with debt to save space
+                                .map(([branchId, { name, amount }]) => (
+                                  <div key={branchId} className="flex items-center gap-1">
+                                    <span>{name}:</span>
+                                    <span className={`font-medium ${amount > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                      £{Math.abs(amount).toFixed(2)}
+                                    </span>
+                                  </div>
+                                ))}
+                              {Object.keys(supplier.branchBalances).length > 2 && (
+                                <span className="text-muted-foreground">+{Object.keys(supplier.branchBalances).length - 2} more</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs mt-1">
+                            <span>{supplier.branchName || "No Branch"}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1 text-sm">
                         {supplier.email && (
