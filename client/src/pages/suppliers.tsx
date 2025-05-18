@@ -601,15 +601,7 @@ export default function Suppliers() {
                       <p className="text-sm text-muted-foreground mb-2">
                         Contact: {supplier.contactPerson || "Person"}
                       </p>
-                      {/* Display Total Debt Prominently - Simple Version */}
-                      <div className="mt-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Total Outstanding:</span>
-                          <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                            £{Math.abs(supplier.outstandingAmount).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
+
                       <div className="space-y-1 text-sm">
                         {supplier.email && (
                           <div className="flex items-center gap-2">
@@ -636,11 +628,27 @@ export default function Suppliers() {
                           <span>{supplier.address || "Address"}</span>
                         </div>
                         
-                        {/* Simple branch information */}
-                        <div className="mt-1">
-                          <div className="text-sm text-muted-foreground">
-                            {supplier.branchName || "No Branch"} - £{Math.abs(supplier.outstandingAmount).toFixed(2)}
-                          </div>
+                        {/* Branch information with balances */}
+                        <div className="mt-2 pt-1 border-t">
+                          {supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                            <div className="space-y-1">
+                              {Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
+                                <div key={branchId} className="flex justify-between">
+                                  <span className="text-sm">{name}</span>
+                                  <span className={`text-sm ${amount > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                    £{Math.abs(amount).toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex justify-between">
+                              <span className="text-sm">{supplier.branchName || "No Branch"}</span>
+                              <span className={`text-sm ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                £{Math.abs(supplier.outstandingAmount).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Branch breakdown for multi-branch suppliers */}
