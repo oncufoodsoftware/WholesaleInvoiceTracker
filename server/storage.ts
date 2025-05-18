@@ -246,10 +246,80 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSupplier(id: number): Promise<boolean> {
+    // First delete any supplier-branch balances
+    await db.delete(supplierBranchBalances).where(eq(supplierBranchBalances.supplierId, id));
+    
+    // Then delete the supplier
     const result = await db
       .delete(suppliers)
       .where(eq(suppliers.id, id));
     return result.count > 0;
+  }
+
+  // Supplier-Branch Balance Methods
+  async getSupplierBranchBalance(supplierId: number, branchId: number): Promise<SupplierBranchBalance | undefined> {
+    const [balance] = await db
+      .select()
+      .from(supplierBranchBalances)
+      .where(
+        and(
+          eq(supplierBranchBalances.supplierId, supplierId),
+          eq(supplierBranchBalances.branchId, branchId)
+        )
+      );
+    return balance;
+  }
+  
+  async getAllSupplierBranchBalances(): Promise<SupplierBranchBalance[]> {
+    return db.select().from(supplierBranchBalances);
+  }
+  
+  async getSupplierBalances(supplierId: number): Promise<SupplierBranchBalance[]> {
+    return db
+      .select()
+      .from(supplierBranchBalances)
+      .where(eq(supplierBranchBalances.supplierId, supplierId));
+  }
+  
+  async getBranchSupplierBalances(branchId: number): Promise<SupplierBranchBalance[]> {
+    return db
+      .select()
+      .from(supplierBranchBalances)
+      .where(eq(supplierBranchBalances.branchId, branchId));
+  }
+  
+  async updateSupplierBranchBalance(supplierId: number, branchId: number, amountChange: number): Promise<SupplierBranchBalance> {
+    // Check if the balance record already exists
+    const existingBalance = await this.getSupplierBranchBalance(supplierId, branchId);
+    
+    if (existingBalance) {
+      // Update existing balance
+      const [updatedBalance] = await db
+        .update(supplierBranchBalances)
+        .set({ 
+          balance: existingBalance.balance + amountChange,
+          lastUpdated: new Date()
+        })
+        .where(
+          and(
+            eq(supplierBranchBalances.supplierId, supplierId),
+            eq(supplierBranchBalances.branchId, branchId)
+          )
+        )
+        .returning();
+      return updatedBalance;
+    } else {
+      // Create new balance record
+      const [newBalance] = await db
+        .insert(supplierBranchBalances)
+        .values({
+          supplierId,
+          branchId,
+          balance: amountChange
+        })
+        .returning();
+      return newBalance;
+    }
   }
 
   // Invoice methods
@@ -290,23 +360,83 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    // Create the invoice
     const [newInvoice] = await db
       .insert(invoices)
       .values(invoice)
       .returning();
+    
+    // Calculate the amount to adjust the supplier-branch balance
+    const amountToAdjust = invoice.type === 'credit_note' 
+      ? (invoice.amount - (invoice.paidAmount || 0)) * -1 
+      : invoice.amount - (invoice.paidAmount || 0);
+    
+    // Update the supplier branch balance
+    await this.updateSupplierBranchBalance(
+      invoice.supplierId,
+      invoice.branchId,
+      amountToAdjust
+    );
+    
     return newInvoice;
   }
 
   async updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    // Get the original invoice to calculate balance adjustments
+    const originalInvoice = await this.getInvoice(id);
+    if (!originalInvoice) return undefined;
+    
+    // Update the invoice
     const [updatedInvoice] = await db
       .update(invoices)
       .set(invoice)
       .where(eq(invoices.id, id))
       .returning();
+      
+    // If payment status or amount has changed, update supplier-branch balance
+    if (invoice.paidAmount !== undefined || invoice.amount !== undefined || invoice.type !== undefined) {
+      // Calculate the original balance impact
+      const originalAmount = originalInvoice.type === 'credit_note' 
+        ? (originalInvoice.amount - (originalInvoice.paidAmount || 0)) * -1 
+        : originalInvoice.amount - (originalInvoice.paidAmount || 0);
+      
+      // Calculate the new balance impact
+      const newAmount = updatedInvoice.type === 'credit_note' 
+        ? (updatedInvoice.amount - (updatedInvoice.paidAmount || 0)) * -1 
+        : updatedInvoice.amount - (updatedInvoice.paidAmount || 0);
+      
+      // Update the balance with the difference
+      const amountDifference = newAmount - originalAmount;
+      if (amountDifference !== 0) {
+        await this.updateSupplierBranchBalance(
+          updatedInvoice.supplierId,
+          updatedInvoice.branchId,
+          amountDifference
+        );
+      }
+    }
+    
     return updatedInvoice;
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
+    // Get the invoice details before deleting to adjust balances
+    const invoice = await this.getInvoice(id);
+    if (!invoice) return false;
+    
+    // Calculate the balance impact that needs to be reversed
+    const balanceImpact = invoice.type === 'credit_note' 
+      ? (invoice.amount - (invoice.paidAmount || 0)) * -1 
+      : invoice.amount - (invoice.paidAmount || 0);
+      
+    // Update the supplier-branch balance by reversing the impact
+    await this.updateSupplierBranchBalance(
+      invoice.supplierId,
+      invoice.branchId,
+      -balanceImpact // Negative to reverse the effect
+    );
+    
+    // Delete the invoice
     const result = await db
       .delete(invoices)
       .where(eq(invoices.id, id));
