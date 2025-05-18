@@ -592,11 +592,11 @@ export default function Suppliers() {
                           </div>
                           <h3 className="font-semibold text-lg">{supplier.name}</h3>
                         </div>
-                        <div className="bg-secondary text-xs px-2 py-1 rounded-md">
-                          {supplier.branchCount && supplier.branchCount > 1 
-                            ? `${supplier.branchCount} Branches` 
-                            : supplier.branchName || "No Branch"}
-                        </div>
+                        {supplier.branchCount && supplier.branchCount > 1 && (
+                          <div className="bg-secondary text-xs px-2 py-1 rounded-md">
+                            {`${supplier.branchCount} Branches`}
+                          </div>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
                         Contact: {supplier.contactPerson || "Person"}
