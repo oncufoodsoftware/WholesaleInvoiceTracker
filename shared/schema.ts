@@ -127,6 +127,21 @@ export const insertUserActionSchema = createInsertSchema(userActions).omit({
   timestamp: true,
 });
 
+// Supplier-Branch balances table to track balances for each supplier per branch
+export const supplierBranchBalances = pgTable("supplier_branch_balances", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id).notNull(),
+  balance: doublePrecision("balance").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Add schema for supplier-branch balances
+export const insertSupplierBranchBalanceSchema = createInsertSchema(supplierBranchBalances).omit({
+  id: true,
+  lastUpdated: true,
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -145,3 +160,6 @@ export type InsertFinancialTransaction = z.infer<typeof insertFinancialTransacti
 
 export type UserAction = typeof userActions.$inferSelect;
 export type InsertUserAction = z.infer<typeof insertUserActionSchema>;
+
+export type SupplierBranchBalance = typeof supplierBranchBalances.$inferSelect;
+export type InsertSupplierBranchBalance = z.infer<typeof insertSupplierBranchBalanceSchema>;

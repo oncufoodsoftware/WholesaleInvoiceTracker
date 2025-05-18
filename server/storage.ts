@@ -5,6 +5,7 @@ import {
   invoices, 
   financialTransactions,
   userActions,
+  supplierBranchBalances,
   type User, 
   type InsertUser, 
   type Branch,
@@ -16,7 +17,9 @@ import {
   type FinancialTransaction,
   type InsertFinancialTransaction,
   type UserAction,
-  type InsertUserAction
+  type InsertUserAction,
+  type SupplierBranchBalance,
+  type InsertSupplierBranchBalance
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray } from "drizzle-orm";
@@ -50,6 +53,13 @@ export interface IStorage {
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(id: number, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
   deleteSupplier(id: number): Promise<boolean>;
+  
+  // Supplier-Branch Balance methods
+  getSupplierBranchBalance(supplierId: number, branchId: number): Promise<SupplierBranchBalance | undefined>;
+  getAllSupplierBranchBalances(): Promise<SupplierBranchBalance[]>;
+  getSupplierBalances(supplierId: number): Promise<SupplierBranchBalance[]>;
+  getBranchSupplierBalances(branchId: number): Promise<SupplierBranchBalance[]>;
+  updateSupplierBranchBalance(supplierId: number, branchId: number, amountChange: number): Promise<SupplierBranchBalance>;
 
   // Invoice methods
   getInvoice(id: number): Promise<Invoice | undefined>;
