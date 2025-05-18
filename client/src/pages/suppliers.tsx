@@ -601,39 +601,14 @@ export default function Suppliers() {
                       <p className="text-sm text-muted-foreground mb-2">
                         Contact: {supplier.contactPerson || "Person"}
                       </p>
-                      {/* Display Total Debt with Branch Information Prominently */}
-                      <div className="mt-2 bg-muted/50 py-1 px-2 rounded">
+                      {/* Display Total Debt Prominently - Simple Version */}
+                      <div className="mt-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">Total Outstanding:</span>
                           <span className={`text-sm font-bold ${supplier.outstandingAmount > 0 ? 'text-destructive' : 'text-green-600'}`}>
                             £{Math.abs(supplier.outstandingAmount).toFixed(2)}
                           </span>
                         </div>
-                        {/* Show branch details with the balance */}
-                        {!isBranchManager && supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                          <div className="flex flex-col text-xs mt-1">
-                            <div className="flex flex-wrap gap-x-4">
-                              {Object.entries(supplier.branchBalances)
-                                .filter(([_, { amount }]) => amount !== 0)
-                                .slice(0, 2) // Show only first 2 branches with debt to save space
-                                .map(([branchId, { name, amount }]) => (
-                                  <div key={branchId} className="flex items-center gap-1">
-                                    <span>{name}:</span>
-                                    <span className={`font-medium ${amount > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                                      £{Math.abs(amount).toFixed(2)}
-                                    </span>
-                                  </div>
-                                ))}
-                              {Object.keys(supplier.branchBalances).length > 2 && (
-                                <span className="text-muted-foreground">+{Object.keys(supplier.branchBalances).length - 2} more</span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-xs mt-1">
-                            <span>{supplier.branchName || "No Branch"}</span>
-                          </div>
-                        )}
                       </div>
                       <div className="space-y-1 text-sm">
                         {supplier.email && (
@@ -659,6 +634,34 @@ export default function Suppliers() {
                               <circle cx="12" cy="10" r="3" />
                           </svg>
                           <span>{supplier.address || "Address"}</span>
+                        </div>
+                        
+                        {/* Branch information under address */}
+                        <div className="mt-2 pt-2 border-t border-dashed border-border">
+                          {supplier.branchCount && supplier.branchCount > 1 ? (
+                            <div className="flex items-center gap-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                <path d="M3 3v18h18" />
+                                <path d="M18 9V3H12" />
+                                <path d="M14 15v-2c0-2.2-2-4-4-4H6" />
+                              </svg>
+                              <span>{supplier.branchCount} Branches - </span>
+                              {Object.entries(supplier.branchBalances || {}).map(([branchId, { name, amount }], index, arr) => (
+                                <span key={branchId} className={index < arr.length - 1 ? "mr-2" : ""}>
+                                  {name}: £{Math.abs(amount).toFixed(2)}
+                                  {index < arr.length - 1 ? "," : ""}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                                <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
+                                <path d="M9 22v-4h6v4" />
+                              </svg>
+                              <span>{supplier.branchName || "No Branch"} - £{Math.abs(supplier.outstandingAmount).toFixed(2)}</span>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Branch breakdown for multi-branch suppliers */}
