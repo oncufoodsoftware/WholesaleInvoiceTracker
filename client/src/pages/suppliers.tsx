@@ -636,32 +636,11 @@ export default function Suppliers() {
                           <span>{supplier.address || "Address"}</span>
                         </div>
                         
-                        {/* Branch information under address */}
-                        <div className="mt-2 pt-2 border-t border-dashed border-border">
-                          {supplier.branchCount && supplier.branchCount > 1 ? (
-                            <div className="flex items-center gap-2">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                                <path d="M3 3v18h18" />
-                                <path d="M18 9V3H12" />
-                                <path d="M14 15v-2c0-2.2-2-4-4-4H6" />
-                              </svg>
-                              <span>{supplier.branchCount} Branches - </span>
-                              {Object.entries(supplier.branchBalances || {}).map(([branchId, { name, amount }], index, arr) => (
-                                <span key={branchId} className={index < arr.length - 1 ? "mr-2" : ""}>
-                                  {name}: £{Math.abs(amount).toFixed(2)}
-                                  {index < arr.length - 1 ? "," : ""}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                                <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
-                                <path d="M9 22v-4h6v4" />
-                              </svg>
-                              <span>{supplier.branchName || "No Branch"} - £{Math.abs(supplier.outstandingAmount).toFixed(2)}</span>
-                            </div>
-                          )}
+                        {/* Simple branch information */}
+                        <div className="mt-1">
+                          <div className="text-sm text-muted-foreground">
+                            {supplier.branchName || "No Branch"} - £{Math.abs(supplier.outstandingAmount).toFixed(2)}
+                          </div>
                         </div>
                         
                         {/* Branch breakdown for multi-branch suppliers */}
