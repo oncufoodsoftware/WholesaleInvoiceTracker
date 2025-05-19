@@ -41,22 +41,26 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
     },
   });
 
-  const { data: suppliersData = [] } = useQuery({ 
+  // Get suppliers
+  const { data: suppliersRaw = [] } = useQuery({ 
     queryKey: ["/api/suppliers"],
   });
   
-  // Sort suppliers alphabetically by name
-  const suppliers = [...suppliersData].sort((a, b) => 
-    a.name.localeCompare(b.name)
+  // Ensure we have an array and then sort alphabetically
+  const suppliersData = Array.isArray(suppliersRaw) ? suppliersRaw : [];
+  const suppliers = [...suppliersData].sort((a: any, b: any) => 
+    (a?.name || '').localeCompare(b?.name || '')
   );
 
-  const { data: branchesData = [] } = useQuery({ 
+  // Get branches
+  const { data: branchesRaw = [] } = useQuery({ 
     queryKey: ["/api/branches"],
   });
   
-  // Sort branches alphabetically by name
-  const branches = [...branchesData].sort((a, b) => 
-    a.name.localeCompare(b.name)
+  // Ensure we have an array and then sort alphabetically
+  const branchesData = Array.isArray(branchesRaw) ? branchesRaw : [];
+  const branches = [...branchesData].sort((a: any, b: any) => 
+    (a?.name || '').localeCompare(b?.name || '')
   );
 
   const handleSubmit = (data: any) => {
