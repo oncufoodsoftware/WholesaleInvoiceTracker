@@ -41,13 +41,23 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
     },
   });
 
-  const { data: suppliers = [] } = useQuery({ 
+  const { data: suppliersData = [] } = useQuery({ 
     queryKey: ["/api/suppliers"],
   });
+  
+  // Sort suppliers alphabetically by name
+  const suppliers = [...suppliersData].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
 
-  const { data: branches = [] } = useQuery({ 
+  const { data: branchesData = [] } = useQuery({ 
     queryKey: ["/api/branches"],
   });
+  
+  // Sort branches alphabetically by name
+  const branches = [...branchesData].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
 
   const handleSubmit = (data: any) => {
     // Convert "all" values to undefined for better API filtering
