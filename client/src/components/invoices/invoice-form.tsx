@@ -60,14 +60,24 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
   const isEditMode = !!invoiceId;
 
   // Get suppliers
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliersData = [] } = useQuery({
     queryKey: ["/api/suppliers"],
   });
+  
+  // Sort suppliers alphabetically by name
+  const suppliers = [...suppliersData].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
 
   // Get branches
-  const { data: branches = [] } = useQuery({
+  const { data: branchesData = [] } = useQuery({
     queryKey: ["/api/branches"],
   });
+  
+  // Sort branches alphabetically by name
+  const branches = [...branchesData].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
 
   // Get invoice if in edit mode
   const { data: invoice, isLoading: isLoadingInvoice } = useQuery({
