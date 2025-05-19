@@ -97,6 +97,11 @@ export function Sidebar({ className }: SidebarNavProps) {
       icon: <Users className="mr-2 h-4 w-4" />,
     },
     {
+      title: "Roles",
+      href: "/roles",
+      icon: <ShieldCheck className="mr-2 h-4 w-4" />,
+    },
+    {
       title: "User Actions",
       href: "/user-actions",
       icon: <Activity className="mr-2 h-4 w-4" />,
