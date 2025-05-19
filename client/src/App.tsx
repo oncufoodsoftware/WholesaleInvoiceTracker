@@ -18,6 +18,7 @@ import Branches from "@/pages/branches";
 import Suppliers from "@/pages/suppliers";
 import UserActions from "@/pages/user-actions";
 import SupplierRisk from "@/pages/supplier-risk";
+import Roles from "@/pages/roles";
 import DebugAuth from "@/pages/debug-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -48,6 +49,7 @@ function Router() {
                 <ProtectedRoute path="/reports" component={Reports} />
                 <ProtectedRoute path="/analytics" component={Analytics} />
                 <ProtectedRoute path="/users" component={Users} requiredRoles={["admin"]} />
+                <ProtectedRoute path="/roles" component={Roles} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/user-actions" component={UserActions} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/settings" component={Settings} />
                 <Route component={NotFound} />

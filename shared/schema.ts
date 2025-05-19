@@ -13,6 +13,19 @@ import { z } from "zod";
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['admin', 'branch_manager', 'accountant']);
+
+// Define page permission types
+export const pageAccessEnum = pgEnum('page_access', [
+  'dashboard', 
+  'invoices', 
+  'suppliers', 
+  'branches', 
+  'risk_analysis',
+  'reports',
+  'users',
+  'roles',
+  'settings'
+]);
 export const invoiceStatusEnum = pgEnum('invoice_status', ['paid', 'unpaid', 'partially_paid']);
 export const invoiceTypeEnum = pgEnum('invoice_type', ['standard', 'credit_note', 'cash']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'cash']);
@@ -26,7 +39,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
-  role: userRoleEnum("role").notNull().default('branch_manager'),
+  role: userRoleEnum("role").notNull().default('branch_manager'), // Keep for backward compatibility
+  roleId: integer("role_id").references(() => roles.id), // New field for custom roles
   branchId: integer("branch_id").references(() => branches.id),
 });
 
@@ -142,6 +156,37 @@ export const insertSupplierBranchBalanceSchema = createInsertSchema(supplierBran
   lastUpdated: true,
 });
 
+// Roles and Permissions tables
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  id: serial("id").primaryKey(),
+  roleId: integer("role_id").references(() => roles.id).notNull(),
+  page: pageAccessEnum("page").notNull(),
+  canView: boolean("can_view").default(false),
+  canCreate: boolean("can_create").default(false),
+  canEdit: boolean("can_edit").default(false),
+  canDelete: boolean("can_delete").default(false),
+});
+
+// Creation schemas
+export const insertRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -163,3 +208,9 @@ export type InsertUserAction = z.infer<typeof insertUserActionSchema>;
 
 export type SupplierBranchBalance = typeof supplierBranchBalances.$inferSelect;
 export type InsertSupplierBranchBalance = z.infer<typeof insertSupplierBranchBalanceSchema>;
+
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
