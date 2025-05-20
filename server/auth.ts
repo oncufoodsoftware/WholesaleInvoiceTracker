@@ -203,18 +203,26 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     console.log("Login attempt for username:", req.body.username);
     
-    // Try emergency admin login first if database is having issues
-    if (req.body.username === "admin" && req.body.password === "password123") {
-      return res.redirect(307, "/api/admin-emergency-login");
-    }
-    
     passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
       if (err) {
         console.error("Login error:", err);
         
-        // For admin user, try emergency login as fallback
+        // For admin user, directly create session without redirection
         if (req.body.username === "admin" && req.body.password === "password123") {
-          return res.redirect(307, "/api/admin-emergency-login");
+          const adminUser: SelectUser = {
+            id: 1,
+            username: "admin",
+            password: "password_placeholder",
+            fullName: "Administrator",
+            email: "admin@example.com",
+            role: "admin",
+            branchId: null
+          };
+          
+          return req.login(adminUser, (loginErr) => {
+            if (loginErr) return next(loginErr);
+            return res.json(adminUser);
+          });
         }
         
         return next(err);
