@@ -28,7 +28,7 @@ import {
   type InsertRolePermission
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, asc, like, or, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc, like, or, inArray, count } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
