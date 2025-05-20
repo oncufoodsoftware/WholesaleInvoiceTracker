@@ -89,12 +89,22 @@ export default function Roles() {
   const { data: rolePermissionsData = {}, isLoading: isLoadingPermissions } = useQuery({
     queryKey: ["/api/roles", selectedRoleId, "permissions"],
     enabled: selectedRoleId !== null,
+    queryFn: async () => {
+      if (!selectedRoleId) return { permissions: [] };
+      const response = await fetch(`/api/roles/${selectedRoleId}/permissions`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch permissions');
+      }
+      return await response.json();
+    }
   });
   
   // Type assertion for permissions with default empty array
   const rolePermissions = {
     permissions: (rolePermissionsData as any)?.permissions || []
   };
+  
+  console.log("Role permissions data:", rolePermissionsData);
 
   // Initialize forms
   const roleForm = useForm<z.infer<typeof roleSchema>>({
@@ -116,23 +126,26 @@ export default function Roles() {
 
   // Reset permission form when role changes
   useEffect(() => {
-    if (rolePermissions && Object.keys(rolePermissions).length > 0) {
+    if (rolePermissions && rolePermissions.permissions && rolePermissions.permissions.length > 0) {
+      console.log("Setting permissions from API:", rolePermissions.permissions);
       // Transform API permissions to form format
       const formPermissions = pages.reduce((acc, page) => {
-        const permission = rolePermissions.permissions?.find((p: any) => p.page === page.id);
+        const permission = rolePermissions.permissions.find((p: any) => p.page === page.id);
         return { 
           ...acc, 
           [page.id]: { 
-            canView: permission?.canView || false, 
-            canCreate: permission?.canCreate || false, 
-            canEdit: permission?.canEdit || false, 
-            canDelete: permission?.canDelete || false 
+            canView: permission ? !!permission.canView : false, 
+            canCreate: permission ? !!permission.canCreate : false, 
+            canEdit: permission ? !!permission.canEdit : false, 
+            canDelete: permission ? !!permission.canDelete : false 
           } 
         };
       }, {});
       
+      console.log("Transformed form permissions:", formPermissions);
       permissionForm.reset(formPermissions);
     } else {
+      console.log("No permissions found, resetting to defaults");
       // Reset to defaults if no permissions set
       permissionForm.reset(pages.reduce((acc, page) => ({ 
         ...acc, 
