@@ -15,6 +15,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
+  isBranchManager: boolean;
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
@@ -99,6 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Add helper to check if user is a branch manager
+  const isBranchManager = user?.role === "branch_manager";
+
   return (
     <AuthContext.Provider
       value={{
@@ -108,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        isBranchManager,
       }}
     >
       {children}

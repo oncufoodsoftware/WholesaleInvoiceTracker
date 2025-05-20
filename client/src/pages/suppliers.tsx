@@ -522,23 +522,23 @@ export default function Suppliers() {
                         <div className="mt-2">
                           <h4 className="text-sm font-semibold border-b pb-1">Branch Breakdown</h4>
                           
-                          {/* Branch balances */}
-                          <div className="mt-2 space-y-1">
-                            {supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
-                              Object.entries(supplier.branchBalances).map(([branchId, { name, amount }]) => (
+                          {/* Branch balances list */}
+                          {supplier.branchBalances && Object.keys(supplier.branchBalances).length > 0 ? (
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(supplier.branchBalances).map(([branchId, data]) => (
                                 <div key={branchId} className="flex justify-between items-center">
-                                  <span className="text-xs">{name}:</span>
-                                  <span className={`text-xs font-medium ${amount > 0 ? 'text-destructive' : amount < 0 ? 'text-green-600' : ''}`}>
-                                    £{Math.abs(amount).toFixed(2)}
+                                  <span className="text-xs">{data.name}:</span>
+                                  <span className={`text-xs font-medium ${data.amount > 0 ? 'text-destructive' : data.amount < 0 ? 'text-green-600' : ''}`}>
+                                    £{Math.abs(data.amount).toFixed(2)}
                                   </span>
                                 </div>
-                              ))
-                            ) : (
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs">No branch details available</span>
-                              </div>
-                            )}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-2">
+                              <span className="text-xs text-muted-foreground">No branch details available</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
