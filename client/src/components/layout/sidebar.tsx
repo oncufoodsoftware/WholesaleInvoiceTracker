@@ -99,7 +99,7 @@ export function Sidebar({ className }: SidebarNavProps) {
     {
       title: "Roles",
       href: "/roles",
-      icon: <ShieldCheck className="mr-2 h-4 w-4" />,
+      icon: <AlertTriangle className="mr-2 h-4 w-4" />,
     },
     {
       title: "User Actions",
