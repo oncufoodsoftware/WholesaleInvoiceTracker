@@ -75,6 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
   
+  // Register role management routes
+  registerRoleRoutes(app);
+  
   // Access the middleware for role-based access control
   const requireRole = app.locals.requireRole;
 
