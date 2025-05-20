@@ -158,8 +158,20 @@ export default function Roles() {
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (data: z.infer<typeof roleSchema>) => {
-      const response = await apiRequest("POST", "/api/roles", data);
-      return response;
+      const response = await fetch("/api/roles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create role");
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -182,8 +194,20 @@ export default function Roles() {
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof roleSchema> }) => {
-      const response = await apiRequest("PATCH", `/api/roles/${id}`, data);
-      return response;
+      const response = await fetch(`/api/roles/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update role");
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -207,8 +231,19 @@ export default function Roles() {
   // Delete role mutation
   const deleteRoleMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/roles/${id}`);
-      return response;
+      const response = await fetch(`/api/roles/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete role");
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -229,8 +264,20 @@ export default function Roles() {
   // Update permissions mutation
   const updatePermissionsMutation = useMutation({
     mutationFn: async ({ roleId, permissions }: { roleId: number; permissions: any }) => {
-      const response = await apiRequest("POST", `/api/roles/${roleId}/permissions`, { permissions });
-      return response;
+      const response = await fetch(`/api/roles/${roleId}/permissions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ permissions })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update permissions");
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       toast({
