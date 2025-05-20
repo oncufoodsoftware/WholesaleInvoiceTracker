@@ -98,7 +98,22 @@ export function AchievementProvider({ children }: { children: ReactNode }) {
 
   // Save achievements to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('achievements', JSON.stringify(achievements));
+    try {
+      // Limit the size of achievements if needed
+      const achievementsToStore = achievements.slice(-20); // Store only the most recent 20 achievements
+      localStorage.setItem('achievements', JSON.stringify(achievementsToStore));
+    } catch (error) {
+      console.error('Failed to save achievements to localStorage', error);
+      // If quota exceeded, try to clear some space
+      try {
+        localStorage.removeItem('achievements');
+        // Try to save a smaller subset
+        const reducedAchievements = achievements.slice(-10); // Only store most recent 10
+        localStorage.setItem('achievements', JSON.stringify(reducedAchievements));
+      } catch (innerError) {
+        console.error('Could not save achievements even after cleanup', innerError);
+      }
+    }
   }, [achievements]);
 
   // Trigger an achievement
