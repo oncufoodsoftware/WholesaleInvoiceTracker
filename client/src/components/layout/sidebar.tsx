@@ -50,7 +50,7 @@ export function Sidebar({ className }: SidebarNavProps) {
   const mainNavItems = [
     {
       title: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: <BarChart3 className="mr-2 h-4 w-4" />,
     },
     {
