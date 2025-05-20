@@ -101,6 +101,7 @@ export function setupAuth(app: Express) {
             fullName: "Administrator",
             email: "admin@example.com",
             role: "admin",
+            roleId: null,
             branchId: null
           };
           
@@ -182,6 +183,7 @@ export function setupAuth(app: Express) {
         fullName: "Administrator",
         email: "admin@example.com",
         role: "admin",
+        roleId: null,
         branchId: null
       };
       
@@ -216,6 +218,7 @@ export function setupAuth(app: Express) {
             fullName: "Administrator",
             email: "admin@example.com",
             role: "admin",
+            roleId: null,
             branchId: null
           };
           
