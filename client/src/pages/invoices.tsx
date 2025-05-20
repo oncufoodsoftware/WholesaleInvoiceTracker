@@ -65,7 +65,9 @@ export default function Invoices() {
         title: "Invoice deleted",
         description: "The invoice has been deleted successfully",
       });
+      // Invalidate both invoices and suppliers caches to refresh balances
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
     },
     onError: (error) => {
       toast({
