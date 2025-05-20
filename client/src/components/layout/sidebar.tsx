@@ -154,7 +154,7 @@ export function Sidebar({ className }: SidebarNavProps) {
         )}
       >
         <div className="flex h-14 items-center border-b px-4 dark:border-slate-700">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl">
             <CircleDollarSign className="h-6 w-6" />
             <span className="text-primary">FinTrack Pro</span>
           </Link>
