@@ -126,11 +126,11 @@ export default function Roles() {
 
   // Reset permission form when role changes
   useEffect(() => {
-    if (rolePermissions && rolePermissions.permissions && rolePermissions.permissions.length > 0) {
-      console.log("Setting permissions from API:", rolePermissions.permissions);
+    if (rolePermissionsData && (rolePermissionsData as any).permissions && (rolePermissionsData as any).permissions.length > 0) {
+      console.log("Setting permissions from API:", (rolePermissionsData as any).permissions);
       // Transform API permissions to form format
       const formPermissions = pages.reduce((acc, page) => {
-        const permission = rolePermissions.permissions.find((p: any) => p.page === page.id);
+        const permission = (rolePermissionsData as any).permissions.find((p: any) => p.page === page.id);
         return { 
           ...acc, 
           [page.id]: { 
@@ -152,7 +152,7 @@ export default function Roles() {
         [page.id]: { canView: false, canCreate: false, canEdit: false, canDelete: false } 
       }), {}));
     }
-  }, [rolePermissions, permissionForm]);
+  }, [rolePermissionsData, permissionForm]);
 
   // Update role form when editing
   useEffect(() => {
