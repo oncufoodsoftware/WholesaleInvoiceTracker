@@ -501,8 +501,8 @@ export default function Roles() {
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
                       <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
+                        checked={!!field.value}
+                        onCheckedChange={(checked) => field.onChange(checked || false)}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
@@ -598,9 +598,9 @@ export default function Roles() {
                               <FormItem className="flex items-start space-x-3 space-y-0">
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value}
+                                    checked={!!field.value}
                                     onCheckedChange={(checked) => {
-                                      field.onChange(checked);
+                                      field.onChange(checked || false);
                                       // If they can create, they must be able to view
                                       if (checked) {
                                         permissionForm.setValue(`${page.id}.canView`, true);
@@ -622,9 +622,9 @@ export default function Roles() {
                               <FormItem className="flex items-start space-x-3 space-y-0">
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value}
+                                    checked={!!field.value}
                                     onCheckedChange={(checked) => {
-                                      field.onChange(checked);
+                                      field.onChange(checked || false);
                                       // If they can edit, they must be able to view
                                       if (checked) {
                                         permissionForm.setValue(`${page.id}.canView`, true);
