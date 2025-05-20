@@ -580,8 +580,8 @@ export default function Roles() {
                               <FormItem className="flex items-start space-x-3 space-y-0">
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
+                                    checked={!!field.value}
+                                    onCheckedChange={(checked) => field.onChange(checked || false)}
                                   />
                                 </FormControl>
                                 <div className="space-y-1 leading-none pt-0.5">
@@ -646,9 +646,9 @@ export default function Roles() {
                               <FormItem className="flex items-start space-x-3 space-y-0">
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value}
+                                    checked={!!field.value}
                                     onCheckedChange={(checked) => {
-                                      field.onChange(checked);
+                                      field.onChange(checked || false);
                                       // If they can delete, they must be able to view
                                       if (checked) {
                                         permissionForm.setValue(`${page.id}.canView`, true);
