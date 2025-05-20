@@ -20,6 +20,7 @@ import {
   Activity,
   LineChart,
   TrendingUp,
+  Shield,
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -99,7 +100,7 @@ export function Sidebar({ className }: SidebarNavProps) {
     {
       title: "Roles",
       href: "/roles",
-      icon: <AlertTriangle className="mr-2 h-4 w-4" />,
+      icon: <Shield className="mr-2 h-4 w-4" />,
     },
     {
       title: "User Actions",
