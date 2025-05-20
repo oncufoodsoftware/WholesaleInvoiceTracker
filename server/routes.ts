@@ -86,6 +86,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/branches', async (req, res) => {
     try {
       const branches = await storage.getAllBranches();
+      
+      // Check if we need to include supplier balances
+      if (req.query.withSupplierBalances === 'true') {
+        const branchesWithBalances = await Promise.all(branches.map(async (branch) => {
+          // Get all balances for this branch
+          const balances = await storage.getBranchSupplierBalances(branch.id);
+          
+          // Get supplier details for each balance
+          const supplierBalances = await Promise.all(balances.map(async (balance) => {
+            const supplier = await storage.getSupplier(balance.supplierId);
+            return {
+              ...balance,
+              supplierName: supplier?.name || 'Unknown Supplier'
+            };
+          }));
+          
+          return {
+            ...branch,
+            supplierBalances
+          };
+        }));
+        
+        return res.json(branchesWithBalances);
+      }
+      
       res.json(branches);
     } catch (err) {
       res.status(500).json({ message: `Error fetching branches: ${err}` });
@@ -195,6 +220,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get all suppliers
       const suppliers = await storage.getAllSuppliers();
+      
+      // Check if we need to include branch balances
+      if (req.query.withBranchBalances === 'true') {
+        const suppliersWithBalances = await Promise.all(suppliers.map(async (supplier) => {
+          // Get all balances for this supplier
+          const balances = await storage.getSupplierBalances(supplier.id);
+          
+          // Get branch details for each balance
+          const branchBalances = await Promise.all(balances.map(async (balance) => {
+            const branch = await storage.getBranch(balance.branchId);
+            return {
+              ...balance,
+              branchName: branch?.name || 'Unknown Branch'
+            };
+          }));
+          
+          return {
+            ...supplier,
+            branchBalances
+          };
+        }));
+        
+        return res.json(suppliersWithBalances);
+      }
       
       // If summary flag is not set, return just the suppliers
       if (req.query.includeSummary !== 'true') {
