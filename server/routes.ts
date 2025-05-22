@@ -190,24 +190,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate amount based on invoice type (credit notes are negative)
         const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
         
-        // Update total amount
+        // Update total amount - always track this for reporting
         supplierSummaries[invoice.supplierId].totalAmount += calculatedAmount;
         
-        // Update outstanding amount based on status and paidAmount
-        if (invoice.status === 'paid') {
-          // Credit notes that are paid should still be deducted from outstanding amounts
-          if (invoice.type === 'credit_note') {
-            supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
+        // Update outstanding amount based on new requirements:
+        // 1. Include all cash invoices regardless of status
+        // 2. Include unpaid standard invoices 
+        // 3. Exclude paid invoices except cash types
+        
+        if (invoice.type === 'cash') {
+          // Always include cash invoices in outstanding amount
+          supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
+        } else if (invoice.type === 'standard' && invoice.status !== 'paid') {
+          // Include unpaid and partially paid standard invoices
+          if (invoice.status === 'partially_paid') {
+            const paidAmount = invoice.paidAmount || 0;
+            supplierSummaries[invoice.supplierId].outstandingAmount += (invoice.amount - paidAmount);
+          } else {
+            // Fully unpaid invoice
+            supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
           }
-          // Other paid invoices don't contribute to outstanding amount
-        } else if (invoice.status === 'partially_paid') {
-          // For partially paid, consider the difference between invoice amount and paid amount
-          const paidAmount = invoice.paidAmount || 0;
-          supplierSummaries[invoice.supplierId].outstandingAmount += (calculatedAmount - paidAmount);
-        } else {
-          // Unpaid invoices contribute full amount to outstanding amount
-          supplierSummaries[invoice.supplierId].outstandingAmount += calculatedAmount;
         }
+        // Paid standard invoices are excluded from outstanding amount
       }
     }
     

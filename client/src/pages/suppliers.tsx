@@ -120,12 +120,18 @@ export default function Suppliers() {
                 amount: balanceAmount
               };
               
-              // Add to total outstanding amount
+              // Add to total outstanding amount if the balance is positive (we owe them money)
+              // This ensures consistent calculation with server-side changes
               totalOutstanding += balanceAmount;
             });
             
-            // Update total outstanding amount - sum of all branch balances
-            supplierWithDebt.outstandingAmount = totalOutstanding;
+            // Use the server-calculated outstandingAmount if available
+            // If not, fall back to our calculated sum of branch balances
+            if (typeof supplier.outstandingAmount === 'number') {
+              supplierWithDebt.outstandingAmount = supplier.outstandingAmount;
+            } else {
+              supplierWithDebt.outstandingAmount = totalOutstanding;
+            }
             
             // Count branches working with this supplier
             if (supplierWithDebt.branchBalances) {
