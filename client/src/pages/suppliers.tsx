@@ -112,16 +112,19 @@ export default function Suppliers() {
                 supplierWithDebt.branchBalances = {};
               }
               
+              // Ensure balance is a valid number
+              const balanceAmount = typeof balance.balance === 'number' ? balance.balance : 0;
+              
               supplierWithDebt.branchBalances[branchId] = {
                 name: balance.branchName || 'Unknown Branch',
-                amount: balance.balance || 0
+                amount: balanceAmount
               };
               
-              // Add to total outstanding amount (using absolute balance for calculation)
-              totalOutstanding += (balance.balance || 0);
+              // Add to total outstanding amount
+              totalOutstanding += balanceAmount;
             });
             
-            // Update total outstanding amount - this represents the sum of all branch balances
+            // Update total outstanding amount - sum of all branch balances
             supplierWithDebt.outstandingAmount = totalOutstanding;
             
             // Count branches working with this supplier
@@ -514,7 +517,7 @@ export default function Suppliers() {
                         <div className="flex justify-between mt-3 font-medium">
                           <span>Outstanding Amount:</span>
                           <span className={`${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : ''}`}>
-                            £{Math.abs(supplier.outstandingAmount).toFixed(2)}
+                            {supplier.outstandingAmount > 0 ? '£' : '-£'}{Math.abs(supplier.outstandingAmount).toFixed(2)}
                           </span>
                         </div>
                         
@@ -529,7 +532,7 @@ export default function Suppliers() {
                                 <div key={branchId} className="flex justify-between items-center">
                                   <span className="text-xs">{data.name}:</span>
                                   <span className={`text-xs font-medium ${data.amount > 0 ? 'text-destructive' : data.amount < 0 ? 'text-green-600' : ''}`}>
-                                    £{Math.abs(data.amount).toFixed(2)}
+                                    {data.amount > 0 ? '£' : '-£'}{Math.abs(data.amount).toFixed(2)}
                                   </span>
                                 </div>
                               ))}
