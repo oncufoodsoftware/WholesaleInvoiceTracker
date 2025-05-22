@@ -958,6 +958,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Financial tips endpoint - AI-powered personalized financial advice
+  app.get('/api/financial-tips', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Get branch ID from query parameters if present
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      
+      // Branch managers can only see tips for their branch
+      if (req.user?.role === 'branch_manager' && req.user?.branchId && branchId !== req.user.branchId) {
+        return res.status(403).json({ 
+          message: 'You can only access financial tips for your own branch'
+        });
+      }
+      
+      // Call the financial tips service function
+      await getFinancialTips(req, res);
+    } catch (err) {
+      res.status(500).json({ message: `Error generating financial tips: ${err}` });
+    }
+  });
+  
   // Supplier Risk Dashboard API Endpoints
   app.get('/api/suppliers/risk', async (req, res) => {
     try {
