@@ -523,7 +523,7 @@ export default function Suppliers() {
                         <div className="flex justify-between mt-3 font-medium">
                           <span>Outstanding Amount:</span>
                           <span className={`${supplier.outstandingAmount > 0 ? 'text-destructive' : supplier.outstandingAmount < 0 ? 'text-green-600' : ''}`}>
-                            {supplier.outstandingAmount > 0 ? '£' : '-£'}{Math.abs(supplier.outstandingAmount).toFixed(2)}
+                            {supplier.outstandingAmount > 0 ? '£' : (supplier.outstandingAmount < 0 ? '-£' : '£')}{Math.abs(supplier.outstandingAmount).toFixed(2)}
                           </span>
                         </div>
                         
@@ -538,7 +538,7 @@ export default function Suppliers() {
                                 <div key={branchId} className="flex justify-between items-center">
                                   <span className="text-xs">{data.name}:</span>
                                   <span className={`text-xs font-medium ${data.amount > 0 ? 'text-destructive' : data.amount < 0 ? 'text-green-600' : ''}`}>
-                                    {data.amount > 0 ? '£' : '-£'}{Math.abs(data.amount).toFixed(2)}
+                                    {data.amount > 0 ? '£' : (data.amount < 0 ? '-£' : '£')}{Math.abs(data.amount).toFixed(2)}
                                   </span>
                                 </div>
                               ))}
