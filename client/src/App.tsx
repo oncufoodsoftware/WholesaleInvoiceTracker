@@ -20,6 +20,7 @@ import UserActions from "@/pages/user-actions";
 import SupplierRisk from "@/pages/supplier-risk";
 import Roles from "@/pages/roles";
 import DebugAuth from "@/pages/debug-auth";
+import Demo from "@/pages/demo";
 import { ProtectedRoute } from "./lib/protected-route";
 
 import { Layout } from "@/components/layout/layout";
@@ -29,6 +30,20 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <Route path="/debug-auth" component={DebugAuth} />
+      
+      {/* For quick access to see if the suppliers page layout is working */}
+      <Route path="/direct-suppliers">
+        <Layout>
+          <Suppliers />
+        </Layout>
+      </Route>
+      
+      {/* Demo page to demonstrate calculation changes */}
+      <Route path="/demo">
+        <Layout>
+          <Demo />
+        </Layout>
+      </Route>
       
       <Route path="/:rest*">
         {(params) => {
