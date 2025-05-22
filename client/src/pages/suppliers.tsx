@@ -117,11 +117,11 @@ export default function Suppliers() {
                 amount: balance.balance || 0
               };
               
-              // Add to total outstanding amount
-              totalOutstanding += balance.balance || 0;
+              // Add to total outstanding amount (using absolute balance for calculation)
+              totalOutstanding += (balance.balance || 0);
             });
             
-            // Update total outstanding amount
+            // Update total outstanding amount - this represents the sum of all branch balances
             supplierWithDebt.outstandingAmount = totalOutstanding;
             
             // Count branches working with this supplier
