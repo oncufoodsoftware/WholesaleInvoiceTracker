@@ -2,23 +2,54 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      // First try to parse as JSON
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `${res.status}: ${res.statusText}`);
+      } else {
+        // Fall back to text if not JSON
+        const text = await res.text();
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          // It's HTML, which likely means a server error
+          throw new Error(`Server error (${res.status}): The server returned an HTML page instead of data`);
+        }
+        throw new Error(`${res.status}: ${text || res.statusText}`);
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        throw err; // Re-throw if it's already an Error
+      }
+      // If JSON parsing failed or other issues, throw generic error
+      throw new Error(`${res.status}: ${res.statusText}`);
+    }
   }
 }
 
 export async function apiRequest(
+  method: string,
   url: string,
-  options?: {
-    method?: string,
-    body?: string,
-    headers?: Record<string, string>
-  }
+  data?: any,
+  customHeaders?: Record<string, string>
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    ...customHeaders
+  };
+  
+  if (data && !(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  let body: any = undefined;
+  if (data) {
+    body = data instanceof FormData ? data : JSON.stringify(data);
+  }
+  
   const res = await fetch(url, {
-    method: options?.method || 'GET',
-    headers: options?.body ? { "Content-Type": "application/json", ...options?.headers } : {},
-    body: options?.body,
+    method,
+    headers,
+    body,
     credentials: "include",
   });
 
@@ -32,16 +63,32 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      
+      // Check if there's content before parsing JSON
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await res.json();
+      }
+      
+      // If no content or not JSON, return null for GET requests
       return null;
+    } catch (error) {
+      console.error("Query error:", error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

@@ -205,6 +205,9 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     console.log("Login attempt for username:", req.body.username);
     
+    // Make sure we always set the Content-Type to application/json
+    res.setHeader('Content-Type', 'application/json');
+    
     passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
       if (err) {
         console.error("Login error:", err);
@@ -223,12 +226,16 @@ export function setupAuth(app: Express) {
           };
           
           return req.login(adminUser, (loginErr) => {
-            if (loginErr) return next(loginErr);
-            return res.json(adminUser);
+            if (loginErr) {
+              console.error("Emergency login session error:", loginErr);
+              return res.status(500).json({ message: "Session creation error" });
+            }
+            return res.status(200).json(adminUser);
           });
         }
         
-        return next(err);
+        // Return a proper JSON error
+        return res.status(500).json({ message: err.message || "Authentication error" });
       }
       
       if (!user) {
@@ -239,7 +246,7 @@ export function setupAuth(app: Express) {
       req.login(user, (loginErr) => {
         if (loginErr) {
           console.error("Login session error:", loginErr);
-          return next(loginErr);
+          return res.status(500).json({ message: "Session creation error" });
         }
         
         console.log("Login successful for user:", user.username, "with role:", user.role);
