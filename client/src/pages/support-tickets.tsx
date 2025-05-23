@@ -43,7 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SupportTicketGenerator } from "@/components/support-ticket-generator";
-import { Loader2, Search, Filter, LifeBuoy } from "lucide-react";
+import { Loader2, Search, Filter, LifeBuoy, MoreHorizontal } from "lucide-react";
 
 // This page displays all submitted support tickets and allows managing them
 export default function SupportTickets() {
@@ -123,7 +123,7 @@ export default function SupportTickets() {
     }
   };
 
-  // Update ticket status handler
+  // Update ticket handler for status changes
   const handleUpdateTicket = async () => {
     if (!updatingTicket) return;
     
@@ -159,6 +159,37 @@ export default function SupportTickets() {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+  
+  // One-click priority update handler
+  const handleUpdatePriority = async (ticketId: number, newPriority: string) => {
+    try {
+      const options = {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priority: newPriority
+        }),
+      };
+      
+      await fetch(`/api/support-tickets/${ticketId}`, options);
+      
+      // Invalidate the cache to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
+      
+      toast({
+        title: "Priority Updated",
+        description: `Ticket priority set to ${newPriority}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update ticket priority.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -253,9 +284,77 @@ export default function SupportTickets() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getPriorityColor(ticket.priority)}>
-                          {ticket.priority}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getPriorityColor(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                          
+                          <div className="relative">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full h-6 w-6"
+                              onClick={() => {
+                                const menu = document.getElementById(`priority-menu-${ticket.id}`);
+                                if (menu) {
+                                  menu.classList.toggle('hidden');
+                                }
+                              }}
+                            >
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                            
+                            <div 
+                              id={`priority-menu-${ticket.id}`}
+                              className="absolute right-0 mt-1 w-36 z-10 bg-white dark:bg-slate-900 rounded-md shadow-lg border border-slate-200 dark:border-slate-800 py-1 hidden"
+                              onMouseLeave={(e) => {
+                                e.currentTarget.classList.add('hidden');
+                              }}
+                            >
+                              <p className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 border-b border-slate-200 dark:border-slate-700">Change priority:</p>
+                              <button
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 flex items-center gap-2"
+                                onClick={() => {
+                                  handleUpdatePriority(ticket.id, 'low');
+                                  document.getElementById(`priority-menu-${ticket.id}`)?.classList.add('hidden');
+                                }}
+                              >
+                                <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+                                Low
+                              </button>
+                              <button
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 flex items-center gap-2"
+                                onClick={() => {
+                                  handleUpdatePriority(ticket.id, 'medium');
+                                  document.getElementById(`priority-menu-${ticket.id}`)?.classList.add('hidden');
+                                }}
+                              >
+                                <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
+                                Medium
+                              </button>
+                              <button
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 flex items-center gap-2"
+                                onClick={() => {
+                                  handleUpdatePriority(ticket.id, 'high');
+                                  document.getElementById(`priority-menu-${ticket.id}`)?.classList.add('hidden');
+                                }}
+                              >
+                                <span className="h-2 w-2 rounded-full bg-orange-500"></span>
+                                High
+                              </button>
+                              <button
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 flex items-center gap-2"
+                                onClick={() => {
+                                  handleUpdatePriority(ticket.id, 'critical');
+                                  document.getElementById(`priority-menu-${ticket.id}`)?.classList.add('hidden');
+                                }}
+                              >
+                                <span className="h-2 w-2 rounded-full bg-red-600"></span>
+                                Critical
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {format(new Date(ticket.createdAt), "MMM d, yyyy")}
