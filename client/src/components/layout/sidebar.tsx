@@ -11,6 +11,7 @@ import {
   CircleDollarSign,
   FileText,
   Layers,
+  LifeBuoy,
   Menu,
   PieChart,
   Settings,
@@ -87,6 +88,11 @@ export function Sidebar({ className }: SidebarNavProps) {
       title: "Analytics",
       href: "/analytics",
       icon: <TrendingUp className="mr-2 h-4 w-4" />,
+    },
+    {
+      title: "Support Tickets",
+      href: "/support-tickets",
+      icon: <LifeBuoy className="mr-2 h-4 w-4" />,
     },
   ];
 

@@ -18,6 +18,7 @@ import Branches from "@/pages/branches";
 import Suppliers from "@/pages/suppliers";
 import UserActions from "@/pages/user-actions";
 import SupplierRisk from "@/pages/supplier-risk";
+import SupportTickets from "@/pages/support-tickets";
 import Roles from "@/pages/roles";
 import DebugAuth from "@/pages/debug-auth";
 
@@ -51,6 +52,7 @@ function Router() {
                 <ProtectedRoute path="/finances" component={Finances} />
                 <ProtectedRoute path="/reports" component={Reports} />
                 <ProtectedRoute path="/analytics" component={Analytics} />
+                <ProtectedRoute path="/support-tickets" component={SupportTickets} />
                 <ProtectedRoute path="/users" component={Users} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/roles" component={Roles} requiredRoles={["admin"]} />
                 <ProtectedRoute path="/user-actions" component={UserActions} requiredRoles={["admin"]} />

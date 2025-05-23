@@ -68,7 +68,7 @@ export function SupportTicketGenerator({
       
       // Make API request to create a support ticket
       const response = await apiRequest('/api/support-tickets/generate', {
-        method: 'POST',
+        method: 'post',
         body: JSON.stringify(payload),
       });
       
@@ -111,7 +111,7 @@ export function SupportTicketGenerator({
       
       // Make API request to create a support ticket
       const response = await apiRequest('/api/support-tickets', {
-        method: 'POST',
+        method: 'post',
         body: JSON.stringify(payload),
       });
       
