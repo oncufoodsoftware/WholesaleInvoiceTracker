@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { SupportTicketGenerator } from "@/components/support-ticket-generator";
 
 export function Header() {
   const { user, logoutMutation } = useAuth();
@@ -48,6 +49,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
       <div className="ml-auto flex items-center gap-4">
+        {user && (
+          <SupportTicketGenerator 
+            variant="outline" 
+            size="sm" 
+            className="hidden md:flex"
+          />
+        )}
         <Button variant="outline" size="icon" className="relative">
           <BellIcon className="h-5 w-5" />
           <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
