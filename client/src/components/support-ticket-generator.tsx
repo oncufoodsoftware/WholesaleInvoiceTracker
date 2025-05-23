@@ -72,16 +72,13 @@ export function SupportTicketGenerator({
         body: JSON.stringify(payload),
       });
       
-      if (response.success) {
-        toast({
-          title: "Support ticket submitted!",
-          description: "Our team will address your issue soon.",
-          variant: "default",
-        });
-        setOpen(false);
-      } else {
-        throw new Error(response.message || "Failed to create support ticket");
-      }
+      toast({
+        title: "Support ticket submitted!",
+        description: "Our team will address your issue soon.",
+        variant: "default",
+      });
+      
+      setOpen(false);
     } catch (error) {
       toast({
         title: "Error creating support ticket",
@@ -106,11 +103,12 @@ export function SupportTicketGenerator({
         description: description || `User requested support from ${pageContext} page.`,
         branchId: user.branchId,
         status: "open",
-        priority
+        priority,
+        userId: user.id
       };
       
       // Make API request to create a support ticket
-      const response = await apiRequest('/api/support-tickets', {
+      await apiRequest('/api/support-tickets', {
         method: 'post',
         body: JSON.stringify(payload),
       });

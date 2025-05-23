@@ -1284,9 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ticket = await storage.createSupportTicket({
         ...validationResult.data,
         userId: req.user.id,
-        status: validationResult.data.status || 'open',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        status: validationResult.data.status || 'open'
       });
       
       // Log the user action
@@ -1295,8 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: 'create',
         entityType: 'support_ticket',
         entityId: ticket.id,
-        details: `Created support ticket: ${ticket.title}`,
-        timestamp: new Date()
+        details: `Created support ticket: ${ticket.title}`
       });
       
       res.status(201).json(ticket);
@@ -1333,8 +1330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update the ticket
       const updatedTicket = await storage.updateSupportTicket(ticketId, {
-        ...validationResult.data,
-        updatedAt: new Date()
+        ...validationResult.data
       });
       
       // Log the user action

@@ -64,7 +64,8 @@ export default function SupportTickets() {
         ? `/api/support-tickets?status=${statusFilter}` 
         : '/api/support-tickets';
       
-      return apiRequest(url);
+      const response = await apiRequest(url);
+      return response;
     }
   });
 
@@ -116,7 +117,7 @@ export default function SupportTickets() {
     setIsUpdating(true);
     
     try {
-      const response = await apiRequest(`/api/support-tickets/${updatingTicket.id}`, {
+      await apiRequest(`/api/support-tickets/${updatingTicket.id}`, {
         method: 'patch',
         body: JSON.stringify({
           status: updatingTicket.status
