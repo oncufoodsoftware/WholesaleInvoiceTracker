@@ -115,10 +115,17 @@ export function SupportTicketGenerator({
       };
       
       // Make API request to create a support ticket
-      await apiRequest('/api/support-tickets', {
-        method: 'post',
+      const response = await fetch('/api/support-tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(payload),
       });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
       
       toast({
         title: "Support ticket submitted!",
@@ -130,7 +137,7 @@ export function SupportTicketGenerator({
       setTitle("");
       setDescription("");
       setPriority("medium");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error creating support ticket",
         description: error.message || "Please try again later",
