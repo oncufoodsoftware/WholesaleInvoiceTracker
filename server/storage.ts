@@ -8,6 +8,7 @@ import {
   supplierBranchBalances,
   roles,
   rolePermissions,
+  supportTickets,
   type User, 
   type InsertUser, 
   type Branch,
@@ -25,7 +26,9 @@ import {
   type Role,
   type InsertRole,
   type RolePermission,
-  type InsertRolePermission
+  type InsertRolePermission,
+  type SupportTicket,
+  type InsertSupportTicket
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray, count } from "drizzle-orm";
@@ -105,6 +108,16 @@ export interface IStorage {
   deleteFinancialTransaction(id: number): Promise<boolean>;
   getTransactionsByDateRange(branchId: number, startDate: Date, endDate: Date): Promise<FinancialTransaction[]>;
   getMonthlySummary(branchId: number, year: number, month: number): Promise<MonthlySummary>;
+
+  // Support Ticket methods
+  getSupportTicket(id: number): Promise<SupportTicket | undefined>;
+  getAllSupportTickets(): Promise<SupportTicket[]>;
+  getSupportTicketsByStatus(status: string): Promise<SupportTicket[]>;
+  getSupportTicketsByUser(userId: number): Promise<SupportTicket[]>;
+  getSupportTicketsByBranch(branchId: number): Promise<SupportTicket[]>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  updateSupportTicket(id: number, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined>;
+  deleteSupportTicket(id: number): Promise<boolean>;
 
   // User actions methods
   logUserAction(action: InsertUserAction): Promise<UserAction>;
@@ -779,6 +792,67 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(rolePermissions)
       .where(eq(rolePermissions.roleId, roleId));
+    return result.count > 0;
+  }
+
+  // Support Ticket methods
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    const [ticket] = await db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.id, id));
+    return ticket;
+  }
+  
+  async getAllSupportTickets(): Promise<SupportTicket[]> {
+    return db.select().from(supportTickets);
+  }
+  
+  async getSupportTicketsByStatus(status: string): Promise<SupportTicket[]> {
+    return db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.status, status as any));
+  }
+  
+  async getSupportTicketsByUser(userId: number): Promise<SupportTicket[]> {
+    return db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.userId, userId));
+  }
+  
+  async getSupportTicketsByBranch(branchId: number): Promise<SupportTicket[]> {
+    return db
+      .select()
+      .from(supportTickets)
+      .where(eq(supportTickets.branchId, branchId));
+  }
+  
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    const [newTicket] = await db
+      .insert(supportTickets)
+      .values(ticket)
+      .returning();
+    return newTicket;
+  }
+  
+  async updateSupportTicket(id: number, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined> {
+    const [updatedTicket] = await db
+      .update(supportTickets)
+      .set({
+        ...ticket,
+        updatedAt: new Date()
+      })
+      .where(eq(supportTickets.id, id))
+      .returning();
+    return updatedTicket;
+  }
+  
+  async deleteSupportTicket(id: number): Promise<boolean> {
+    const result = await db
+      .delete(supportTickets)
+      .where(eq(supportTickets.id, id));
     return result.count > 0;
   }
 }

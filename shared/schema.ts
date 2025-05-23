@@ -31,6 +31,8 @@ export const invoiceTypeEnum = pgEnum('invoice_type', ['standard', 'credit_note'
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'cash']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['income', 'expense']);
 export const actionTypeEnum = pgEnum('action_type', ['create', 'update', 'delete', 'login', 'logout']);
+export const supportTicketStatusEnum = pgEnum('support_ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
+export const supportTicketPriorityEnum = pgEnum('support_ticket_priority', ['low', 'medium', 'high', 'critical']);
 
 // Users table
 export const users = pgTable("users", {
@@ -97,6 +99,23 @@ export const financialTransactions = pgTable("financial_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Support Tickets table
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: supportTicketStatusEnum("status").notNull().default('open'),
+  priority: supportTicketPriorityEnum("priority").notNull().default('medium'),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  category: text("category"),
+  screenshot: text("screenshot"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  assignedTo: integer("assigned_to").references(() => users.id),
+});
+
 // Define schemas and types
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -118,6 +137,13 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
 export const insertFinancialTransactionSchema = createInsertSchema(financialTransactions).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  resolvedAt: true,
 });
 
 // The Drizzle relations need to be defined later when setting up relations in the database
@@ -214,3 +240,6 @@ export type InsertRole = z.infer<typeof insertRoleSchema>;
 
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
