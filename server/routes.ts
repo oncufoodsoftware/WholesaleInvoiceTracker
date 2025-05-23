@@ -15,7 +15,10 @@ import {
   insertFinancialTransactionSchema,
   insertUserSchema,
   insertUserActionSchema,
-  actionTypeEnum
+  insertSupportTicketSchema,
+  actionTypeEnum,
+  supportTicketStatusEnum,
+  supportTicketPriorityEnum
 } from "@shared/schema";
 import { getAnalyticsData, getRevenueForecast } from "./analytics";
 import { getSupplierRiskData, getRiskHistory } from "./risk-analytics";
@@ -1210,6 +1213,254 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   }, express.static(uploadDir));
+
+  // Support Ticket API Endpoints
+  app.get('/api/support-tickets', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Get all support tickets or filter by different criteria
+      let tickets;
+      
+      if (req.query.status) {
+        tickets = await storage.getSupportTicketsByStatus(req.query.status as string);
+      } else if (req.query.userId) {
+        tickets = await storage.getSupportTicketsByUser(Number(req.query.userId));
+      } else if (req.query.branchId) {
+        tickets = await storage.getSupportTicketsByBranch(Number(req.query.branchId));
+      } else {
+        tickets = await storage.getAllSupportTickets();
+      }
+      
+      res.json(tickets);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching support tickets: ${err}` });
+    }
+  });
+  
+  // Get a single support ticket
+  app.get('/api/support-tickets/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      const ticketId = Number(req.params.id);
+      const ticket = await storage.getSupportTicket(ticketId);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: 'Support ticket not found' });
+      }
+      
+      res.json(ticket);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching support ticket: ${err}` });
+    }
+  });
+  
+  // Create a new support ticket (One-Click Support Ticket Generator)
+  app.post('/api/support-tickets', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Validate the request body
+      const validationResult = insertSupportTicketSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid support ticket data', 
+          errors: validationResult.error.format() 
+        });
+      }
+      
+      // Create the support ticket
+      const ticket = await storage.createSupportTicket({
+        ...validationResult.data,
+        userId: req.user.id,
+        status: validationResult.data.status || 'open',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Log the user action
+      await storage.logUserAction({
+        userId: req.user.id,
+        actionType: 'create',
+        entityType: 'support_ticket',
+        entityId: ticket.id,
+        details: `Created support ticket: ${ticket.title}`,
+        timestamp: new Date()
+      });
+      
+      res.status(201).json(ticket);
+    } catch (err) {
+      res.status(500).json({ message: `Error creating support ticket: ${err}` });
+    }
+  });
+  
+  // Update a support ticket
+  app.patch('/api/support-tickets/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      const ticketId = Number(req.params.id);
+      
+      // Check if ticket exists
+      const existingTicket = await storage.getSupportTicket(ticketId);
+      if (!existingTicket) {
+        return res.status(404).json({ message: 'Support ticket not found' });
+      }
+      
+      // Validate the request body
+      const validationResult = insertSupportTicketSchema.partial().safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid support ticket data', 
+          errors: validationResult.error.format() 
+        });
+      }
+      
+      // Update the ticket
+      const updatedTicket = await storage.updateSupportTicket(ticketId, {
+        ...validationResult.data,
+        updatedAt: new Date()
+      });
+      
+      // Log the user action
+      await storage.logUserAction({
+        userId: req.user.id,
+        actionType: 'update',
+        entityType: 'support_ticket',
+        entityId: ticketId,
+        details: `Updated support ticket: ${existingTicket.title}`,
+        timestamp: new Date()
+      });
+      
+      res.json(updatedTicket);
+    } catch (err) {
+      res.status(500).json({ message: `Error updating support ticket: ${err}` });
+    }
+  });
+  
+  // Delete a support ticket
+  app.delete('/api/support-tickets/:id', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      const ticketId = Number(req.params.id);
+      
+      // Check if ticket exists
+      const existingTicket = await storage.getSupportTicket(ticketId);
+      if (!existingTicket) {
+        return res.status(404).json({ message: 'Support ticket not found' });
+      }
+      
+      // Delete the ticket
+      const result = await storage.deleteSupportTicket(ticketId);
+      
+      if (result) {
+        // Log the user action
+        await storage.logUserAction({
+          userId: req.user.id,
+          actionType: 'delete',
+          entityType: 'support_ticket',
+          entityId: ticketId,
+          details: `Deleted support ticket: ${existingTicket.title}`,
+          timestamp: new Date()
+        });
+        
+        res.json({ message: 'Support ticket deleted successfully' });
+      } else {
+        res.status(500).json({ message: 'Failed to delete support ticket' });
+      }
+    } catch (err) {
+      res.status(500).json({ message: `Error deleting support ticket: ${err}` });
+    }
+  });
+  
+  // One-Click Support Ticket Generator endpoint
+  app.post('/api/support-tickets/generate', async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+      
+      // Extract context information from request body
+      const { pageContext, errorDetails, userAction, priority } = req.body;
+      
+      if (!pageContext) {
+        return res.status(400).json({ message: 'Page context is required' });
+      }
+      
+      // Generate ticket title based on context
+      let title = `Support needed on ${pageContext} page`;
+      if (errorDetails?.type) {
+        title = `${errorDetails.type} error on ${pageContext} page`;
+      }
+      
+      // Generate ticket description with all available context
+      let description = `User encountered an issue while on the ${pageContext} page.\n\n`;
+      
+      if (userAction) {
+        description += `User action: ${userAction}\n\n`;
+      }
+      
+      if (errorDetails) {
+        description += `Error details:\n${JSON.stringify(errorDetails, null, 2)}\n\n`;
+      }
+      
+      description += `Browser: ${req.headers['user-agent']}\n`;
+      description += `Timestamp: ${new Date().toISOString()}\n`;
+      
+      // Create the support ticket with auto-generated content
+      const ticket = await storage.createSupportTicket({
+        title,
+        description,
+        userId: req.user.id,
+        branchId: req.user.branchId,
+        status: 'open',
+        priority: priority || 'medium',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Log the user action
+      await storage.logUserAction({
+        userId: req.user.id,
+        actionType: 'create',
+        entityType: 'support_ticket',
+        entityId: ticket.id,
+        details: `Auto-generated support ticket from ${pageContext} page`,
+        timestamp: new Date()
+      });
+      
+      res.status(201).json({
+        success: true,
+        message: 'Support ticket generated successfully',
+        ticket
+      });
+    } catch (err) {
+      res.status(500).json({ 
+        success: false,
+        message: `Error generating support ticket: ${err}` 
+      });
+    }
+  });
 
   const httpServer = createServer(app);
 
