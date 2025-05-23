@@ -235,47 +235,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all balances for this supplier
           let balances = await storage.getSupplierBalances(supplier.id);
           
-          // If no balances but supplier has invoices, generate balances from invoices
-          if (balances.length === 0) {
-            const supplierInvoices = allInvoices.filter(inv => inv.supplierId === supplier.id);
+          // Force balance update if requested or if no balances exist
+          const forceUpdate = req.query.forceBalanceUpdate === 'true' || balances.length === 0;
+          
+          // Get all invoices for this supplier
+          const supplierInvoices = allInvoices.filter(inv => inv.supplierId === supplier.id);
+          
+          // If we need to force an update and have invoices, regenerate balances
+          if (forceUpdate && supplierInvoices.length > 0) {
+            // Create a map of branch balances from invoices
+            const branchBalanceMap = new Map<number, number>();
             
-            if (supplierInvoices.length > 0) {
-              // Create a map of branch balances from invoices
-              const branchBalanceMap = new Map<number, number>();
+            // Calculate balance per branch
+            for (const invoice of supplierInvoices) {
+              const branchId = invoice.branchId;
+              const currentBalance = branchBalanceMap.get(branchId) || 0;
               
-              // Calculate balance per branch
-              for (const invoice of supplierInvoices) {
-                const branchId = invoice.branchId;
-                const currentBalance = branchBalanceMap.get(branchId) || 0;
-                
-                // Add to balance based on invoice type and status
-                // For standard invoices: if unpaid, add to balance
-                // For credit notes: always subtract from balance
-                // For cash invoices: they're considered immediately paid
-                let amountToAdd = 0;
-                
-                if (invoice.type === 'standard' && invoice.status !== 'paid') {
-                  amountToAdd = invoice.amount - invoice.paidAmount;
-                } else if (invoice.type === 'credit_note') {
-                  amountToAdd = -invoice.amount;
-                }
-                
-                if (amountToAdd !== 0) {
-                  branchBalanceMap.set(branchId, currentBalance + amountToAdd);
-                }
+              // Add to balance based on invoice type and status
+              // For standard invoices: if unpaid, add to balance
+              // For credit notes: always subtract from balance
+              // For cash invoices: they're considered immediately paid
+              let amountToAdd = 0;
+              
+              if (invoice.type === 'standard' && invoice.status !== 'paid') {
+                amountToAdd = invoice.amount - (invoice.paidAmount || 0);
+              } else if (invoice.type === 'credit_note') {
+                amountToAdd = -invoice.amount;
               }
               
-              // Create branch balances from the map
-              for (const [branchId, balance] of branchBalanceMap.entries()) {
-                if (balance !== 0) {
-                  // Create or update balance in database
-                  await storage.updateSupplierBranchBalance(supplier.id, branchId, balance);
-                }
+              if (amountToAdd !== 0) {
+                branchBalanceMap.set(branchId, currentBalance + amountToAdd);
               }
-              
-              // Fetch the newly created balances
-              balances = await storage.getSupplierBalances(supplier.id);
             }
+            
+            // If we're doing a forced update, delete existing balances first
+            if (balances.length > 0) {
+              // Reset existing balances if forcing update
+              for (const balance of balances) {
+                // Use updateSupplierBranchBalance with 0 to reset the balance
+                await storage.updateSupplierBranchBalance(supplier.id, balance.branchId, -balance.balance);
+              }
+            }
+            
+            // Create branch balances from the map
+            for (const [branchId, balance] of Array.from(branchBalanceMap.entries())) {
+              if (balance !== 0) {
+                // Create or update balance in database
+                await storage.updateSupplierBranchBalance(supplier.id, branchId, balance);
+              }
+            }
+            
+            // Fetch the newly created balances
+            balances = await storage.getSupplierBalances(supplier.id);
           }
           
           // Get branch details for each balance

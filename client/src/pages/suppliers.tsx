@@ -81,7 +81,7 @@ export default function Suppliers() {
         : "/api/suppliers";
         
       // Add the withBranchBalances parameter to get branch-specific balances
-      const url = `${baseUrl}?withBranchBalances=true`;
+      const url = `${baseUrl}?withBranchBalances=true&forceBalanceUpdate=true`;
       
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch suppliers");
