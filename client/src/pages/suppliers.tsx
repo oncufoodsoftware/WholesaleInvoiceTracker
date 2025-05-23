@@ -519,6 +519,16 @@ export default function Suppliers() {
                           </div>
                         )}
                         
+                        {/* Primary branch information */}
+                        {supplier.branchName && (
+                          <div className="flex items-start gap-2 mt-1">
+                            <div className="w-5 flex justify-center pt-0.5">
+                              <Building className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm">Primary Branch: {supplier.branchName}</span>
+                          </div>
+                        )}
+                        
                         {/* Outstanding amount for this supplier */}
                         <div className="flex justify-between mt-3 font-medium">
                           <span>Outstanding Amount:</span>
