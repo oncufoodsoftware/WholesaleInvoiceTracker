@@ -241,8 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all invoices for this supplier
           const supplierInvoices = allInvoices.filter(inv => inv.supplierId === supplier.id);
           
-          // If we need to force an update and have invoices, regenerate balances
-          if (forceUpdate && supplierInvoices.length > 0) {
+          // If we have invoices, always regenerate balances to ensure they're up to date
+          if (supplierInvoices.length > 0) {
             // Create a map of branch balances from invoices
             const branchBalanceMap = new Map<number, number>();
             
