@@ -59,13 +59,13 @@ export default function SupportTickets() {
   // Fetch tickets based on filters
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['/api/support-tickets', statusFilter],
-    queryFn: async () => {
-      const url = statusFilter 
+    queryFn: async ({ queryKey }) => {
+      const url = statusFilter && statusFilter !== 'all'
         ? `/api/support-tickets?status=${statusFilter}` 
         : '/api/support-tickets';
       
       const response = await apiRequest(url);
-      return response;
+      return Array.isArray(response) ? response : [];
     }
   });
 
@@ -117,12 +117,17 @@ export default function SupportTickets() {
     setIsUpdating(true);
     
     try {
-      await apiRequest(`/api/support-tickets/${updatingTicket.id}`, {
-        method: 'patch',
+      const options = {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           status: updatingTicket.status
         }),
-      });
+      };
+      
+      await fetch(`/api/support-tickets/${updatingTicket.id}`, options);
       
       // Invalidate the cache to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
@@ -133,10 +138,10 @@ export default function SupportTickets() {
       });
       
       setUpdatingTicket(null);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update the support ticket.",
+        description: error.message || "Failed to update the support ticket.",
         variant: "destructive",
       });
     } finally {
@@ -186,7 +191,7 @@ export default function SupportTickets() {
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="resolved">Resolved</SelectItem>
