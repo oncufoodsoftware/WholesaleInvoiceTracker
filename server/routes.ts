@@ -1339,8 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: 'update',
         entityType: 'support_ticket',
         entityId: ticketId,
-        details: `Updated support ticket: ${existingTicket.title}`,
-        timestamp: new Date()
+        details: `Updated support ticket: ${existingTicket.title}`
       });
       
       res.json(updatedTicket);
@@ -1375,8 +1374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actionType: 'delete',
           entityType: 'support_ticket',
           entityId: ticketId,
-          details: `Deleted support ticket: ${existingTicket.title}`,
-          timestamp: new Date()
+          details: `Deleted support ticket: ${existingTicket.title}`
         });
         
         res.json({ message: 'Support ticket deleted successfully' });
@@ -1430,9 +1428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.id,
         branchId: req.user.branchId,
         status: 'open',
-        priority: priority || 'medium',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        priority: priority || 'medium'
       });
       
       // Log the user action
@@ -1441,8 +1437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: 'create',
         entityType: 'support_ticket',
         entityId: ticket.id,
-        details: `Auto-generated support ticket from ${pageContext} page`,
-        timestamp: new Date()
+        details: `Auto-generated support ticket from ${pageContext} page`
       });
       
       res.status(201).json({
