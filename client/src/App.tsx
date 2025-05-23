@@ -28,11 +28,13 @@ import { Layout } from "@/components/layout/layout";
 function Router() {
   return (
     <Switch>
+      {/* Root path redirect handled differently for wouter compatibility */}
+      <Route path="/">
+        {() => <Redirect to="/dashboard" />}
+      </Route>
+      
       <Route path="/auth" component={AuthPage} />
       <Route path="/debug-auth" component={DebugAuth} />
-      
-
-
       
       <Route path="/:rest*">
         {(params) => {
@@ -41,9 +43,6 @@ function Router() {
           return (
             <Layout>
               <Switch>
-                <Route path="/">
-                  {() => <Redirect to="/dashboard" />}
-                </Route>
                 <ProtectedRoute path="/dashboard" component={Dashboard} />
                 <ProtectedRoute path="/branches" component={Branches} />
                 <ProtectedRoute path="/suppliers" component={Suppliers} />
