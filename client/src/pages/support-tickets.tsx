@@ -60,12 +60,25 @@ export default function SupportTickets() {
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['/api/support-tickets', statusFilter],
     queryFn: async ({ queryKey }) => {
-      const url = statusFilter && statusFilter !== 'all'
-        ? `/api/support-tickets?status=${statusFilter}` 
-        : '/api/support-tickets';
-      
-      const response = await apiRequest(url);
-      return Array.isArray(response) ? response : [];
+      try {
+        const url = statusFilter && statusFilter !== 'all'
+          ? `/api/support-tickets?status=${statusFilter}` 
+          : '/api/support-tickets';
+        
+        const response = await fetch(url, {
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tickets: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error("Error fetching tickets:", error);
+        return [];
+      }
     }
   });
 
