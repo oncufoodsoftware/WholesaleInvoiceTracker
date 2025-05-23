@@ -226,11 +226,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all suppliers
       const suppliers = await storage.getAllSuppliers();
       
+      // Get all invoices for balances
+      const allInvoices = await storage.getAllInvoices();
+      
       // Check if we need to include branch balances
       if (req.query.withBranchBalances === 'true') {
         const suppliersWithBalances = await Promise.all(suppliers.map(async (supplier) => {
           // Get all balances for this supplier
-          const balances = await storage.getSupplierBalances(supplier.id);
+          let balances = await storage.getSupplierBalances(supplier.id);
+          
+          // If no balances but supplier has invoices, generate balances from invoices
+          if (balances.length === 0) {
+            const supplierInvoices = allInvoices.filter(inv => inv.supplierId === supplier.id);
+            
+            if (supplierInvoices.length > 0) {
+              // Create a map of branch balances from invoices
+              const branchBalanceMap = new Map<number, number>();
+              
+              // Calculate balance per branch
+              for (const invoice of supplierInvoices) {
+                const branchId = invoice.branchId;
+                const currentBalance = branchBalanceMap.get(branchId) || 0;
+                
+                // Add to balance based on invoice type and status
+                // For standard invoices: if unpaid, add to balance
+                // For credit notes: always subtract from balance
+                // For cash invoices: they're considered immediately paid
+                let amountToAdd = 0;
+                
+                if (invoice.type === 'standard' && invoice.status !== 'paid') {
+                  amountToAdd = invoice.amount - invoice.paidAmount;
+                } else if (invoice.type === 'credit_note') {
+                  amountToAdd = -invoice.amount;
+                }
+                
+                if (amountToAdd !== 0) {
+                  branchBalanceMap.set(branchId, currentBalance + amountToAdd);
+                }
+              }
+              
+              // Create branch balances from the map
+              for (const [branchId, balance] of branchBalanceMap.entries()) {
+                if (balance !== 0) {
+                  // Create or update balance in database
+                  await storage.updateSupplierBranchBalance(supplier.id, branchId, balance);
+                }
+              }
+              
+              // Fetch the newly created balances
+              balances = await storage.getSupplierBalances(supplier.id);
+            }
+          }
           
           // Get branch details for each balance
           const branchBalances = await Promise.all(balances.map(async (balance) => {
