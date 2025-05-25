@@ -17,7 +17,7 @@ import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { InvoiceForm } from "./invoice-form";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 interface InvoiceListProps {
   invoices: any[];
@@ -447,18 +447,24 @@ export function InvoiceList({
               setIsEditDialogOpen(false);
               setEditingInvoiceId(null);
               
-              // Get the active query keys to check if we're in a filtered view
-              const activeQueries = queryClient.getQueryCache().findAll({ 
-                predicate: query => query.queryKey[0] === "/api/invoices" && query.queryKey.length > 1 
-              });
+              // Get the saved filters from localStorage
+              const savedFilters = localStorage.getItem('invoiceFilters');
+              const filters = savedFilters ? JSON.parse(savedFilters) : null;
               
-              if (activeQueries.length > 0) {
-                // We have active filtered queries, so invalidate those specifically
-                activeQueries.forEach(query => {
-                  queryClient.invalidateQueries({ queryKey: query.queryKey });
+              if (filters && Object.keys(filters).length > 0) {
+                // We have saved filters, invalidate the specific query
+                queryClient.invalidateQueries({ queryKey: ["/api/invoices", filters] });
+                
+                // Refetch with the current filters
+                queryClient.fetchQuery({ 
+                  queryKey: ["/api/invoices", filters],
+                  queryFn: async () => {
+                    const res = await apiRequest("POST", "/api/invoices/filter", filters);
+                    return res.json();
+                  }
                 });
               } else {
-                // No filters active, just invalidate the main invoice list
+                // No saved filters, invalidate the main list
                 queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
               }
               

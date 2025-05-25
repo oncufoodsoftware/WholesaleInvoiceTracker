@@ -12,7 +12,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 export default function Invoices() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [filters, setFilters] = useState({});
+  
+  // Use localStorage to persist filters across actions and page reloads
+  const savedFilters = localStorage.getItem('invoiceFilters');
+  const [filters, setFilters] = useState(savedFilters ? JSON.parse(savedFilters) : {});
+  
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -65,13 +69,24 @@ export default function Invoices() {
         title: "Invoice deleted",
         description: "The invoice has been deleted successfully",
       });
-      // Invalidate both invoices and suppliers caches to refresh balances, but preserve filters
-      // by targeting the specific query keys
-      if (Object.keys(filters).length > 0) {
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices", filters] });
-        // Refetch with current filters to maintain filtered view
-        refetch();
+      // Get the saved filters from localStorage
+      const savedFilters = localStorage.getItem('invoiceFilters');
+      const currentFilters = savedFilters ? JSON.parse(savedFilters) : null;
+      
+      if (currentFilters && Object.keys(currentFilters).length > 0) {
+        // We have saved filters, invalidate the specific query
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices", currentFilters] });
+        
+        // Refetch with the current filters to maintain the filtered view
+        queryClient.fetchQuery({ 
+          queryKey: ["/api/invoices", currentFilters],
+          queryFn: async () => {
+            const res = await apiRequest("POST", "/api/invoices/filter", currentFilters);
+            return res.json();
+          }
+        });
       } else {
+        // No saved filters, invalidate the main list
         queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
@@ -87,12 +102,16 @@ export default function Invoices() {
 
   // Handle filter application
   const handleApplyFilters = (newFilters: any) => {
+    // Save filters to localStorage for persistence
+    localStorage.setItem('invoiceFilters', JSON.stringify(newFilters));
     setFilters(newFilters);
     setCurrentPage(1);
   };
 
   // Handle filter reset
   const handleResetFilters = () => {
+    // Clear saved filters
+    localStorage.removeItem('invoiceFilters');
     setFilters({});
     setCurrentPage(1);
   };

@@ -30,14 +30,18 @@ interface InvoiceFiltersProps {
 }
 
 export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFiltersProps) {
+  // Get saved filters from localStorage
+  const savedFilters = localStorage.getItem('invoiceFilters');
+  const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
+  
   const form = useForm({
     defaultValues: {
-      supplierId: "all",
-      branchId: "all",
-      status: "all",
-      type: "all",
-      startDate: "",
-      endDate: "",
+      supplierId: parsedFilters.supplierId || "all",
+      branchId: parsedFilters.branchId || "all",
+      status: parsedFilters.status || "all",
+      type: parsedFilters.type || "all",
+      startDate: parsedFilters.startDate || "",
+      endDate: parsedFilters.endDate || "",
     },
   });
 
