@@ -65,8 +65,15 @@ export default function Invoices() {
         title: "Invoice deleted",
         description: "The invoice has been deleted successfully",
       });
-      // Invalidate both invoices and suppliers caches to refresh balances
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      // Invalidate both invoices and suppliers caches to refresh balances, but preserve filters
+      // by targeting the specific query keys
+      if (Object.keys(filters).length > 0) {
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices", filters] });
+        // Refetch with current filters to maintain filtered view
+        refetch();
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
     },
     onError: (error) => {
@@ -216,7 +223,21 @@ export default function Invoices() {
           onClose={() => setIsDialogOpen(false)}
           onSuccess={() => {
             setIsDialogOpen(false);
-            queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+            
+            // Preserve filters when creating a new invoice
+            if (Object.keys(filters).length > 0) {
+              // Invalidate the specific filtered query to refresh the data
+              queryClient.invalidateQueries({ queryKey: ["/api/invoices", filters] });
+              // Explicit refetch to maintain the current filtered view
+              refetch();
+            } else {
+              // Regular invalidation for non-filtered view
+              queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+            }
+            
+            // Always invalidate suppliers for balance updates
+            queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+            
             toast({
               title: "Success",
               description: "Invoice created successfully",

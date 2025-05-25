@@ -317,7 +317,25 @@ export function InvoiceList({
               onSuccess={() => {
                 setIsEditDialogOpen(false);
                 setEditingInvoiceId(null);
-                queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+                
+                // Get the active query keys to check if we're in a filtered view
+                const activeQueries = queryClient.getQueryCache().findAll({ 
+                  predicate: query => query.queryKey[0] === "/api/invoices" && query.queryKey.length > 1 
+                });
+                
+                if (activeQueries.length > 0) {
+                  // We have active filtered queries, so invalidate those specifically
+                  activeQueries.forEach(query => {
+                    queryClient.invalidateQueries({ queryKey: query.queryKey });
+                  });
+                } else {
+                  // No filters active, just invalidate the main invoice list
+                  queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+                }
+                
+                // Always invalidate suppliers for balance updates
+                queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+                
                 toast({
                   title: "Success",
                   description: "Invoice updated successfully",
@@ -428,7 +446,25 @@ export function InvoiceList({
             onSuccess={() => {
               setIsEditDialogOpen(false);
               setEditingInvoiceId(null);
-              queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+              
+              // Get the active query keys to check if we're in a filtered view
+              const activeQueries = queryClient.getQueryCache().findAll({ 
+                predicate: query => query.queryKey[0] === "/api/invoices" && query.queryKey.length > 1 
+              });
+              
+              if (activeQueries.length > 0) {
+                // We have active filtered queries, so invalidate those specifically
+                activeQueries.forEach(query => {
+                  queryClient.invalidateQueries({ queryKey: query.queryKey });
+                });
+              } else {
+                // No filters active, just invalidate the main invoice list
+                queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+              }
+              
+              // Always invalidate suppliers for balance updates
+              queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+              
               toast({
                 title: "Success",
                 description: "Invoice updated successfully",
