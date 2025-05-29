@@ -132,35 +132,7 @@ export function Sidebar({ className }: SidebarNavProps) {
   ];
 
   // Filter navigation items based on user permissions
-  const mainNavItems = allNavItems.filter(item => hasPageAccess(item.pageAccess));
-
-  // Only show the admin nav items for admin users
-  const adminNavItems = user?.role === "admin" ? [
-    {
-      title: "Users",
-      href: "/users",
-      icon: <Users className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "Roles",
-      href: "/roles",
-      icon: <Shield className="mr-2 h-4 w-4" />,
-    },
-    {
-      title: "User Actions",
-      href: "/user-actions",
-      icon: <Activity className="mr-2 h-4 w-4" />,
-    }
-  ] : [];
-
-  // Settings is available for all users
-  const settingsNavItems = [
-    {
-      title: "Settings",
-      href: "/settings",
-      icon: <Settings className="mr-2 h-4 w-4" />,
-    }
-  ];
+  const filteredNavItems = allNavItems.filter(item => hasPageAccess(item.pageAccess));
 
   return (
     <>
@@ -206,49 +178,7 @@ export function Sidebar({ className }: SidebarNavProps) {
         <ScrollArea className="flex-1 py-4">
           <nav className="grid gap-2 px-2">
             <div className="grid gap-1 px-2">
-              {mainNavItems.map((item, index) => (
-                <Link
-                  key={index}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                    location === item.href ? "bg-accent text-accent-foreground" : "transparent"
-                  )}
-                >
-                  {item.icon}
-                  {item.title}
-                </Link>
-              ))}
-            </div>
-            
-            {adminNavItems.length > 0 && (
-              <>
-                <div className="my-2 mx-2">
-                  <div className="text-xs font-semibold text-muted-foreground">Administration</div>
-                </div>
-                <div className="grid gap-1 px-2">
-                  {adminNavItems.map((item, index) => (
-                    <Link
-                      key={index}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                        location === item.href ? "bg-accent text-accent-foreground" : "transparent"
-                      )}
-                    >
-                      {item.icon}
-                      {item.title}
-                    </Link>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <div className="my-2 mx-2">
-              <div className="text-xs font-semibold text-muted-foreground">Settings</div>
-            </div>
-            <div className="grid gap-1 px-2">
-              {settingsNavItems.map((item, index) => (
+              {filteredNavItems.map((item, index) => (
                 <Link
                   key={index}
                   href={item.href}
