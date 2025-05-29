@@ -76,9 +76,38 @@ const logUserAction = async (req: Request, actionType: typeof actionTypeEnum.enu
   }
 };
 
+// Role-based access control helpers
+const checkBranchAccess = (user: any, branchId?: number) => {
+  if (user.role === "admin") {
+    return true; // Admin can access all branches
+  } else if (user.role === "branch_manager") {
+    return !branchId || branchId === user.branchId; // Branch manager can only access their branch
+  } else if (user.role === "accountant") {
+    return !branchId || branchId === user.branchId; // Accountant can only access their branch
+  }
+  return false;
+};
+
+const filterByUserAccess = (data: any[], user: any, branchIdField = 'branchId') => {
+  if (user.role === "admin") {
+    return data; // Admin sees all data
+  } else if (user.role === "branch_manager" || user.role === "accountant") {
+    return data.filter(item => item[branchIdField] === user.branchId); // Only their branch data
+  }
+  return [];
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+
+  // Authentication middleware
+  const requireAuth = (req: Request, res: Response, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
   
   // Register role management routes
   registerRoleRoutes(app);
@@ -411,17 +440,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invoice API endpoints
-  app.get('/api/invoices', async (req, res) => {
+  app.get('/api/invoices', requireAuth, async (req, res) => {
     try {
-      // Check if user is branch manager and limit to their branch
-      if (req.isAuthenticated() && req.user?.role === 'branch_manager' && req.user?.branchId) {
-        const invoices = await storage.getInvoicesByBranch(req.user.branchId);
-        return res.json(invoices);
-      }
-      
-      // For admin and accountant, return all invoices
       const invoices = await storage.getAllInvoices();
-      res.json(invoices);
+      const filteredInvoices = filterByUserAccess(invoices, req.user);
+      res.json(filteredInvoices);
     } catch (err) {
       res.status(500).json({ message: `Error fetching invoices: ${err}` });
     }
@@ -746,11 +769,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User management API endpoints - Admin only
-  app.get('/api/users', requireRole(['admin']), async (req, res) => {
+  // User management API endpoints
+  app.get('/api/users', requireAuth, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
-      res.json(users);
+      const filteredUsers = filterByUserAccess(users, req.user);
+      res.json(filteredUsers);
     } catch (err) {
       res.status(500).json({ message: `Error fetching users: ${err}` });
     }
