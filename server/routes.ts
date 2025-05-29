@@ -1130,13 +1130,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort branches by sales (highest first)
       branchSales.sort((a, b) => b.total - a.total);
       
+      // Calculate invoice status breakdown
+      const statusBreakdown = [
+        {
+          status: 'paid',
+          count: invoices.filter(inv => inv.status === 'paid').length,
+          totalAmount: invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0)
+        },
+        {
+          status: 'unpaid',
+          count: invoices.filter(inv => inv.status === 'unpaid').length,
+          totalAmount: invoices.filter(inv => inv.status === 'unpaid').reduce((sum, inv) => sum + inv.amount, 0)
+        },
+        {
+          status: 'partially_paid',
+          count: invoices.filter(inv => inv.status === 'partially_paid').length,
+          totalAmount: invoices.filter(inv => inv.status === 'partially_paid').reduce((sum, inv) => sum + inv.amount, 0)
+        }
+      ];
+      
       res.json({
         monthlySales: monthlyData,
         branchSales: branchSales,
-        categoryDistribution: Object.keys(categories).map(category => ({
-          category,
-          value: Math.floor(Math.random() * 5000) + 1000 // We'll use random data for categories
-        }))
+        statusBreakdown: statusBreakdown
       });
     } catch (err) {
       res.status(500).json({ message: `Error generating sales report: ${err}` });

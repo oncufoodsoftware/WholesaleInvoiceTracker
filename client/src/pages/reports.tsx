@@ -354,81 +354,80 @@ export default function Reports() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <PieChart className="h-5 w-5 text-primary" />
-                  Sales by Category
+                  Invoice Status Breakdown
                 </CardTitle>
                 <CardDescription>
-                  Distribution of sales across different product categories
+                  Distribution of invoices by payment status
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {salesReportLoading ? (
                   <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
-                    <p className="text-muted-foreground">Loading category data...</p>
+                    <p className="text-muted-foreground">Loading status data...</p>
                   </div>
-                ) : salesReportData?.categoryDistribution && salesReportData.categoryDistribution.length > 0 ? (
+                ) : salesReportData?.statusBreakdown && salesReportData.statusBreakdown.length > 0 ? (
                   <div className="h-[300px] p-4 border rounded-md">
-                    <div className="grid grid-cols-2 gap-4 h-full">
-                      <div className="flex flex-col justify-center items-center">
-                        <div className="flex flex-wrap justify-center gap-2 mb-4">
-                          {salesReportData.categoryDistribution.map((item: any, index: number) => (
-                            <div key={index} className="flex items-center">
-                              <div 
-                                className="w-3 h-3 rounded-full mr-1" 
-                                style={{ 
-                                  backgroundColor: `hsl(${index * 60}, 70%, 50%)` 
-                                }}
-                              />
-                              <span className="text-xs">{item.category}</span>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        {salesReportData.statusBreakdown.map((item: any, index: number) => {
+                          const colors = {
+                            'paid': 'bg-green-500',
+                            'unpaid': 'bg-red-500', 
+                            'partially_paid': 'bg-yellow-500'
+                          };
+                          const statusLabels = {
+                            'paid': 'Paid',
+                            'unpaid': 'Unpaid',
+                            'partially_paid': 'Partially Paid'
+                          };
+                          
+                          return (
+                            <div key={index} className="text-center p-3 border rounded-lg">
+                              <div className={`w-8 h-8 ${colors[item.status as keyof typeof colors] || 'bg-gray-500'} rounded-full mx-auto mb-2`} />
+                              <p className="text-sm font-medium">{statusLabels[item.status as keyof typeof statusLabels] || item.status}</p>
+                              <p className="text-2xl font-bold">{item.count}</p>
+                              <p className="text-xs text-muted-foreground">£{item.totalAmount.toLocaleString()}</p>
                             </div>
-                          ))}
-                        </div>
-                        <div className="relative w-40 h-40">
-                          {salesReportData.categoryDistribution.map((item: any, index: number) => {
-                            const total = salesReportData.categoryDistribution.reduce((sum: number, i: any) => sum + i.value, 0);
-                            const percentage = total > 0 ? (item.value / total) * 100 : 0;
-                            const cumulativePercentage = salesReportData.categoryDistribution
-                              .slice(0, index)
-                              .reduce((sum: number, i: any) => sum + (i.value / total) * 100, 0);
-                            
-                            return (
-                              <div 
-                                key={index}
-                                className="absolute top-0 left-0 w-40 h-40"
-                                style={{
-                                  clipPath: `conic-gradient(from ${cumulativePercentage * 3.6}deg, transparent 0%, transparent ${percentage * 3.6}deg, currentColor 0deg)`,
-                                  color: `hsl(${index * 60}, 70%, 50%)`,
-                                  opacity: 0.8
-                                }}
-                              />
-                            );
-                          })}
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-background rounded-full" />
-                        </div>
+                          );
+                        })}
                       </div>
-                      <div className="flex flex-col justify-center">
-                        <h4 className="text-sm font-medium mb-2">Category Distribution</h4>
-                        <ul className="space-y-2">
-                          {salesReportData.categoryDistribution.map((item: any, index: number) => {
-                            const total = salesReportData.categoryDistribution.reduce((sum: number, i: any) => sum + i.value, 0);
-                            const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
+                      
+                      <div className="pt-4 border-t">
+                        <h4 className="text-sm font-medium mb-3">Payment Status Overview</h4>
+                        <div className="space-y-2">
+                          {salesReportData.statusBreakdown.map((item: any, index: number) => {
+                            const total = salesReportData.statusBreakdown.reduce((sum: number, i: any) => sum + i.count, 0);
+                            const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                            const colors = {
+                              'paid': 'bg-green-100 text-green-800',
+                              'unpaid': 'bg-red-100 text-red-800',
+                              'partially_paid': 'bg-yellow-100 text-yellow-800'
+                            };
+                            const statusLabels = {
+                              'paid': 'Paid',
+                              'unpaid': 'Unpaid', 
+                              'partially_paid': 'Partially Paid'
+                            };
                             
                             return (
-                              <li key={index} className="flex justify-between items-center text-sm">
-                                <span>{item.category}</span>
+                              <div key={index} className="flex items-center justify-between">
+                                <span className="text-sm">{statusLabels[item.status as keyof typeof statusLabels] || item.status}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">£{item.value.toLocaleString()}</span>
-                                  <span className="bg-muted px-1.5 py-0.5 rounded text-xs">{percentage}%</span>
+                                  <span className="text-sm text-muted-foreground">{item.count} invoices</span>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${colors[item.status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
+                                    {percentage}%
+                                  </span>
                                 </div>
-                              </li>
+                              </div>
                             );
                           })}
-                        </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="h-[300px] flex items-center justify-center border rounded-md bg-muted/20">
-                    <p className="text-muted-foreground">No category data available</p>
+                    <p className="text-muted-foreground">No status data available</p>
                   </div>
                 )}
               </CardContent>
