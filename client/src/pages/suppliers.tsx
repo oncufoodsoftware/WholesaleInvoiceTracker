@@ -25,6 +25,8 @@ interface SupplierWithDebt {
   phone: string | null;
   email: string | null;
   address: string | null;
+  accountNumber: string | null;
+  shortCode: string | null;
   notes: string | null;
   branchId?: number | null;
   branchName?: string;
@@ -42,6 +44,8 @@ const supplierSchema = z.object({
   phone: z.string().optional().nullable(),
   email: z.string().email("Invalid email address").optional().nullable(),
   address: z.string().optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  shortCode: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -519,6 +523,37 @@ export default function Suppliers() {
                           </div>
                         )}
                         
+                        {/* Bank Details */}
+                        {(supplier.accountNumber || supplier.shortCode) && (
+                          <div className="mt-2 pt-2 border-t border-border/50">
+                            <h4 className="text-xs font-semibold text-muted-foreground mb-1">Bank Details</h4>
+                            {supplier.accountNumber && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 flex justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-credit-card">
+                                    <rect width="20" height="14" x="2" y="5" rx="2"/>
+                                    <line x1="2" x2="22" y1="10" y2="10"/>
+                                  </svg>
+                                </div>
+                                <span className="text-sm">Account: {supplier.accountNumber}</span>
+                              </div>
+                            )}
+                            {supplier.shortCode && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 flex justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-hash">
+                                    <line x1="4" x2="20" y1="9" y2="9"/>
+                                    <line x1="4" x2="20" y1="15" y2="15"/>
+                                    <line x1="10" x2="8" y1="3" y2="21"/>
+                                    <line x1="16" x2="14" y1="3" y2="21"/>
+                                  </svg>
+                                </div>
+                                <span className="text-sm">Sort Code: {supplier.shortCode}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
                         {/* Primary branch information */}
                         {supplier.branchName && (
                           <div className="flex items-start gap-2 mt-1">
@@ -690,6 +725,34 @@ export default function Suppliers() {
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={addForm.control}
+                  name="accountNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bank account number" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addForm.control}
+                  name="shortCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sort Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bank sort code" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={addForm.control}
                 name="notes"
@@ -788,6 +851,34 @@ export default function Suppliers() {
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="accountNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bank account number" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="shortCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sort Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bank sort code" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={editForm.control}
                 name="notes"

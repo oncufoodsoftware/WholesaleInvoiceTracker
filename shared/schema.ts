@@ -65,6 +65,8 @@ export const suppliers = pgTable("suppliers", {
   phone: text("phone"),
   email: text("email"),
   address: text("address"),
+  accountNumber: text("account_number"),
+  shortCode: text("short_code"),
   notes: text("notes"),
 });
 
