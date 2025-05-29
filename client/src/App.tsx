@@ -44,19 +44,19 @@ function Router() {
           return (
             <Layout>
               <Switch>
-                <ProtectedRoute path="/dashboard" component={Dashboard} />
-                <ProtectedRoute path="/branches" component={Branches} />
-                <ProtectedRoute path="/suppliers" component={Suppliers} />
-                <ProtectedRoute path="/supplier-risk" component={SupplierRisk} />
-                <ProtectedRoute path="/invoices" component={Invoices} />
-                <ProtectedRoute path="/finances" component={Finances} />
-                <ProtectedRoute path="/reports" component={Reports} />
-                <ProtectedRoute path="/analytics" component={Analytics} />
-                <ProtectedRoute path="/support-tickets" component={SupportTickets} />
-                <ProtectedRoute path="/users" component={Users} requiredRoles={["admin"]} />
-                <ProtectedRoute path="/roles" component={Roles} requiredRoles={["admin"]} />
-                <ProtectedRoute path="/user-actions" component={UserActions} requiredRoles={["admin"]} />
-                <ProtectedRoute path="/settings" component={Settings} />
+                <ProtectedRoute path="/dashboard" component={Dashboard} requiredPageAccess="dashboard" />
+                <ProtectedRoute path="/branches" component={Branches} requiredPageAccess="branches" />
+                <ProtectedRoute path="/suppliers" component={Suppliers} requiredPageAccess="suppliers" />
+                <ProtectedRoute path="/supplier-risk" component={SupplierRisk} requiredPageAccess="risk_analysis" />
+                <ProtectedRoute path="/invoices" component={Invoices} requiredPageAccess="invoices" />
+                <ProtectedRoute path="/finances" component={Finances} requiredPageAccess="dashboard" />
+                <ProtectedRoute path="/reports" component={Reports} requiredPageAccess="reports" />
+                <ProtectedRoute path="/analytics" component={Analytics} requiredPageAccess="reports" />
+                <ProtectedRoute path="/support-tickets" component={SupportTickets} requiredPageAccess="dashboard" />
+                <ProtectedRoute path="/users" component={Users} requiredPageAccess="users" />
+                <ProtectedRoute path="/roles" component={Roles} requiredPageAccess="roles" />
+                <ProtectedRoute path="/user-actions" component={UserActions} requiredPageAccess="users" />
+                <ProtectedRoute path="/settings" component={Settings} requiredPageAccess="settings" />
                 <Route component={NotFound} />
               </Switch>
             </Layout>
