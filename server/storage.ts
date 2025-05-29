@@ -9,6 +9,7 @@ import {
   roles,
   rolePermissions,
   supportTickets,
+  invoicePayments,
   type User, 
   type InsertUser, 
   type Branch,
@@ -28,7 +29,9 @@ import {
   type RolePermission,
   type InsertRolePermission,
   type SupportTicket,
-  type InsertSupportTicket
+  type InsertSupportTicket,
+  type InvoicePayment,
+  type InsertInvoicePayment
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray, count } from "drizzle-orm";
@@ -115,6 +118,13 @@ export interface IStorage {
   getSupportTicketsByStatus(status: string): Promise<SupportTicket[]>;
   getSupportTicketsByUser(userId: number): Promise<SupportTicket[]>;
   getSupportTicketsByBranch(branchId: number): Promise<SupportTicket[]>;
+
+  // Invoice Payment methods
+  getInvoicePayment(id: number): Promise<InvoicePayment | undefined>;
+  getInvoicePayments(invoiceId: number): Promise<InvoicePayment[]>;
+  createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment>;
+  updateInvoicePayment(id: number, payment: Partial<InsertInvoicePayment>): Promise<InvoicePayment | undefined>;
+  deleteInvoicePayment(id: number): Promise<boolean>;
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
   updateSupportTicket(id: number, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined>;
   deleteSupportTicket(id: number): Promise<boolean>;

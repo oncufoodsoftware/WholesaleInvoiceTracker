@@ -33,6 +33,7 @@ export const transactionTypeEnum = pgEnum('transaction_type', ['income', 'expens
 export const actionTypeEnum = pgEnum('action_type', ['create', 'update', 'delete', 'login', 'logout']);
 export const supportTicketStatusEnum = pgEnum('support_ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
 export const supportTicketPriorityEnum = pgEnum('support_ticket_priority', ['low', 'medium', 'high', 'critical']);
+export const paymentTypeEnum = pgEnum('payment_type', ['bank_transfer', 'cheque']);
 
 // Users table
 export const users = pgTable("users", {
@@ -101,6 +102,19 @@ export const financialTransactions = pgTable("financial_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Invoice payments table (tracks individual payments for each invoice)
+export const invoicePayments = pgTable("invoice_payments", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  paymentType: paymentTypeEnum("payment_type").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  chequeNumber: text("cheque_number"), // Only for cheque payments
+  paymentDate: timestamp("payment_date").notNull(),
+  notes: text("notes"),
+  recordedBy: integer("recorded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Support Tickets table
 export const supportTickets = pgTable("support_tickets", {
   id: serial("id").primaryKey(),
@@ -146,6 +160,11 @@ export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit
   createdAt: true,
   updatedAt: true,
   resolvedAt: true,
+});
+
+export const insertInvoicePaymentSchema = createInsertSchema(invoicePayments).omit({
+  id: true,
+  createdAt: true,
 });
 
 // The Drizzle relations need to be defined later when setting up relations in the database
@@ -245,3 +264,6 @@ export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export type InvoicePayment = typeof invoicePayments.$inferSelect;
+export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
