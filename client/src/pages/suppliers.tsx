@@ -221,6 +221,8 @@ export default function Suppliers() {
       phone: "",
       email: "",
       address: "",
+      accountNumber: "",
+      shortCode: "",
       notes: "",
     },
   });
@@ -234,6 +236,8 @@ export default function Suppliers() {
       phone: "",
       email: "",
       address: "",
+      accountNumber: "",
+      shortCode: "",
       notes: "",
     },
   });
@@ -253,6 +257,8 @@ export default function Suppliers() {
       editForm.setValue("phone", selectedSupplier.phone || "");
       editForm.setValue("email", selectedSupplier.email || "");
       editForm.setValue("address", selectedSupplier.address || "");
+      editForm.setValue("accountNumber", selectedSupplier.accountNumber || "");
+      editForm.setValue("shortCode", selectedSupplier.shortCode || "");
       editForm.setValue("notes", selectedSupplier.notes || "");
     }
   }, [selectedSupplier, isEditDialogOpen, editForm]);
