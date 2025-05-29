@@ -198,13 +198,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         supplierSummaries[invoice.supplierId].totalAmount += calculatedAmount;
         
         // Update outstanding amount based on requirements:
-        // 1. Include all Standard invoices (regardless of payment status)
-        // 2. Include all Cash invoices (regardless of payment status)
+        // 1. Include all Standard invoices, minus any paid amounts
+        // 2. Include all Cash invoices, minus any paid amounts
         // 3. Subtract Credit Notes from the balance
         
         if (invoice.type === 'standard' || invoice.type === 'cash') {
-          // Include all standard and cash invoices in outstanding amount
-          supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
+          // Include invoice amount minus any paid amount
+          const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+          supplierSummaries[invoice.supplierId].outstandingAmount += unpaidAmount;
         } else if (invoice.type === 'credit_note') {
           // Subtract credit notes from outstanding amount
           supplierSummaries[invoice.supplierId].outstandingAmount -= invoice.amount;
@@ -248,13 +249,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const currentBalance = branchBalanceMap.get(branchId) || 0;
               
               // Add to balance based on invoice type and status
-              // For standard invoices: always add to balance (regardless of payment status)
-              // For cash invoices: always add to balance (regardless of payment status)
+              // For standard invoices: add unpaid amount (total - paid)
+              // For cash invoices: add unpaid amount (total - paid)
               // For credit notes: always subtract from balance
               let amountToAdd = 0;
               
               if (invoice.type === 'standard' || invoice.type === 'cash') {
-                amountToAdd = invoice.amount;
+                const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+                amountToAdd = unpaidAmount;
               } else if (invoice.type === 'credit_note') {
                 amountToAdd = -invoice.amount;
               }
