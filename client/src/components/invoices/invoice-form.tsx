@@ -33,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { UploadIcon } from "lucide-react";
+import { InvoicePaymentDetails } from "@/components/invoice-payment-details";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Invoice form schema
 const invoiceSchema = z.object({
@@ -229,17 +231,25 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
   }
 
   return (
-    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>
           {isEditMode ? "Edit Invoice" : "Add New Invoice"}
         </DialogTitle>
       </DialogHeader>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
+      {isEditMode ? (
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Invoice Details</TabsTrigger>
+            <TabsTrigger value="payments">Payment Tracking</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="details">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
               control={form.control}
               name="invoiceNumber"
               render={({ field }) => (
@@ -517,10 +527,298 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                 ? "Update Invoice"
                 : "Save Invoice"
               }
-            </Button>
-          </DialogFooter>
-        </form>
-      </Form>
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="payments">
+            {invoice && (
+              <InvoicePaymentDetails
+                invoiceId={invoice.id}
+                invoiceAmount={parseFloat(invoice.amount)}
+                currentPaidAmount={parseFloat(invoice.paidAmount || '0')}
+                onPaymentUpdate={(newPaidAmount) => {
+                  form.setValue("paidAmount", newPaidAmount.toString());
+                  const amount = parseFloat(form.getValues().amount) || 0;
+                  const type = form.getValues().type;
+                  
+                  // Auto-update status based on paid amount
+                  if (type === "credit_note") {
+                    if (newPaidAmount === 0) {
+                      form.setValue("status", "unpaid");
+                    } else if (newPaidAmount < amount) {
+                      form.setValue("status", "partially_paid");
+                    } else if (newPaidAmount >= amount) {
+                      form.setValue("status", "paid");
+                    }
+                  } else {
+                    if (newPaidAmount === 0) {
+                      form.setValue("status", "unpaid");
+                    } else if (newPaidAmount >= amount) {
+                      form.setValue("status", "paid");
+                    } else {
+                      form.setValue("status", "partially_paid");
+                    }
+                  }
+                }}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="invoiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="INV-2023-001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="invoiceDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="supplierId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Supplier</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select supplier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {suppliers.map((supplier: any) => (
+                          <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {branches.map((branch: any) => (
+                          <SelectItem key={branch.id} value={branch.id.toString()}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                        <Input 
+                          className="pl-8" 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="paidAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Paid Amount</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                        <Input 
+                          className="pl-8" 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // Auto-update status based on paid amount
+                            const paidAmount = parseFloat(e.target.value) || 0;
+                            const amount = parseFloat(form.getValues().amount) || 0;
+                            const type = form.getValues().type;
+                            
+                            if (type === "credit_note") {
+                              if (paidAmount === 0) {
+                                form.setValue("status", "unpaid");
+                              } else if (paidAmount < amount) {
+                                form.setValue("status", "partially_paid");
+                              } else if (paidAmount >= amount) {
+                                form.setValue("status", "paid");
+                              }
+                            } else {
+                              if (paidAmount === 0) {
+                                form.setValue("status", "unpaid");
+                              } else if (paidAmount >= amount) {
+                                form.setValue("status", "paid");
+                              } else {
+                                form.setValue("status", "partially_paid");
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="credit_note">Credit Note</SelectItem>
+                        <SelectItem value="cash">Cash</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                        <SelectItem value="partially_paid">Partially Paid</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Additional notes..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-4">
+              <Label htmlFor="file-upload" className="text-sm font-medium">
+                Upload Invoice Document (optional)
+              </Label>
+              <div className="mt-2">
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-medium
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100"
+                />
+                {file && (
+                  <p className="mt-2 text-sm text-green-600 flex items-center">
+                    <UploadIcon className="w-4 h-4 mr-1" />
+                    {file.name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createInvoiceMutation.isPending || updateInvoiceMutation.isPending}>
+                {createInvoiceMutation.isPending || updateInvoiceMutation.isPending ? "Saving..." : isEditMode ? "Update Invoice" : "Create Invoice"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      )}
     </DialogContent>
   );
 }

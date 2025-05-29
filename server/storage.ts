@@ -865,6 +865,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(supportTickets.id, id));
     return result.count > 0;
   }
+
+  // Invoice Payment methods
+  async getInvoicePayment(id: number): Promise<InvoicePayment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(invoicePayments)
+      .where(eq(invoicePayments.id, id));
+    return payment;
+  }
+
+  async getInvoicePayments(invoiceId: number): Promise<InvoicePayment[]> {
+    return await db
+      .select()
+      .from(invoicePayments)
+      .where(eq(invoicePayments.invoiceId, invoiceId))
+      .orderBy(desc(invoicePayments.paymentDate));
+  }
+
+  async createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment> {
+    const [newPayment] = await db
+      .insert(invoicePayments)
+      .values(payment)
+      .returning();
+    return newPayment;
+  }
+
+  async updateInvoicePayment(id: number, payment: Partial<InsertInvoicePayment>): Promise<InvoicePayment | undefined> {
+    const [updatedPayment] = await db
+      .update(invoicePayments)
+      .set(payment)
+      .where(eq(invoicePayments.id, id))
+      .returning();
+    return updatedPayment;
+  }
+
+  async deleteInvoicePayment(id: number): Promise<boolean> {
+    const result = await db
+      .delete(invoicePayments)
+      .where(eq(invoicePayments.id, id));
+    return result.count > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();
