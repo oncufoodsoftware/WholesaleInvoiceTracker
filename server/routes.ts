@@ -197,25 +197,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update total amount - always track this for reporting
         supplierSummaries[invoice.supplierId].totalAmount += calculatedAmount;
         
-        // Update outstanding amount based on new requirements:
-        // 1. Include all cash invoices regardless of status
-        // 2. Include unpaid standard invoices 
-        // 3. Exclude paid invoices except cash types
+        // Update outstanding amount based on requirements:
+        // 1. Include all Standard invoices (regardless of payment status)
+        // 2. Include all Cash invoices (regardless of payment status)
+        // 3. Subtract Credit Notes from the balance
         
-        if (invoice.type === 'cash') {
-          // Always include cash invoices in outstanding amount
+        if (invoice.type === 'standard' || invoice.type === 'cash') {
+          // Include all standard and cash invoices in outstanding amount
           supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
-        } else if (invoice.type === 'standard' && invoice.status !== 'paid') {
-          // Include unpaid and partially paid standard invoices
-          if (invoice.status === 'partially_paid') {
-            const paidAmount = invoice.paidAmount || 0;
-            supplierSummaries[invoice.supplierId].outstandingAmount += (invoice.amount - paidAmount);
-          } else {
-            // Fully unpaid invoice
-            supplierSummaries[invoice.supplierId].outstandingAmount += invoice.amount;
-          }
+        } else if (invoice.type === 'credit_note') {
+          // Subtract credit notes from outstanding amount
+          supplierSummaries[invoice.supplierId].outstandingAmount -= invoice.amount;
         }
-        // Paid standard invoices are excluded from outstanding amount
       }
     }
     
@@ -255,13 +248,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const currentBalance = branchBalanceMap.get(branchId) || 0;
               
               // Add to balance based on invoice type and status
-              // For standard invoices: if unpaid, add to balance
+              // For standard invoices: always add to balance (regardless of payment status)
+              // For cash invoices: always add to balance (regardless of payment status)
               // For credit notes: always subtract from balance
-              // For cash invoices: they're considered immediately paid
               let amountToAdd = 0;
               
-              if (invoice.type === 'standard' && invoice.status !== 'paid') {
-                amountToAdd = invoice.amount - (invoice.paidAmount || 0);
+              if (invoice.type === 'standard' || invoice.type === 'cash') {
+                amountToAdd = invoice.amount;
               } else if (invoice.type === 'credit_note') {
                 amountToAdd = -invoice.amount;
               }
