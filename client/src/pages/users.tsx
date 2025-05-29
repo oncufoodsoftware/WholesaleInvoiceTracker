@@ -58,9 +58,22 @@ export default function Users() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
 
-  // Get users
+  // Get users (filtered by role)
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ["/api/users"],
+  });
+
+  // Filter users based on current user's role
+  const filteredUsers = users.filter((user: any) => {
+    if (currentUser?.role === "admin") {
+      return true; // Admin can see all users
+    } else if (currentUser?.role === "branch_manager") {
+      // Branch managers can only see users from their branch
+      return user.branchId === currentUser.branchId;
+    } else {
+      // Accountants and other roles can only see themselves
+      return user.id === currentUser?.id;
+    }
   });
 
   // Get branches for the form
@@ -158,9 +171,9 @@ export default function Users() {
   // Handle form submission
   function onSubmit(data: z.infer<typeof userSchema>) {
     if (editingUserId !== null) {
-      // If editing, remove password if it's empty
+      // If editing, remove password if it's empty or contains asterisks
       const userData = { ...data };
-      if (!userData.password) {
+      if (!userData.password || userData.password === "*****") {
         delete userData.password;
       }
       updateUserMutation.mutate({ id: editingUserId, userData });
@@ -178,7 +191,7 @@ export default function Users() {
       email: user.email,
       role: user.role,
       branchId: user.branchId ? user.branchId.toString() : undefined,
-      password: "", // Leave password empty when editing
+      password: "*****", // Show asterisks for existing password
     });
     setIsDialogOpen(true);
   }
@@ -203,24 +216,26 @@ export default function Users() {
     <div className="py-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Button 
-          onClick={() => {
-            setEditingUserId(null);
-            form.reset({
-              username: "",
-              password: "",
-              fullName: "",
-              email: "",
-              role: "branch_manager",
-              branchId: "",
-            });
-            setIsDialogOpen(true);
-          }} 
-          className="flex items-center gap-1"
-        >
-          <PlusIcon className="h-4 w-4" />
-          <span>New User</span>
-        </Button>
+        {currentUser?.role === "admin" && (
+          <Button 
+            onClick={() => {
+              setEditingUserId(null);
+              form.reset({
+                username: "",
+                password: "",
+                fullName: "",
+                email: "",
+                role: "branch_manager",
+                branchId: "",
+              });
+              setIsDialogOpen(true);
+            }} 
+            className="flex items-center gap-1"
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span>New User</span>
+          </Button>
+        )}
       </div>
 
       {/* User List */}
@@ -249,14 +264,14 @@ export default function Users() {
                   <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                 </TableRow>
               ))
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user: any) => {
+              filteredUsers.map((user: any) => {
                 // Find branch name
                 const branch = branches.find((b: any) => b.id === user.branchId);
                 
@@ -282,21 +297,25 @@ export default function Users() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          onClick={() => handleEditUser(user)} 
-                          variant="ghost" 
-                          size="sm"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          onClick={() => handleDeleteUser(user.id)} 
-                          variant="ghost" 
-                          size="sm"
-                          disabled={deleteUserMutation.isPending || user.id === currentUser?.id}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {(currentUser?.role === "admin" || user.id === currentUser?.id) && (
+                          <Button
+                            onClick={() => handleEditUser(user)} 
+                            variant="ghost" 
+                            size="sm"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {currentUser?.role === "admin" && (
+                          <Button 
+                            onClick={() => handleDeleteUser(user.id)} 
+                            variant="ghost" 
+                            size="sm"
+                            disabled={deleteUserMutation.isPending || user.id === currentUser?.id}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
