@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Search, Plus, Pencil, Trash2, AlertTriangle, ArrowUpDown, Building, Phone, Mail, MapPin, ClipboardList } from "lucide-react";
 import { SupplierSearch } from "./suppliers-search";
+import { SupplierTipTooltip } from "@/components/financial-tip-tooltip";
 // Import standard components and hooks without achievements for now
 
 // Interface for a supplier with debt information
@@ -438,7 +439,10 @@ export default function Suppliers() {
   return (
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
+          <SupplierTipTooltip variant="prominent" />
+        </div>
         <Button onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Supplier
