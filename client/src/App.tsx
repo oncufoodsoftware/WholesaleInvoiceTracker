@@ -21,6 +21,7 @@ import SupplierRisk from "@/pages/supplier-risk";
 import SupportTickets from "@/pages/support-tickets";
 import Roles from "@/pages/roles";
 import DebugAuth from "@/pages/debug-auth";
+import SecurityDashboard from "@/pages/security-dashboard";
 
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -57,6 +58,7 @@ function Router() {
                 <ProtectedRoute path="/roles" component={Roles} requiredPageAccess="roles" />
                 <ProtectedRoute path="/user-actions" component={UserActions} requiredPageAccess="users" />
                 <ProtectedRoute path="/settings" component={Settings} requiredPageAccess="settings" />
+                <ProtectedRoute path="/security" component={SecurityDashboard} requiredPageAccess="settings" />
                 <Route component={NotFound} />
               </Switch>
             </Layout>

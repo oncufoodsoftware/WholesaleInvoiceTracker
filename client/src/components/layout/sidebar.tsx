@@ -129,6 +129,12 @@ export function Sidebar({ className }: SidebarNavProps) {
       icon: <Settings className="mr-2 h-4 w-4" />,
       pageAccess: "settings",
     },
+    {
+      title: "Security Dashboard",
+      href: "/security",
+      icon: <Shield className="mr-2 h-4 w-4" />,
+      pageAccess: "settings",
+    },
   ];
 
   // Filter navigation items based on user permissions

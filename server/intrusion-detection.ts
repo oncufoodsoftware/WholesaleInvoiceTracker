@@ -174,6 +174,23 @@ export const intrusionDetection = (req: Request, res: Response, next: NextFuncti
   const ip = getClientIP(req);
   const now = Date.now();
 
+  // Skip security checks for localhost and development environment
+  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('10.') || ip.startsWith('192.168.') || process.env.NODE_ENV === 'development') {
+    return next();
+  }
+
+  // Clear any previously blocked IPs in development
+  if (process.env.NODE_ENV === 'development') {
+    for (const [blockedIp, data] of ipTracker.entries()) {
+      if (data.blocked) {
+        data.blocked = false;
+        data.suspicious = false;
+        data.requests = [];
+        data.failedLogins = 0;
+      }
+    }
+  }
+
   // Initialize or get IP tracking data
   if (!ipTracker.has(ip)) {
     ipTracker.set(ip, {
