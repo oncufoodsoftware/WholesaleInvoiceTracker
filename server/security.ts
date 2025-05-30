@@ -16,22 +16,36 @@ export const authRateLimit = rateLimit({
 
 export const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs for general endpoints
+  max: 1000, // Increased limit for development
   message: {
     error: "Too many requests, please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for development environment and whitelisted IPs
+    return process.env.NODE_ENV === 'development' || 
+           req.ip === '194.72.123.66' || 
+           req.ip === '127.0.0.1' || 
+           req.ip?.startsWith('10.');
+  }
 });
 
 export const apiRateLimit = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // Limit each IP to 30 API requests per minute
+  max: 300, // Increased limit for development
   message: {
     error: "API rate limit exceeded, please slow down.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for development environment and whitelisted IPs
+    return process.env.NODE_ENV === 'development' || 
+           req.ip === '194.72.123.66' || 
+           req.ip === '127.0.0.1' || 
+           req.ip?.startsWith('10.');
+  }
 });
 
 // Security headers configuration
