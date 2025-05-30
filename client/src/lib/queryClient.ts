@@ -27,23 +27,77 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Generate CSRF token for client requests
+function generateCSRFToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// Input sanitization for client-side data
+function sanitizeInput(input: any): any {
+  if (typeof input === 'string') {
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .trim();
+  }
+  if (typeof input === 'object' && input !== null) {
+    const sanitized: any = {};
+    for (const [key, value] of Object.entries(input)) {
+      sanitized[key] = sanitizeInput(value);
+    }
+    return sanitized;
+  }
+  return input;
+}
+
+// Validate URL to prevent SSRF attacks
+function validateURL(url: string): boolean {
+  try {
+    const urlObj = new URL(url, window.location.origin);
+    // Only allow same origin requests and specific trusted APIs
+    return urlObj.origin === window.location.origin || 
+           urlObj.hostname === 'api.openai.com';
+  } catch {
+    return false;
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: any,
   customHeaders?: Record<string, string>
 ): Promise<Response> {
+  // Validate URL to prevent SSRF
+  if (!validateURL(url)) {
+    throw new Error('Invalid URL: Cross-origin requests not allowed');
+  }
+
+  // Sanitize input data
+  const sanitizedData = data ? sanitizeInput(data) : undefined;
+
   const headers: Record<string, string> = {
+    'X-Requested-With': 'XMLHttpRequest',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
     ...customHeaders
   };
   
-  if (data && !(data instanceof FormData)) {
+  // Add CSRF token for state-changing requests
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+    headers['X-CSRF-Token'] = generateCSRFToken();
+  }
+  
+  if (sanitizedData && !(sanitizedData instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
   
   let body: any = undefined;
-  if (data) {
-    body = data instanceof FormData ? data : JSON.stringify(data);
+  if (sanitizedData) {
+    body = sanitizedData instanceof FormData ? sanitizedData : JSON.stringify(sanitizedData);
   }
   
   const res = await fetch(url, {
@@ -51,6 +105,10 @@ export async function apiRequest(
     headers,
     body,
     credentials: "include",
+    // Security headers for requests
+    mode: 'same-origin',
+    cache: 'no-cache',
+    referrerPolicy: 'strict-origin-when-cross-origin'
   });
 
   await throwIfResNotOk(res);

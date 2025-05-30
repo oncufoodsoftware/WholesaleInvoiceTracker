@@ -906,6 +906,117 @@ export class DatabaseStorage implements IStorage {
       .where(eq(invoicePayments.id, id));
     return result.count > 0;
   }
+
+  // Security monitoring methods
+  async getActiveSessions(): Promise<number> {
+    try {
+      // Count active user sessions from user_actions table
+      const result = await db
+        .select({ count: sql`count(*)` })
+        .from(userActions)
+        .where(
+          and(
+            eq(userActions.actionType, 'login'),
+            gte(userActions.timestamp, new Date(Date.now() - 24 * 60 * 60 * 1000))
+          )
+        );
+      return Number(result[0]?.count) || 0;
+    } catch (error) {
+      console.error('Error getting active sessions:', error);
+      return 0;
+    }
+  }
+
+  async getFailedLoginAttempts(): Promise<number> {
+    try {
+      // Count failed login attempts in the last hour
+      const result = await db
+        .select({ count: sql`count(*)` })
+        .from(userActions)
+        .where(
+          and(
+            eq(userActions.actionType, 'failed_login'),
+            gte(userActions.timestamp, new Date(Date.now() - 60 * 60 * 1000))
+          )
+        );
+      return Number(result[0]?.count) || 0;
+    } catch (error) {
+      console.error('Error getting failed login attempts:', error);
+      return 0;
+    }
+  }
+
+  async getBlockedIPs(): Promise<number> {
+    try {
+      // Count unique IPs with security incidents
+      const result = await db
+        .select({ count: sql`count(distinct details)` })
+        .from(userActions)
+        .where(
+          and(
+            eq(userActions.actionType, 'security_incident'),
+            gte(userActions.timestamp, new Date(Date.now() - 24 * 60 * 60 * 1000))
+          )
+        );
+      return Number(result[0]?.count) || 0;
+    } catch (error) {
+      console.error('Error getting blocked IPs:', error);
+      return 0;
+    }
+  }
+
+  async getSuspiciousActivity(): Promise<number> {
+    try {
+      // Count suspicious activities in the last 24 hours
+      const result = await db
+        .select({ count: sql`count(*)` })
+        .from(userActions)
+        .where(
+          and(
+            or(
+              eq(userActions.actionType, 'failed_login'),
+              eq(userActions.actionType, 'security_incident')
+            ),
+            gte(userActions.timestamp, new Date(Date.now() - 24 * 60 * 60 * 1000))
+          )
+        );
+      return Number(result[0]?.count) || 0;
+    } catch (error) {
+      console.error('Error getting suspicious activity:', error);
+      return 0;
+    }
+  }
+
+  async getSecurityThreats(): Promise<any[]> {
+    try {
+      // Get recent security incidents and threats
+      const threats = await db
+        .select({
+          id: userActions.id,
+          type: userActions.actionType,
+          timestamp: userActions.timestamp,
+          details: userActions.details,
+          userId: userActions.userId
+        })
+        .from(userActions)
+        .where(
+          and(
+            or(
+              eq(userActions.actionType, 'security_incident'),
+              eq(userActions.actionType, 'failed_login')
+            ),
+            gte(userActions.timestamp, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+          )
+        )
+        .orderBy(desc(userActions.timestamp))
+        .limit(50);
+
+      return threats;
+    } catch (error) {
+      console.error('Error getting security threats:', error);
+      return [];
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

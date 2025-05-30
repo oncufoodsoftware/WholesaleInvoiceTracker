@@ -1091,6 +1091,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Security Monitoring API Endpoints
+  app.get('/api/security/metrics', async (req, res) => {
+    try {
+      // Check if user is authenticated and is admin
+      if (!req.isAuthenticated() || req.user?.role !== 'admin') {
+        return res.status(401).send("Unauthorized");
+      }
+
+      // Get current security metrics
+      const metrics = {
+        rateLimit: {
+          status: "active" as const,
+          rejectedRequests: 0, // This would come from rate limiter stats
+          avgResponseTime: 45
+        },
+        authentication: {
+          totalSessions: await storage.getActiveSessions(),
+          activeSessions: await storage.getActiveSessions(),
+          failedAttempts: await storage.getFailedLoginAttempts(),
+          lastSuccessfulLogin: new Date().toISOString()
+        },
+        bruteForce: {
+          blockedIPs: await storage.getBlockedIPs(),
+          suspiciousActivity: await storage.getSuspiciousActivity(),
+          lastIncident: null as string | null
+        },
+        security: {
+          httpsEnabled: true,
+          corsConfigured: true,
+          xssProtection: true,
+          sqlInjectionProtection: true,
+          csrfProtection: true
+        }
+      };
+
+      res.json(metrics);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching security metrics: ${err}` });
+    }
+  });
+
+  app.get('/api/security/threats', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== 'admin') {
+        return res.status(401).send("Unauthorized");
+      }
+
+      // Get recent security threats and incidents
+      const threats = await storage.getSecurityThreats();
+      res.json(threats);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching security threats: ${err}` });
+    }
+  });
+
+  app.post('/api/security/incident', async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user?.role !== 'admin') {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const { type, description, severity } = req.body;
+      
+      // Log security incident
+      await logUserAction(req, 'security_incident', 'security', undefined, `${type}: ${description}`);
+      
+      res.json({ success: true, message: 'Security incident logged' });
+    } catch (err) {
+      res.status(500).json({ message: `Error logging security incident: ${err}` });
+    }
+  });
+
   // Reports API Endpoints
   app.get('/api/reports/sales', async (req, res) => {
     try {

@@ -18,6 +18,7 @@ import {
   generateCsrfToken,
   fileUploadSecurity
 } from "./security";
+import { intrusionDetection } from "./intrusion-detection";
 
 // Validate environment variables on startup
 validateEnvironment();
@@ -48,6 +49,9 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 // XSS and SQL injection protection
 app.use(xssProtection);
 app.use(sqlInjectionProtection);
+
+// Advanced intrusion detection system
+app.use(intrusionDetection);
 
 app.use((req, res, next) => {
   const start = Date.now();
