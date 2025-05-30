@@ -174,12 +174,12 @@ export const intrusionDetection = (req: Request, res: Response, next: NextFuncti
   const ip = getClientIP(req);
   const now = Date.now();
 
-  // Skip security checks for localhost and development environment
-  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('10.') || ip.startsWith('192.168.') || process.env.NODE_ENV === 'development') {
+  // Skip security checks for localhost, development environment, and user's IP
+  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('10.') || ip.startsWith('192.168.') || ip === '194.72.123.66' || process.env.NODE_ENV === 'development') {
     return next();
   }
 
-  // Clear any previously blocked IPs in development
+  // Clear any previously blocked IPs in development and unblock user's IP
   if (process.env.NODE_ENV === 'development') {
     for (const [blockedIp, data] of ipTracker.entries()) {
       if (data.blocked) {
@@ -189,6 +189,15 @@ export const intrusionDetection = (req: Request, res: Response, next: NextFuncti
         data.failedLogins = 0;
       }
     }
+  }
+
+  // Specifically unblock user's IP if it exists in tracker
+  if (ipTracker.has('194.72.123.66')) {
+    const userData = ipTracker.get('194.72.123.66')!;
+    userData.blocked = false;
+    userData.suspicious = false;
+    userData.requests = [];
+    userData.failedLogins = 0;
   }
 
   // Initialize or get IP tracking data
