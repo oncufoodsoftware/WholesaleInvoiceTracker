@@ -3,10 +3,51 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { registerRoleRoutes } from "./role-routes";
 import { setupAuth } from "./auth";
+import {
+  authRateLimit,
+  generalRateLimit,
+  apiRateLimit,
+  securityHeaders,
+  xssProtection,
+  sqlInjectionProtection,
+  csrfProtection,
+  sessionSecurity,
+  securityLogger,
+  bruteForceProtection,
+  validateEnvironment,
+  generateCsrfToken,
+  fileUploadSecurity
+} from "./security";
+
+// Validate environment variables on startup
+validateEnvironment();
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Apply security headers first
+app.use(securityHeaders);
+
+// Security logging for monitoring
+app.use(securityLogger);
+
+// Trust proxy for accurate IP detection behind reverse proxies
+app.set('trust proxy', 1);
+
+// Rate limiting - more restrictive for auth endpoints
+app.use('/auth', authRateLimit);
+app.use('/api', apiRateLimit);
+app.use(generalRateLimit);
+
+// Brute force protection
+app.use(bruteForceProtection);
+
+// Body parsing with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// XSS and SQL injection protection
+app.use(xssProtection);
+app.use(sqlInjectionProtection);
 
 app.use((req, res, next) => {
   const start = Date.now();
