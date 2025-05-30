@@ -4,7 +4,7 @@ import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { ReactNode } from "react";
 
 interface StatCardProps {
-  title: string;
+  title: string | ReactNode;
   value: string;
   icon: ReactNode;
   trend?: {

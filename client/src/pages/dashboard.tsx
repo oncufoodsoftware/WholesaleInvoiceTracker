@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 import { AchievementDemo } from "@/components/dashboard/achievement-demo";
+import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -191,7 +192,12 @@ export default function Dashboard() {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          title="Total Revenue"
+          title={
+            <div className="flex items-center gap-2">
+              Total Revenue
+              <CashFlowTipTooltip variant="compact" />
+            </div>
+          }
           value={dashboardData.totalRevenue}
           icon={<Wallet className="h-5 w-5" />}
           trend={trends.revenue}
@@ -205,7 +211,12 @@ export default function Dashboard() {
           iconBgClass="bg-red-100 dark:bg-red-900/20"
         />
         <StatCard
-          title="Outstanding Invoices"
+          title={
+            <div className="flex items-center gap-2">
+              Outstanding Invoices
+              <FinancialTipTooltip category="invoices" variant="compact" />
+            </div>
+          }
           value={dashboardData.outstandingInvoices}
           icon={<Receipt className="h-5 w-5" />}
           trend={trends.invoices}
@@ -213,7 +224,12 @@ export default function Dashboard() {
           iconBgClass="bg-amber-100 dark:bg-amber-900/20"
         />
         <StatCard
-          title="Cash Flow"
+          title={
+            <div className="flex items-center gap-2">
+              Cash Flow
+              <CashFlowTipTooltip variant="compact" />
+            </div>
+          }
           value={dashboardData.cashFlow}
           icon={<Landmark className="h-5 w-5" />}
           trend={trends.cashFlow}

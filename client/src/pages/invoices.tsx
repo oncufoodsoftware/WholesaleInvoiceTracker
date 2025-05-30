@@ -8,6 +8,7 @@ import { InvoiceForm } from "@/components/invoices/invoice-form";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { InvoiceTipTooltip } from "@/components/financial-tip-tooltip";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -136,7 +137,10 @@ export default function Invoices() {
   return (
     <div className="py-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Invoice Management</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">Invoice Management</h2>
+          <InvoiceTipTooltip variant="prominent" />
+        </div>
         <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-1">
           <PlusIcon className="h-4 w-4" />
           <span>New Invoice</span>
