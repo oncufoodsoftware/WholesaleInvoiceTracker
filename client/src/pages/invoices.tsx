@@ -276,6 +276,11 @@ export default function Invoices() {
           }}
         />
       </Dialog>
+
+      {/* Bulk Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <BulkPaymentForm onClose={() => setIsPaymentDialogOpen(false)} />
+      </Dialog>
     </div>
   );
 }

@@ -22,6 +22,7 @@ import SupportTickets from "@/pages/support-tickets";
 import Roles from "@/pages/roles";
 import DebugAuth from "@/pages/debug-auth";
 import SecurityDashboard from "@/pages/security-dashboard";
+import PaymentTracking from "@/pages/payment-tracking";
 
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -50,6 +51,7 @@ function Router() {
                 <ProtectedRoute path="/suppliers" component={Suppliers} requiredPageAccess="suppliers" />
                 <ProtectedRoute path="/supplier-risk" component={SupplierRisk} requiredPageAccess="risk_analysis" />
                 <ProtectedRoute path="/invoices" component={Invoices} requiredPageAccess="invoices" />
+                <ProtectedRoute path="/payment-tracking" component={PaymentTracking} requiredPageAccess="invoices" />
                 <ProtectedRoute path="/finances" component={Finances} requiredPageAccess="dashboard" />
                 <ProtectedRoute path="/reports" component={Reports} requiredPageAccess="reports" />
                 <ProtectedRoute path="/analytics" component={Analytics} requiredPageAccess="reports" />
