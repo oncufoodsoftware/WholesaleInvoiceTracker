@@ -51,7 +51,7 @@ function Router() {
                 <ProtectedRoute path="/suppliers" component={Suppliers} requiredPageAccess="suppliers" />
                 <ProtectedRoute path="/supplier-risk" component={SupplierRisk} requiredPageAccess="risk_analysis" />
                 <ProtectedRoute path="/invoices" component={Invoices} requiredPageAccess="invoices" />
-                <ProtectedRoute path="/payment-tracking" component={PaymentTracking} requiredPageAccess="invoices" />
+                <ProtectedRoute path="/payment-tracking" component={PaymentTracking} requiredPageAccess="payment_tracking" />
                 <ProtectedRoute path="/finances" component={Finances} requiredPageAccess="dashboard" />
                 <ProtectedRoute path="/reports" component={Reports} requiredPageAccess="reports" />
                 <ProtectedRoute path="/analytics" component={Analytics} requiredPageAccess="reports" />
