@@ -12,31 +12,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, CreditCard, Building } from "lucide-react";
+import { Loader2, CreditCard, Building, Banknote, FileCheck } from "lucide-react";
+import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const bulkPaymentSchema = z.object({
   supplierId: z.number().min(1, "Please select a supplier"),
   branchId: z.number().min(1, "Please select a branch"),
   totalAmount: z.number().min(0.01, "Amount must be greater than 0"),
-  bankTransferAmount: z.number().min(0, "Bank transfer amount cannot be negative").optional(),
-  chequeAmount: z.number().min(0, "Cheque amount cannot be negative").optional(),
+  paymentMethod: z.enum(["cash", "bank_transfer", "cheque"], {
+    required_error: "Please select a payment method",
+  }),
   chequeNumber: z.string().optional(),
   paymentDate: z.string().min(1, "Payment date is required"),
   notes: z.string().optional(),
 }).refine((data) => {
-  const bankAmount = data.bankTransferAmount || 0;
-  const chequeAmount = data.chequeAmount || 0;
-  return Math.abs((bankAmount + chequeAmount) - data.totalAmount) < 0.01;
-}, {
-  message: "Bank transfer and cheque amounts must equal total amount",
-  path: ["totalAmount"]
-}).refine((data) => {
-  if (data.chequeAmount && data.chequeAmount > 0 && !data.chequeNumber) {
+  if (data.paymentMethod === "cheque" && !data.chequeNumber) {
     return false;
   }
   return true;
 }, {
-  message: "Cheque number is required when cheque amount is specified",
+  message: "Cheque number is required when using cheque payment",
   path: ["chequeNumber"]
 });
 
@@ -55,11 +51,12 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
     resolver: zodResolver(bulkPaymentSchema),
     defaultValues: {
       totalAmount: 0,
-      bankTransferAmount: 0,
-      chequeAmount: 0,
+      paymentMethod: "cash" as const,
       paymentDate: new Date().toISOString().split('T')[0],
     },
   });
+
+  const watchedPaymentMethod = form.watch("paymentMethod");
 
   // Fetch suppliers
   const { data: suppliers = [] } = useQuery({
@@ -120,45 +117,26 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
   });
 
   const onSubmit = (data: BulkPaymentFormData) => {
-    bulkPaymentMutation.mutate(data);
+    // Convert payment method to the expected API format
+    const apiData = {
+      ...data,
+      bankTransferAmount: data.paymentMethod === "bank_transfer" ? data.totalAmount : 0,
+      chequeAmount: data.paymentMethod === "cheque" ? data.totalAmount : 0,
+      paymentMethod: undefined // Remove this field as API expects bankTransferAmount/chequeAmount
+    };
+    
+    bulkPaymentMutation.mutate(apiData);
   };
 
   const totalOutstanding = unpaidInvoices.reduce((sum: number, invoice: any) => 
     sum + (invoice.amount - (invoice.paidAmount || 0)), 0
   );
 
-  const watchedTotalAmount = form.watch("totalAmount");
-  const watchedBankAmount = form.watch("bankTransferAmount") || 0;
-  const watchedChequeAmount = form.watch("chequeAmount") || 0;
-
-  const handleTotalAmountChange = (value: number) => {
-    form.setValue("totalAmount", value);
-    
-    // Auto-distribute to bank transfer if no cheque amount set
-    if (!watchedChequeAmount) {
-      form.setValue("bankTransferAmount", value);
-      form.setValue("chequeAmount", 0);
-    }
-  };
-
-  const handleBankAmountChange = (value: number) => {
-    form.setValue("bankTransferAmount", value);
-    form.setValue("chequeAmount", Math.max(0, watchedTotalAmount - value));
-  };
-
-  const handleChequeAmountChange = (value: number) => {
-    form.setValue("chequeAmount", value);
-    form.setValue("bankTransferAmount", Math.max(0, watchedTotalAmount - value));
-  };
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Bulk Payment to Supplier</h3>
-        <p className="text-sm text-muted-foreground">
-          Process payments across multiple invoices with automatic distribution from oldest to newest
-        </p>
-      </div>
+    <DialogContent className="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>Bulk Payment</DialogTitle>
+      </DialogHeader>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Supplier and Branch Selection */}
@@ -340,6 +318,6 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
           </Button>
         </div>
       </form>
-    </div>
+    </DialogContent>
   );
 }
