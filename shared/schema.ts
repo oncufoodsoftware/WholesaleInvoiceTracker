@@ -24,7 +24,8 @@ export const pageAccessEnum = pgEnum('page_access', [
   'reports',
   'users',
   'roles',
-  'settings'
+  'settings',
+  'payment_tracking'
 ]);
 export const invoiceStatusEnum = pgEnum('invoice_status', ['paid', 'unpaid', 'partially_paid']);
 export const invoiceTypeEnum = pgEnum('invoice_type', ['standard', 'credit_note', 'cash']);

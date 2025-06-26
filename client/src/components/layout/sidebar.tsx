@@ -86,7 +86,7 @@ export function Sidebar({ className }: SidebarNavProps) {
       title: "Payment Tracking",
       href: "/payment-tracking",
       icon: <CreditCard className="mr-2 h-4 w-4" />,
-      pageAccess: "invoices",
+      pageAccess: "payment_tracking",
     },
     {
       title: "Finances",
