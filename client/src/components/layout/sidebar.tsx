@@ -23,6 +23,7 @@ import {
   LineChart,
   TrendingUp,
   Shield,
+  CreditCard,
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -79,6 +80,12 @@ export function Sidebar({ className }: SidebarNavProps) {
       title: "Invoices",
       href: "/invoices",
       icon: <FileText className="mr-2 h-4 w-4" />,
+      pageAccess: "invoices",
+    },
+    {
+      title: "Payment Tracking",
+      href: "/payment-tracking",
+      icon: <CreditCard className="mr-2 h-4 w-4" />,
       pageAccess: "invoices",
     },
     {

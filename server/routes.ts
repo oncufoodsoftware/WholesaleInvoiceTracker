@@ -1165,6 +1165,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment API Endpoints
+  app.post('/api/payments/bulk-payment', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const { supplierId, branchId, totalAmount, bankTransferAmount, chequeAmount, chequeNumber, paymentDate, notes } = req.body;
+
+      // Process bulk payment
+      const result = await storage.processBulkPayment({
+        supplierId,
+        branchId,
+        totalAmount,
+        bankTransferAmount: bankTransferAmount || 0,
+        chequeAmount: chequeAmount || 0,
+        chequeNumber,
+        paymentDate: new Date(paymentDate),
+        notes,
+        recordedBy: req.user!.id,
+      });
+
+      await logUserAction(req, 'create', 'supplier_payment', result.paymentId, `Bulk payment of ${totalAmount} to supplier ${supplierId}`);
+
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ message: `Error processing bulk payment: ${err}` });
+    }
+  });
+
+  app.get('/api/payments/tracking', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const payments = await storage.getAllPaymentTracking(branchId, startDate, endDate);
+      res.json(payments);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching payment tracking data: ${err}` });
+    }
+  });
+
+  app.get('/api/payments/supplier/:supplierId', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const supplierId = Number(req.params.supplierId);
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+
+      const payments = await storage.getSupplierPayments(supplierId, branchId);
+      res.json(payments);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching supplier payments: ${err}` });
+    }
+  });
+
   // Reports API Endpoints
   app.get('/api/reports/sales', async (req, res) => {
     try {
