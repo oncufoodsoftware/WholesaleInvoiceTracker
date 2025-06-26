@@ -12,7 +12,7 @@ import { format } from "date-fns";
 
 export default function PaymentTracking() {
   const [filters, setFilters] = useState({
-    branchId: "",
+    branchId: "all",
     startDate: "",
     endDate: "",
   });
@@ -32,7 +32,7 @@ export default function PaymentTracking() {
     queryKey: ["/api/payments/tracking", filters],
     queryFn: async () => {
       const queryParams = new URLSearchParams();
-      if (filters.branchId) queryParams.append("branchId", filters.branchId);
+      if (filters.branchId && filters.branchId !== "all") queryParams.append("branchId", filters.branchId);
       if (filters.startDate) queryParams.append("startDate", filters.startDate);
       if (filters.endDate) queryParams.append("endDate", filters.endDate);
 
@@ -50,7 +50,7 @@ export default function PaymentTracking() {
 
   const clearFilters = () => {
     setFilters({
-      branchId: "",
+      branchId: "all",
       startDate: "",
       endDate: "",
     });
@@ -136,7 +136,7 @@ export default function PaymentTracking() {
                   <SelectValue placeholder="All branches" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All branches</SelectItem>
+                  <SelectItem value="all">All branches</SelectItem>
                   {branches.map((branch: any) => (
                     <SelectItem key={branch.id} value={branch.id.toString()}>
                       {branch.name}
