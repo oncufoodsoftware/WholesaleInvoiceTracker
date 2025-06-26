@@ -8,11 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, CreditCard, Building, Banknote, FileCheck } from "lucide-react";
+import { Loader2, Banknote, Building, FileCheck } from "lucide-react";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -78,29 +76,15 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
     }
   });
 
-  // Fetch unpaid invoices for selected supplier and branch
-  const { data: unpaidInvoices = [] } = useQuery({
-    queryKey: ["/api/invoices", { supplierId: selectedSupplier, branchId: selectedBranch, status: "unpaid,partially_paid" }],
-    queryFn: async () => {
-      if (!selectedSupplier || !selectedBranch) return [];
-      const res = await apiRequest("POST", "/api/invoices/filter", {
-        supplierId: selectedSupplier,
-        branchId: selectedBranch,
-        status: "unpaid,partially_paid"
-      });
-      return await res.json();
-    },
-    enabled: !!selectedSupplier && !!selectedBranch
-  });
-
   // Process bulk payment mutation
   const bulkPaymentMutation = useMutation({
-    mutationFn: async (data: BulkPaymentFormData) => {
+    mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/payments/bulk-payment", data);
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/tracking"] });
       toast({
         title: "Payment processed successfully",
         description: `Bulk payment has been applied to invoices`,
@@ -128,184 +112,156 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
     bulkPaymentMutation.mutate(apiData);
   };
 
-  const totalOutstanding = unpaidInvoices.reduce((sum: number, invoice: any) => 
-    sum + (invoice.amount - (invoice.paidAmount || 0)), 0
-  );
-
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>Bulk Payment</DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Supplier and Branch Selection */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="supplier">Supplier</Label>
-            <Select
-              value={selectedSupplier?.toString() || ""}
-              onValueChange={(value) => {
-                const supplierId = parseInt(value);
-                setSelectedSupplier(supplierId);
-                form.setValue("supplierId", supplierId);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((supplier: any) => (
-                  <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {form.formState.errors.supplierId && (
-              <p className="text-sm text-red-500">{form.formState.errors.supplierId.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch</Label>
-            <Select
-              value={selectedBranch?.toString() || ""}
-              onValueChange={(value) => {
-                const branchId = parseInt(value);
-                setSelectedBranch(branchId);
-                form.setValue("branchId", branchId);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch: any) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {form.formState.errors.branchId && (
-              <p className="text-sm text-red-500">{form.formState.errors.branchId.message}</p>
-            )}
-          </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Supplier Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="supplier">Supplier</Label>
+          <Select 
+            value={selectedSupplier?.toString() || ""} 
+            onValueChange={(value) => {
+              const supplierId = parseInt(value);
+              setSelectedSupplier(supplierId);
+              form.setValue("supplierId", supplierId);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              {suppliers.map((supplier: any) => (
+                <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                  {supplier.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.supplierId && (
+            <p className="text-sm text-destructive">{form.formState.errors.supplierId.message}</p>
+          )}
         </div>
 
-        {/* Outstanding Invoices Summary */}
-        {selectedSupplier && selectedBranch && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
+        {/* Branch Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="branch">Branch</Label>
+          <Select 
+            value={selectedBranch?.toString() || ""} 
+            onValueChange={(value) => {
+              const branchId = parseInt(value);
+              setSelectedBranch(branchId);
+              form.setValue("branchId", branchId);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((branch: any) => (
+                <SelectItem key={branch.id} value={branch.id.toString()}>
+                  {branch.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.branchId && (
+            <p className="text-sm text-destructive">{form.formState.errors.branchId.message}</p>
+          )}
+        </div>
+
+        {/* Payment Amount */}
+        <div className="space-y-2">
+          <Label htmlFor="amount">Payment Amount (£)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            {...form.register("totalAmount", { valueAsNumber: true })}
+          />
+          {form.formState.errors.totalAmount && (
+            <p className="text-sm text-destructive">{form.formState.errors.totalAmount.message}</p>
+          )}
+        </div>
+
+        {/* Payment Method */}
+        <div className="space-y-3">
+          <Label>Payment Method</Label>
+          <RadioGroup
+            value={watchedPaymentMethod}
+            onValueChange={(value) => form.setValue("paymentMethod", value as any)}
+            className="grid grid-cols-1 gap-3"
+          >
+            <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50">
+              <RadioGroupItem value="cash" id="cash" />
+              <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer flex-1">
+                <Banknote className="h-4 w-4" />
+                Cash
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50">
+              <RadioGroupItem value="bank_transfer" id="bank_transfer" />
+              <Label htmlFor="bank_transfer" className="flex items-center gap-2 cursor-pointer flex-1">
                 <Building className="h-4 w-4" />
-                Outstanding Invoices
-              </CardTitle>
-              <CardDescription>
-                {unpaidInvoices.length} unpaid invoices totaling £{totalOutstanding.toFixed(2)}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {unpaidInvoices.map((invoice: any) => (
-                  <div key={invoice.id} className="flex justify-between text-sm">
-                    <span>{invoice.invoiceNumber}</span>
-                    <span>£{(invoice.amount - (invoice.paidAmount || 0)).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                Bank Transfer
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50">
+              <RadioGroupItem value="cheque" id="cheque" />
+              <Label htmlFor="cheque" className="flex items-center gap-2 cursor-pointer flex-1">
+                <FileCheck className="h-4 w-4" />
+                Cheque
+              </Label>
+            </div>
+          </RadioGroup>
+          {form.formState.errors.paymentMethod && (
+            <p className="text-sm text-destructive">{form.formState.errors.paymentMethod.message}</p>
+          )}
+        </div>
+
+        {/* Cheque Number (conditional) */}
+        {watchedPaymentMethod === "cheque" && (
+          <div className="space-y-2">
+            <Label htmlFor="chequeNumber">Cheque Number</Label>
+            <Input
+              placeholder="Enter cheque number"
+              {...form.register("chequeNumber")}
+            />
+            {form.formState.errors.chequeNumber && (
+              <p className="text-sm text-destructive">{form.formState.errors.chequeNumber.message}</p>
+            )}
+          </div>
         )}
 
-        {/* Payment Details */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="totalAmount">Total Payment Amount</Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              {...form.register("totalAmount", { 
-                valueAsNumber: true,
-                onChange: (e) => handleTotalAmountChange(parseFloat(e.target.value) || 0)
-              })}
-            />
-            {form.formState.errors.totalAmount && (
-              <p className="text-sm text-red-500">{form.formState.errors.totalAmount.message}</p>
-            )}
-          </div>
-
-          <Separator />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="bankTransferAmount" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Bank Transfer Amount
-              </Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...form.register("bankTransferAmount", { 
-                  valueAsNumber: true,
-                  onChange: (e) => handleBankAmountChange(parseFloat(e.target.value) || 0)
-                })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="chequeAmount">Cheque Amount</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...form.register("chequeAmount", { 
-                  valueAsNumber: true,
-                  onChange: (e) => handleChequeAmountChange(parseFloat(e.target.value) || 0)
-                })}
-              />
-            </div>
-          </div>
-
-          {watchedChequeAmount > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="chequeNumber">Cheque Number</Label>
-              <Input
-                type="text"
-                placeholder="Enter cheque number"
-                {...form.register("chequeNumber")}
-              />
-              {form.formState.errors.chequeNumber && (
-                <p className="text-sm text-red-500">{form.formState.errors.chequeNumber.message}</p>
-              )}
-            </div>
+        {/* Payment Date */}
+        <div className="space-y-2">
+          <Label htmlFor="paymentDate">Payment Date</Label>
+          <Input
+            type="date"
+            {...form.register("paymentDate")}
+          />
+          {form.formState.errors.paymentDate && (
+            <p className="text-sm text-destructive">{form.formState.errors.paymentDate.message}</p>
           )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="paymentDate">Payment Date</Label>
-            <Input
-              type="date"
-              {...form.register("paymentDate")}
-            />
-            {form.formState.errors.paymentDate && (
-              <p className="text-sm text-red-500">{form.formState.errors.paymentDate.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              placeholder="Additional notes about this payment"
-              {...form.register("notes")}
-            />
-          </div>
+        {/* Notes */}
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes (Optional)</Label>
+          <Textarea
+            placeholder="Additional notes about this payment"
+            {...form.register("notes")}
+            rows={2}
+          />
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
