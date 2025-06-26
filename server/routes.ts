@@ -16,6 +16,8 @@ import {
   insertUserSchema,
   insertUserActionSchema,
   insertSupportTicketSchema,
+  insertSupplierPaymentSchema,
+  insertInvoicePaymentSchema,
   actionTypeEnum,
   supportTicketStatusEnum,
   supportTicketPriorityEnum

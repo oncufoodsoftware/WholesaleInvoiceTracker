@@ -115,6 +115,21 @@ export const invoicePayments = pgTable("invoice_payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Supplier payments table (tracks bulk payments to suppliers)
+export const supplierPayments = pgTable("supplier_payments", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id).notNull(),
+  totalAmount: doublePrecision("total_amount").notNull(),
+  bankTransferAmount: doublePrecision("bank_transfer_amount").default(0),
+  chequeAmount: doublePrecision("cheque_amount").default(0),
+  chequeNumber: text("cheque_number"), // For cheque payments
+  paymentDate: timestamp("payment_date").notNull(),
+  notes: text("notes"),
+  recordedBy: integer("recorded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Support Tickets table
 export const supportTickets = pgTable("support_tickets", {
   id: serial("id").primaryKey(),
@@ -163,6 +178,11 @@ export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit
 });
 
 export const insertInvoicePaymentSchema = createInsertSchema(invoicePayments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupplierPaymentSchema = createInsertSchema(supplierPayments).omit({
   id: true,
   createdAt: true,
 });
@@ -267,3 +287,6 @@ export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 
 export type InvoicePayment = typeof invoicePayments.$inferSelect;
 export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
+
+export type SupplierPayment = typeof supplierPayments.$inferSelect;
+export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
