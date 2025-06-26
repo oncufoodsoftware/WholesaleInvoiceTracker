@@ -1562,6 +1562,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment Tracking API Endpoints
+  app.post('/api/payments/bulk-payment', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const validationResult = insertSupplierPaymentSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid payment data', 
+          errors: validationResult.error.format() 
+        });
+      }
+
+      const paymentData = {
+        ...validationResult.data,
+        recordedBy: req.user.id
+      };
+
+      // Process bulk payment with automatic invoice distribution
+      const result = await storage.processBulkPayment(paymentData);
+      
+      await logUserAction(req, 'create', 'supplier_payment', result.paymentId, 
+        `Bulk payment of £${paymentData.totalAmount} to supplier`);
+
+      res.status(201).json(result);
+    } catch (err) {
+      res.status(500).json({ message: `Error processing bulk payment: ${err}` });
+    }
+  });
+
+  app.get('/api/payments/supplier/:supplierId', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const supplierId = Number(req.params.supplierId);
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      
+      const payments = await storage.getSupplierPayments(supplierId, branchId);
+      res.json(payments);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching supplier payments: ${err}` });
+    }
+  });
+
+  app.get('/api/payments/tracking', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const payments = await storage.getAllPaymentTracking(branchId, startDate, endDate);
+      res.json(payments);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching payment tracking: ${err}` });
+    }
+  });
+
+  app.get('/api/invoices/:invoiceId/payments', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const invoiceId = Number(req.params.invoiceId);
+      const payments = await storage.getInvoicePayments(invoiceId);
+      res.json(payments);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching invoice payments: ${err}` });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

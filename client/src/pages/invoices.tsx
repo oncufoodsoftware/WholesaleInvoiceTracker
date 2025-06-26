@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, FileDownIcon, GridIcon, ListIcon } from "lucide-react";
+import { PlusIcon, FileDownIcon, GridIcon, ListIcon, CreditCardIcon } from "lucide-react";
 import { InvoiceFilters } from "@/components/invoices/invoice-filters";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
@@ -9,10 +9,12 @@ import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { InvoiceTipTooltip } from "@/components/financial-tip-tooltip";
+import { BulkPaymentForm } from "@/components/payments/bulk-payment-form";
 
 export default function Invoices() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
   // Use localStorage to persist filters across actions and page reloads
   const savedFilters = localStorage.getItem('invoiceFilters');
@@ -141,10 +143,16 @@ export default function Invoices() {
           <h2 className="text-2xl font-bold">Invoice Management</h2>
           <InvoiceTipTooltip variant="prominent" />
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-1">
-          <PlusIcon className="h-4 w-4" />
-          <span>New Invoice</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsPaymentDialogOpen(true)} variant="outline" className="flex items-center gap-1">
+            <CreditCardIcon className="h-4 w-4" />
+            <span>Bulk Payment</span>
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-1">
+            <PlusIcon className="h-4 w-4" />
+            <span>New Invoice</span>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

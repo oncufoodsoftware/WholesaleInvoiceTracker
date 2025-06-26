@@ -10,6 +10,7 @@ import {
   rolePermissions,
   supportTickets,
   invoicePayments,
+  supplierPayments,
   type User, 
   type InsertUser, 
   type Branch,
@@ -31,7 +32,9 @@ import {
   type SupportTicket,
   type InsertSupportTicket,
   type InvoicePayment,
-  type InsertInvoicePayment
+  type InsertInvoicePayment,
+  type SupplierPayment,
+  type InsertSupplierPayment
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray, count } from "drizzle-orm";
@@ -125,9 +128,16 @@ export interface IStorage {
   createInvoicePayment(payment: InsertInvoicePayment): Promise<InvoicePayment>;
   updateInvoicePayment(id: number, payment: Partial<InsertInvoicePayment>): Promise<InvoicePayment | undefined>;
   deleteInvoicePayment(id: number): Promise<boolean>;
+  
+  // Support Ticket methods
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
   updateSupportTicket(id: number, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined>;
   deleteSupportTicket(id: number): Promise<boolean>;
+
+  // Supplier Payment methods
+  processBulkPayment(payment: InsertSupplierPayment): Promise<{ paymentId: number; updatedInvoices: number[] }>;
+  getSupplierPayments(supplierId: number, branchId?: number): Promise<SupplierPayment[]>;
+  getAllPaymentTracking(branchId?: number, startDate?: Date, endDate?: Date): Promise<any[]>;
 
   // User actions methods
   logUserAction(action: InsertUserAction): Promise<UserAction>;
@@ -1014,6 +1024,205 @@ export class DatabaseStorage implements IStorage {
       return threats;
     } catch (error) {
       console.error('Error getting security threats:', error);
+      return [];
+    }
+  }
+
+  // Bulk Payment Processing Methods
+  async processBulkPayment(payment: InsertSupplierPayment): Promise<{ paymentId: number; updatedInvoices: number[] }> {
+    try {
+      // Start a database transaction
+      const result = await db.transaction(async (tx) => {
+        // Create the supplier payment record
+        const [supplierPayment] = await tx
+          .insert(supplierPayments)
+          .values(payment)
+          .returning();
+
+        // Get unpaid invoices for this supplier and branch, ordered by date (oldest first)
+        const unpaidInvoices = await tx
+          .select()
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.supplierId, payment.supplierId),
+              eq(invoices.branchId, payment.branchId),
+              or(
+                eq(invoices.status, 'unpaid'),
+                eq(invoices.status, 'partially_paid')
+              )
+            )
+          )
+          .orderBy(asc(invoices.invoiceDate));
+
+        let remainingAmount = payment.totalAmount;
+        const updatedInvoices: number[] = [];
+
+        // Distribute payment across invoices (FIFO - oldest first)
+        for (const invoice of unpaidInvoices) {
+          if (remainingAmount <= 0) break;
+
+          const outstandingAmount = invoice.amount - (invoice.paidAmount || 0);
+          if (outstandingAmount <= 0) continue;
+
+          const paymentAmount = Math.min(remainingAmount, outstandingAmount);
+          const newPaidAmount = (invoice.paidAmount || 0) + paymentAmount;
+          
+          // Determine payment types for this invoice
+          let bankTransferAmount = 0;
+          let chequeAmount = 0;
+          
+          if (payment.bankTransferAmount && payment.bankTransferAmount > 0) {
+            bankTransferAmount = Math.min(paymentAmount, payment.bankTransferAmount - (payment.totalAmount - remainingAmount - paymentAmount));
+            bankTransferAmount = Math.max(0, bankTransferAmount);
+          }
+          
+          if (payment.chequeAmount && payment.chequeAmount > 0 && paymentAmount > bankTransferAmount) {
+            chequeAmount = paymentAmount - bankTransferAmount;
+          } else if (!payment.bankTransferAmount) {
+            chequeAmount = paymentAmount;
+          } else if (!payment.chequeAmount) {
+            bankTransferAmount = paymentAmount;
+          }
+
+          // Create individual invoice payment records
+          if (bankTransferAmount > 0) {
+            await tx.insert(invoicePayments).values({
+              invoiceId: invoice.id,
+              paymentType: 'bank_transfer',
+              amount: bankTransferAmount,
+              paymentDate: payment.paymentDate,
+              notes: `Bulk payment - Bank Transfer`,
+              recordedBy: payment.recordedBy
+            });
+          }
+
+          if (chequeAmount > 0) {
+            await tx.insert(invoicePayments).values({
+              invoiceId: invoice.id,
+              paymentType: 'cheque',
+              amount: chequeAmount,
+              chequeNumber: payment.chequeNumber,
+              paymentDate: payment.paymentDate,
+              notes: `Bulk payment - Cheque ${payment.chequeNumber}`,
+              recordedBy: payment.recordedBy
+            });
+          }
+
+          // Update invoice paid amount and status
+          const newStatus = newPaidAmount >= invoice.amount ? 'paid' : 'partially_paid';
+          
+          await tx
+            .update(invoices)
+            .set({
+              paidAmount: newPaidAmount,
+              status: newStatus
+            })
+            .where(eq(invoices.id, invoice.id));
+
+          updatedInvoices.push(invoice.id);
+          remainingAmount -= paymentAmount;
+        }
+
+        // Update supplier branch balance
+        const currentBalance = await tx
+          .select()
+          .from(supplierBranchBalances)
+          .where(
+            and(
+              eq(supplierBranchBalances.supplierId, payment.supplierId),
+              eq(supplierBranchBalances.branchId, payment.branchId)
+            )
+          );
+
+        if (currentBalance.length > 0) {
+          await tx
+            .update(supplierBranchBalances)
+            .set({
+              balance: currentBalance[0].balance - payment.totalAmount,
+              lastUpdated: new Date()
+            })
+            .where(
+              and(
+                eq(supplierBranchBalances.supplierId, payment.supplierId),
+                eq(supplierBranchBalances.branchId, payment.branchId)
+              )
+            );
+        } else {
+          await tx.insert(supplierBranchBalances).values({
+            supplierId: payment.supplierId,
+            branchId: payment.branchId,
+            balance: -payment.totalAmount
+          });
+        }
+
+        return { paymentId: supplierPayment.id, updatedInvoices };
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error processing bulk payment:', error);
+      throw new Error(`Failed to process bulk payment: ${error}`);
+    }
+  }
+
+  async getSupplierPayments(supplierId: number, branchId?: number): Promise<SupplierPayment[]> {
+    try {
+      let query = db.select().from(supplierPayments).where(eq(supplierPayments.supplierId, supplierId));
+      
+      if (branchId) {
+        query = query.where(eq(supplierPayments.branchId, branchId));
+      }
+      
+      const payments = await query.orderBy(desc(supplierPayments.paymentDate));
+      return payments;
+    } catch (error) {
+      console.error('Error getting supplier payments:', error);
+      return [];
+    }
+  }
+
+  async getAllPaymentTracking(branchId?: number, startDate?: Date, endDate?: Date): Promise<any[]> {
+    try {
+      let whereConditions = [];
+
+      if (branchId) {
+        whereConditions.push(eq(supplierPayments.branchId, branchId));
+      }
+      
+      if (startDate) {
+        whereConditions.push(gte(supplierPayments.paymentDate, startDate));
+      }
+      
+      if (endDate) {
+        whereConditions.push(lte(supplierPayments.paymentDate, endDate));
+      }
+
+      const payments = await db
+        .select({
+          id: supplierPayments.id,
+          supplierId: supplierPayments.supplierId,
+          supplierName: suppliers.name,
+          branchId: supplierPayments.branchId,
+          branchName: branches.name,
+          totalAmount: supplierPayments.totalAmount,
+          bankTransferAmount: supplierPayments.bankTransferAmount,
+          chequeAmount: supplierPayments.chequeAmount,
+          chequeNumber: supplierPayments.chequeNumber,
+          paymentDate: supplierPayments.paymentDate,
+          notes: supplierPayments.notes,
+          recordedBy: supplierPayments.recordedBy,
+          createdAt: supplierPayments.createdAt
+        })
+        .from(supplierPayments)
+        .leftJoin(suppliers, eq(supplierPayments.supplierId, suppliers.id))
+        .leftJoin(branches, eq(supplierPayments.branchId, branches.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(supplierPayments.paymentDate));
+
+      return payments;
+    } catch (error) {
+      console.error('Error getting payment tracking:', error);
       return [];
     }
   }
