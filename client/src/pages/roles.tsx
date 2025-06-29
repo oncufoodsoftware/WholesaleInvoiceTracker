@@ -349,8 +349,8 @@ export default function Roles() {
     setPermissionsDialogOpen(true);
   };
 
-  // Helper to check if the user is admin
-  const isAdmin = currentUser?.role === 'admin';
+  // Helper to check if the user can manage roles
+  const canManageRoles = currentUser?.role === 'admin' || currentUser?.role === 'branch_manager';
 
   return (
     <div className="py-4">
@@ -370,7 +370,7 @@ export default function Roles() {
             setIsDialogOpen(true);
           }} 
           className="flex items-center gap-1"
-          disabled={!isAdmin}
+          disabled={!canManageRoles}
         >
           <PlusIcon className="h-4 w-4" />
           <span>New Role</span>
@@ -428,7 +428,7 @@ export default function Roles() {
                         onClick={() => handleOpenPermissions(role)}
                         variant="outline"
                         size="sm"
-                        disabled={!isAdmin}
+                        disabled={!canManageRoles}
                       >
                         <ShieldCheck className="h-4 w-4" />
                       </Button>
@@ -439,7 +439,7 @@ export default function Roles() {
                         }}
                         variant="outline"
                         size="sm"
-                        disabled={!isAdmin}
+                        disabled={!canManageRoles}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -447,7 +447,7 @@ export default function Roles() {
                         onClick={() => handleDeleteRole(role.id)} 
                         variant="ghost" 
                         size="sm"
-                        disabled={!isAdmin || role.isDefault || (role.userCount && role.userCount > 0)}
+                        disabled={!canManageRoles || role.isDefault || (role.userCount && role.userCount > 0)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
