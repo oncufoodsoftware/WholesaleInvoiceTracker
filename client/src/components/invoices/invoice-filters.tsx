@@ -30,14 +30,22 @@ interface InvoiceFiltersProps {
 }
 
 export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFiltersProps) {
+  // Get current user info
+  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+  
   // Get saved filters from localStorage
   const savedFilters = localStorage.getItem('invoiceFilters');
   const parsedFilters = savedFilters ? JSON.parse(savedFilters) : {};
   
+  // For branch managers, set their branch as default and don't allow changing
+  const defaultBranchId = (user as any)?.role === 'branch_manager' 
+    ? (user as any).branchId?.toString() || "all"
+    : parsedFilters.branchId || "all";
+  
   const form = useForm({
     defaultValues: {
       supplierId: parsedFilters.supplierId || "all",
-      branchId: parsedFilters.branchId || "all",
+      branchId: defaultBranchId,
       status: parsedFilters.status || "all",
       type: parsedFilters.type || "all",
       startDate: parsedFilters.startDate || "",
@@ -129,9 +137,10 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
+                    disabled={(user as any)?.role === 'branch_manager'}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={(user as any)?.role === 'branch_manager' ? 'opacity-60' : ''}>
                         <SelectValue placeholder="All Branches" />
                       </SelectTrigger>
                     </FormControl>
@@ -144,6 +153,11 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                       ))}
                     </SelectContent>
                   </Select>
+                  {(user as any)?.role === 'branch_manager' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Branch selection is locked to your assigned branch
+                    </p>
+                  )}
                 </FormItem>
               )}
             />
