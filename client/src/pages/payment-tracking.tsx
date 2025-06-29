@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,24 @@ import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon }
 import { format } from "date-fns";
 
 export default function PaymentTracking() {
+  // Get current user info
+  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+    
   const [filters, setFilters] = useState({
     branchId: "all",
     startDate: "",
     endDate: "",
   });
+
+  // Update branch filter when user data loads
+  useEffect(() => {
+    if (user && (user as any)?.role === 'branch_manager' && (user as any)?.branchId) {
+      setFilters(prev => ({
+        ...prev,
+        branchId: (user as any).branchId.toString()
+      }));
+    }
+  }, [user]);
 
   // Fetch branches for filter dropdown
   const { data: branches = [] } = useQuery({
@@ -45,12 +58,20 @@ export default function PaymentTracking() {
   });
 
   const handleFilterChange = (key: string, value: string) => {
+    // Don't allow branch managers to change branch
+    if (key === 'branchId' && (user as any)?.role === 'branch_manager') {
+      return;
+    }
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const clearFilters = () => {
+    const resetBranchId = (user as any)?.role === 'branch_manager' 
+      ? (user as any).branchId?.toString() || "all"
+      : "all";
+      
     setFilters({
-      branchId: "all",
+      branchId: resetBranchId,
       startDate: "",
       endDate: "",
     });
@@ -131,8 +152,9 @@ export default function PaymentTracking() {
               <Select
                 value={filters.branchId}
                 onValueChange={(value) => handleFilterChange("branchId", value)}
+                disabled={(user as any)?.role === 'branch_manager'}
               >
-                <SelectTrigger>
+                <SelectTrigger className={(user as any)?.role === 'branch_manager' ? 'opacity-60' : ''}>
                   <SelectValue placeholder="All branches" />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,6 +166,11 @@ export default function PaymentTracking() {
                   ))}
                 </SelectContent>
               </Select>
+              {(user as any)?.role === 'branch_manager' && (
+                <p className="text-xs text-muted-foreground">
+                  Branch selection is locked to your assigned branch
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
