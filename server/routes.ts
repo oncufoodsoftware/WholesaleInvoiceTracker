@@ -254,8 +254,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all suppliers
       const suppliers = await storage.getAllSuppliers();
       
-      // Get all invoices for balances
-      const allInvoices = await storage.getAllInvoices();
+      // Get invoices based on user role and branch
+      const user = req.user as any;
+      let allInvoices;
+      
+      if (user?.role === 'branch_manager' && user?.branchId) {
+        // Branch manager sees only their branch invoices
+        allInvoices = await storage.getInvoicesByBranch(user.branchId);
+      } else {
+        // Admin sees all invoices
+        allInvoices = await storage.getAllInvoices();
+      }
       
       // Check if we need to include branch balances
       if (req.query.withBranchBalances === 'true') {
@@ -1201,9 +1210,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).send("Unauthorized");
       }
 
-      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      let branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      // Branch managers can only see their own branch payments
+      const user = req.user as any;
+      if (user?.role === 'branch_manager' && user?.branchId) {
+        branchId = user.branchId;
+      }
 
       const payments = await storage.getAllPaymentTracking(branchId, startDate, endDate);
       res.json(payments);

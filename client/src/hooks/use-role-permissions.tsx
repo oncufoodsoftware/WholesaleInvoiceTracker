@@ -21,9 +21,10 @@ export function useRolePermissions() {
       return true;
     }
 
-    // Branch Manager has access to roles page by default
-    if (user?.role === 'branch_manager' && page === 'roles') {
-      return true;
+    // Branch Manager has access to specific pages only
+    if (user?.role === 'branch_manager') {
+      const allowedPages = ['dashboard', 'suppliers', 'invoices', 'payment_tracking', 'supplier_risk', 'finances'];
+      return allowedPages.includes(page);
     }
 
     if (!permissions || !Array.isArray(permissions)) {
@@ -51,15 +52,9 @@ export function useRolePermissions() {
       ];
     }
 
-    // Branch Manager gets roles page access by default
+    // Branch Manager gets specific pages access only
     if (user?.role === 'branch_manager') {
-      const basePages = ['dashboard', 'roles'];
-      if (!permissions || !Array.isArray(permissions)) {
-        return basePages;
-      }
-      
-      const permissionPages = permissions.map((permission: RolePermission) => permission.pageAccess);
-      return Array.from(new Set([...basePages, ...permissionPages])); // Remove duplicates
+      return ['dashboard', 'suppliers', 'invoices', 'payment_tracking', 'supplier_risk', 'finances'];
     }
 
     if (!permissions || !Array.isArray(permissions)) {
