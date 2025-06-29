@@ -113,6 +113,11 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- June 29, 2025. Implemented branch-based data filtering for Branch Manager role
+  - Removed Branch Manager access to Roles page (admin-only now)
+  - Added branch filtering to all API endpoints (suppliers, invoices, payments, analytics, risk)
+  - Branch Managers now see only their assigned branch data across all pages
+  - Dashboard shows branch-specific metrics for Branch Managers
 - June 26, 2025. Initial setup
 
 ## User Preferences

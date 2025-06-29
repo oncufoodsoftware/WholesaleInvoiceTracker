@@ -25,8 +25,8 @@ export function registerRoleRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
-    // Allow admin and branch_manager to access roles
-    if (user.role === "admin" || user.role === "branch_manager") {
+    // Only allow admin to access roles management
+    if (user.role === "admin") {
       return next();
     }
     
@@ -88,10 +88,10 @@ export function registerRoleRoutes(app: Express) {
   // Create a new role
   app.post("/api/roles", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
-      // Allow admin and branch_manager to create roles
+      // Only allow admin to create roles
       const user = req.user as any;
-      if (user.role !== "admin" && user.role !== "branch_manager") {
-        return res.status(403).json({ message: "Access denied. Admin or Branch Manager privileges required." });
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
       }
       
       // Validate request body
@@ -146,10 +146,10 @@ export function registerRoleRoutes(app: Express) {
   // Update a role
   app.patch("/api/roles/:id", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
-      // Allow admin and branch_manager to update roles
+      // Only allow admin to update roles
       const user = req.user as any;
-      if (user.role !== "admin" && user.role !== "branch_manager") {
-        return res.status(403).json({ message: "Access denied. Admin or Branch Manager privileges required." });
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
       }
       
       const roleId = parseInt(req.params.id);
@@ -198,10 +198,10 @@ export function registerRoleRoutes(app: Express) {
   // Delete a role
   app.delete("/api/roles/:id", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
-      // Allow admin and branch_manager to delete roles
+      // Only allow admin to delete roles
       const user = req.user as any;
-      if (user.role !== "admin" && user.role !== "branch_manager") {
-        return res.status(403).json({ message: "Access denied. Admin or Branch Manager privileges required." });
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
       }
       
       const roleId = parseInt(req.params.id);
@@ -248,10 +248,10 @@ export function registerRoleRoutes(app: Express) {
   // Update role permissions
   app.post("/api/roles/:id/permissions", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
-      // Allow admin and branch_manager to update role permissions
+      // Only allow admin to update role permissions
       const user = req.user as any;
-      if (user.role !== "admin" && user.role !== "branch_manager") {
-        return res.status(403).json({ message: "Access denied. Admin or Branch Manager privileges required." });
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
       }
       
       const roleId = parseInt(req.params.id);
