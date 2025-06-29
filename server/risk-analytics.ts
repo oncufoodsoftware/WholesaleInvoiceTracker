@@ -26,7 +26,13 @@ export interface SupplierRiskData {
  */
 export async function getSupplierRiskData(req: Request, res: Response) {
   try {
-    const { startDate, endDate, branchId } = req.query;
+    let { startDate, endDate, branchId } = req.query;
+    
+    // Branch managers can only see their own branch data
+    const user = req.user as any;
+    if (user?.role === 'branch_manager' && user?.branchId) {
+      branchId = user.branchId.toString();
+    }
     
     // Validate date parameters
     if (!startDate || !endDate) {
@@ -173,7 +179,13 @@ export async function getSupplierRiskData(req: Request, res: Response) {
  */
 export async function getRiskHistory(req: Request, res: Response) {
   try {
-    const { supplierId, months = 6 } = req.query;
+    let { supplierId, months = 6, branchId } = req.query;
+    
+    // Branch managers can only see their own branch data
+    const user = req.user as any;
+    if (user?.role === 'branch_manager' && user?.branchId) {
+      branchId = user.branchId.toString();
+    }
     
     // Validate supplierId
     if (!supplierId) {

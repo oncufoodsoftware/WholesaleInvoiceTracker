@@ -293,7 +293,13 @@ export async function getBranchPerformanceMetrics(): Promise<any[]> {
 export async function getAnalyticsData(req: Request, res: Response) {
   try {
     // Check if we need to filter by branch
-    const branchId = req.query.branchId ? parseInt(req.query.branchId as string) : undefined;
+    let branchId = req.query.branchId ? parseInt(req.query.branchId as string) : undefined;
+    
+    // Branch managers can only see their own branch data
+    const user = req.user as any;
+    if (user?.role === 'branch_manager' && user?.branchId) {
+      branchId = user.branchId;
+    }
     
     // Get revenue data
     const revenue = await getMonthlyRevenue(branchId);
