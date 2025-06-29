@@ -59,7 +59,7 @@ export function useRolePermissions() {
       }
       
       const permissionPages = permissions.map((permission: RolePermission) => permission.pageAccess);
-      return [...new Set([...basePages, ...permissionPages])]; // Remove duplicates
+      return Array.from(new Set([...basePages, ...permissionPages])); // Remove duplicates
     }
 
     if (!permissions || !Array.isArray(permissions)) {
