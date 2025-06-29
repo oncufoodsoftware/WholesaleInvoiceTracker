@@ -10,8 +10,31 @@ import {
 // Register role management routes
 export function registerRoleRoutes(app: Express) {
   
+  // Authentication middleware
+  const requireAuth = (req: Request, res: Response, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
+
+  // Role-based access control for roles management
+  const requireRoleAccess = (req: Request, res: Response, next: any) => {
+    const user = req.user as any;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Allow admin and branch_manager to access roles
+    if (user.role === "admin" || user.role === "branch_manager") {
+      return next();
+    }
+    
+    return res.status(403).json({ message: "Access denied. Insufficient permissions." });
+  };
+  
   // Get all roles with user count
-  app.get("/api/roles", async (req: Request, res: Response) => {
+  app.get("/api/roles", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
       const roles = await storage.getAllRoles();
       
@@ -30,7 +53,7 @@ export function registerRoleRoutes(app: Express) {
   });
   
   // Get a specific role
-  app.get("/api/roles/:id", async (req: Request, res: Response) => {
+  app.get("/api/roles/:id", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
       const roleId = parseInt(req.params.id);
       const role = await storage.getRole(roleId);
@@ -46,7 +69,7 @@ export function registerRoleRoutes(app: Express) {
   });
   
   // Get permissions for a role
-  app.get("/api/roles/:id/permissions", async (req: Request, res: Response) => {
+  app.get("/api/roles/:id/permissions", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
       const roleId = parseInt(req.params.id);
       const role = await storage.getRole(roleId);
@@ -63,7 +86,7 @@ export function registerRoleRoutes(app: Express) {
   });
   
   // Create a new role
-  app.post("/api/roles", async (req: Request, res: Response) => {
+  app.post("/api/roles", requireAuth, requireRoleAccess, async (req: Request, res: Response) => {
     try {
       // Check if user is admin
       if (!req.isAuthenticated() || req.user?.role !== "admin") {

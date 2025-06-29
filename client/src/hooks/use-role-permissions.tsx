@@ -21,6 +21,11 @@ export function useRolePermissions() {
       return true;
     }
 
+    // Branch Manager has access to roles page by default
+    if (user?.role === 'branch_manager' && page === 'roles') {
+      return true;
+    }
+
     if (!permissions || !Array.isArray(permissions)) {
       return false;
     }
@@ -44,6 +49,17 @@ export function useRolePermissions() {
         'roles',
         'settings'
       ];
+    }
+
+    // Branch Manager gets roles page access by default
+    if (user?.role === 'branch_manager') {
+      const basePages = ['dashboard', 'roles'];
+      if (!permissions || !Array.isArray(permissions)) {
+        return basePages;
+      }
+      
+      const permissionPages = permissions.map((permission: RolePermission) => permission.pageAccess);
+      return [...new Set([...basePages, ...permissionPages])]; // Remove duplicates
     }
 
     if (!permissions || !Array.isArray(permissions)) {
