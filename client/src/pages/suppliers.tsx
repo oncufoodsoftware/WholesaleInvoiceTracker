@@ -62,13 +62,11 @@ export default function Suppliers() {
   // Get all branches for dropdown selectors and data enrichment
   const { data: branches = [] } = useQuery({
     queryKey: ["/api/branches"],
-    enabled: !isBranchManager, // Only fetch for admin users
   });
   
   // Get all invoices for additional data enrichment
   const { data: invoices = [] } = useQuery({
     queryKey: ["/api/invoices"],
-    enabled: !isBranchManager, // Only fetch for admin users
   });
   
   // Get all suppliers with total debt information
@@ -78,22 +76,17 @@ export default function Suppliers() {
     isError,
     refetch
   } = useQuery({
-    queryKey: ["/api/suppliers", { includeSummary: true, branchId: isBranchManager ? user?.branchId : undefined }],
+    queryKey: ["/api/suppliers", { includeSummary: true }],
     queryFn: async () => {
-      // If branch manager, filter by their branch - use the branch-specific endpoint
-      const baseUrl = isBranchManager && user?.branchId
-        ? `/api/suppliers/branch/${user.branchId}`
-        : "/api/suppliers";
-        
-      // Add the withBranchBalances parameter to get branch-specific balances
-      const url = `${baseUrl}?withBranchBalances=true&forceBalanceUpdate=true`;
+      // Always get all suppliers, but we'll filter balance data based on user role
+      const url = "/api/suppliers?withBranchBalances=true&forceBalanceUpdate=true";
       
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch suppliers");
       let data = await res.json();
       
       // Process the data to add additional needed fields
-      if (!isBranchManager && Array.isArray(data)) {
+      if (Array.isArray(data)) {
         return data.map((supplier) => {
           // Create a supplier with formatted balance information
           const supplierWithDebt = {
@@ -111,6 +104,11 @@ export default function Suppliers() {
             supplier.branchBalances.forEach((balance) => {
               const branchId = balance.branchId;
               if (!branchId) return;
+              
+              // For branch managers, only show their own branch data
+              if (isBranchManager && user?.branchId && branchId !== user.branchId) {
+                return; // Skip this balance for branch managers if it's not their branch
+              }
               
               // Add to branch balances
               if (!supplierWithDebt.branchBalances) {
@@ -130,12 +128,18 @@ export default function Suppliers() {
               totalOutstanding += balanceAmount;
             });
             
-            // Use the server-calculated outstandingAmount if available
-            // If not, fall back to our calculated sum of branch balances
-            if (typeof supplier.outstandingAmount === 'number') {
-              supplierWithDebt.outstandingAmount = supplier.outstandingAmount;
+            // For branch managers, use only their branch balance as total outstanding
+            if (isBranchManager && user?.branchId) {
+              const branchBalance = supplierWithDebt.branchBalances?.[user.branchId];
+              supplierWithDebt.outstandingAmount = branchBalance?.amount || 0;
             } else {
-              supplierWithDebt.outstandingAmount = totalOutstanding;
+              // For admins, use the server-calculated outstandingAmount if available
+              // If not, fall back to our calculated sum of branch balances
+              if (typeof supplier.outstandingAmount === 'number') {
+                supplierWithDebt.outstandingAmount = supplier.outstandingAmount;
+              } else {
+                supplierWithDebt.outstandingAmount = totalOutstanding;
+              }
             }
             
             // Count branches working with this supplier
