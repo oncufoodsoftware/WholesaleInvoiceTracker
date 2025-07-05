@@ -22,6 +22,8 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 import { AchievementDemo } from "@/components/dashboard/achievement-demo";
 import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
@@ -30,6 +32,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { checkAchievement } = useAchievements();
   const [timeframe, setTimeframe] = useState("month");
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   
   // Define types for API response
   interface BranchSummary {
@@ -53,17 +56,56 @@ export default function Dashboard() {
     supplierData: SupplierSummary[];
   }
 
+  // Get branches for admin dropdown
+  const { data: branches = [] } = useQuery({
+    queryKey: ["/api/branches"],
+    enabled: user?.role !== "branch_manager",
+  });
+
+  // Set initial branch selection for admin users
+  useEffect(() => {
+    if (user?.role !== "branch_manager" && (branches as any[]).length > 0 && !selectedBranchId) {
+      setSelectedBranchId((branches as any[])[0].id.toString());
+    }
+  }, [user, branches, selectedBranchId]);
+
+  // Determine which branch to use for data fetching
+  const currentBranchId = user?.role === "branch_manager" 
+    ? user?.branchId?.toString() 
+    : selectedBranchId;
+
   // Fetch summary data from the API - adjust query based on user role
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary", user?.role === "branch_manager" ? user?.branchId : "all"],
+    queryKey: ["/api/dashboard/summary", currentBranchId],
     queryFn: async () => {
-      const endpoint = user?.role === "branch_manager" && user?.branchId
-        ? `/api/dashboard/summary?branchId=${user.branchId}`
+      const endpoint = currentBranchId && currentBranchId !== "all"
+        ? `/api/dashboard/summary?branchId=${currentBranchId}`
         : "/api/dashboard/summary";
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error("Failed to fetch summary data");
       return res.json();
     },
+    enabled: !!currentBranchId || user?.role === "branch_manager",
+  });
+
+  // Fetch financial transactions data for Total Revenue calculation (monthly)
+  const { data: monthlyFinancialSummary } = useQuery({
+    queryKey: ["/api/financial-transactions/summary/monthly", currentBranchId],
+    queryFn: async () => {
+      if (!currentBranchId) return null;
+      
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1; // JavaScript months are 0-based
+      
+      const res = await fetch(
+        `/api/financial-transactions/summary/monthly?branchId=${currentBranchId}&year=${year}&month=${month}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) throw new Error("Failed to fetch financial data");
+      return res.json();
+    },
+    enabled: !!currentBranchId,
   });
 
   // Format numbers as currency (£ Pounds)
@@ -86,39 +128,46 @@ export default function Dashboard() {
     return summaryData.branchData;
   };
 
-  // Calculate branch-specific stats if the user is a branch manager
+  // Calculate revenue from financial transactions (for current month)
+  const calculateTotalRevenue = () => {
+    if (!monthlyFinancialSummary) return 0;
+    
+    // Use totalSales from the monthly financial summary
+    return monthlyFinancialSummary.totalSales || 0;
+  };
+
+  // Calculate branch-specific stats
   const branchSpecificData = () => {
-    if (user?.role !== "branch_manager" || !user?.branchId || !summaryData) {
+    const totalRevenue = calculateTotalRevenue();
+    
+    if (user?.role === "branch_manager" && user?.branchId && summaryData) {
+      const userBranch = summaryData.branchData.find(branch => branch.id === user.branchId);
       return {
-        totalRevenue: summaryData?.totalInvoiceAmount || 0,
-        outstandingAmount: summaryData?.totalOutstandingAmount || 0
+        totalRevenue,
+        outstandingAmount: userBranch?.outstandingAmount || 0
       };
     }
-
-    const userBranch = summaryData.branchData.find(branch => branch.id === user.branchId);
-    
-    if (!userBranch) return { totalRevenue: 0, outstandingAmount: 0 };
     
     return {
-      totalRevenue: userBranch.totalAmount,
-      outstandingAmount: userBranch.outstandingAmount
+      totalRevenue,
+      outstandingAmount: summaryData?.totalOutstandingAmount || 0
     };
   };
 
   // Financial metrics
-  const financialData = branchSpecificData();
+  const dashboardFinancialData = branchSpecificData();
   
   // Check for financial achievements when data loads
   useEffect(() => {
-    if (financialData.totalRevenue > 0) {
+    if (dashboardFinancialData.totalRevenue > 0) {
       // Check sales milestone achievement
       checkAchievement(AchievementTrigger.SALES_MILESTONE, {
-        value: financialData.totalRevenue,
+        value: dashboardFinancialData.totalRevenue,
         period: 'this period'
       });
       
       // Check for positive cash flow achievement
-      const cashFlowAmount = financialData.totalRevenue * 0.35;
+      const cashFlowAmount = dashboardFinancialData.totalRevenue * 0.35;
       if (cashFlowAmount > 0) {
         checkAchievement(AchievementTrigger.POSITIVE_CASH_FLOW, {
           period: 'this month',
@@ -127,26 +176,26 @@ export default function Dashboard() {
       }
       
       // Check payment rate achievement (fully paid invoices)
-      const paymentRate = financialData.totalRevenue 
-        ? ((financialData.totalRevenue - financialData.outstandingAmount) / financialData.totalRevenue) * 100
+      const paymentRate = dashboardFinancialData.totalRevenue 
+        ? ((dashboardFinancialData.totalRevenue - dashboardFinancialData.outstandingAmount) / dashboardFinancialData.totalRevenue) * 100
         : 0;
         
       if (paymentRate >= 95) {
         checkAchievement(AchievementTrigger.ALL_INVOICES_PAID);
       }
     }
-  }, [financialData, checkAchievement]);
+  }, [dashboardFinancialData, checkAchievement]);
   
   // Format dashboard data based on user role and branch
   const dashboardData = {
-    totalRevenue: formatCurrency(financialData.totalRevenue),
-    outstandingInvoices: formatCurrency(financialData.outstandingAmount),
-    paymentRate: financialData.totalRevenue 
-      ? Math.round(((financialData.totalRevenue - financialData.outstandingAmount) / financialData.totalRevenue) * 100) 
+    totalRevenue: formatCurrency(dashboardFinancialData.totalRevenue),
+    outstandingInvoices: formatCurrency(dashboardFinancialData.outstandingAmount),
+    paymentRate: dashboardFinancialData.totalRevenue 
+      ? Math.round(((dashboardFinancialData.totalRevenue - dashboardFinancialData.outstandingAmount) / dashboardFinancialData.totalRevenue) * 100) 
       : 0,
     // For demo purposes - in a real app these would come from real financial data
-    totalExpenses: formatCurrency(financialData.totalRevenue * 0.65), 
-    cashFlow: formatCurrency(financialData.totalRevenue * 0.35)
+    totalExpenses: formatCurrency(dashboardFinancialData.totalRevenue * 0.65), 
+    cashFlow: formatCurrency(dashboardFinancialData.totalRevenue * 0.35)
   };
 
   // Dynamic trends based on user role
@@ -176,6 +225,25 @@ export default function Dashboard() {
           )}
         </div>
         <div className="flex gap-2">
+          {/* Branch selection for admin users */}
+          {user?.role !== "branch_manager" && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="branch-select" className="text-sm font-medium">Branch:</Label>
+              <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(branches as any[]).map((branch: any) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
           <Button variant="outline" className="flex items-center gap-1">
             <CalendarIcon className="h-4 w-4" />
             <span>This Month</span>
