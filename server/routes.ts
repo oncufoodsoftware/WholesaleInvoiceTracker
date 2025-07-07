@@ -251,11 +251,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Supplier API endpoints
   app.get('/api/suppliers', async (req, res) => {
     try {
-      // Get all suppliers
-      const suppliers = await storage.getAllSuppliers();
+      const user = req.user as any;
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      
+      // Branch managers can only see suppliers from their own branch
+      let targetBranchId = branchId;
+      if (user?.role === 'branch_manager' && user?.branchId) {
+        targetBranchId = user.branchId;
+      }
+      
+      // Get suppliers (filtered by branch if specified)
+      let suppliers;
+      if (targetBranchId) {
+        suppliers = await storage.getSuppliersByBranch(targetBranchId);
+      } else {
+        suppliers = await storage.getAllSuppliers();
+      }
       
       // Get invoices based on user role and branch
-      const user = req.user as any;
       let allInvoices;
       
       if (user?.role === 'branch_manager' && user?.branchId) {

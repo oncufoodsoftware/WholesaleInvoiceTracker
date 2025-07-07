@@ -76,12 +76,17 @@ export default function Suppliers() {
     isError,
     refetch
   } = useQuery({
-    queryKey: ["/api/suppliers", { includeSummary: true }],
+    queryKey: ["/api/suppliers", { includeSummary: true, branchId: user?.branchId }],
     queryFn: async () => {
-      // Always get all suppliers, but we'll filter balance data based on user role
-      const url = "/api/suppliers?withBranchBalances=true&forceBalanceUpdate=true";
+      // Branch managers only see suppliers from their branch
+      let url = "/api/suppliers?withBranchBalances=true&forceBalanceUpdate=true";
+      if (isBranchManager && user?.branchId) {
+        url += `&branchId=${user.branchId}`;
+      }
       
-      const res = await fetch(url);
+      console.log("Fetching suppliers with URL:", url);
+      
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch suppliers");
       let data = await res.json();
       

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertBranchSchema, type Branch } from "@shared/schema";
+import { insertBranchSchema, insertSupplierSchema, type Branch, type Supplier } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 
@@ -37,7 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Store, Phone, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Store, Phone, MapPin, Users, Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Extend the branch schema with additional validation
@@ -47,12 +47,20 @@ const branchSchema = insertBranchSchema.extend({
   contactNumber: z.string().min(5, { message: "Contact number must be at least 5 characters" }),
 });
 
+// Extend the supplier schema for branch-specific suppliers
+const supplierSchema = insertSupplierSchema.extend({
+  name: z.string().min(2, { message: "Supplier name must be at least 2 characters" }),
+  branchId: z.number(),
+});
+
 export default function Branches() {
   const { toast } = useToast();
   const { checkAchievement } = useAchievements();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
+  const [selectedBranchForSupplier, setSelectedBranchForSupplier] = useState<Branch | null>(null);
   
   // Get all branches
   const {
@@ -87,6 +95,22 @@ export default function Branches() {
       address: "",
       contactNumber: "",
       manager: "",
+    },
+  });
+
+  // Form for adding a new supplier to a branch
+  const supplierForm = useForm<z.infer<typeof supplierSchema>>({
+    resolver: zodResolver(supplierSchema),
+    defaultValues: {
+      name: "",
+      contactPerson: "",
+      phone: "",
+      email: "",
+      address: "",
+      accountNumber: "",
+      shortCode: "",
+      notes: "",
+      branchId: 0,
     },
   });
 
@@ -169,6 +193,31 @@ export default function Branches() {
     },
   });
 
+  // Mutation for adding a supplier to a branch
+  const addSupplierMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof supplierSchema>) => {
+      const res = await apiRequest("POST", "/api/suppliers", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Supplier added",
+        description: "The supplier has been added to the branch successfully.",
+      });
+      setIsSupplierDialogOpen(false);
+      supplierForm.reset();
+      setSelectedBranchForSupplier(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   function onAddSubmit(values: z.infer<typeof branchSchema>) {
     addBranchMutation.mutate(values);
   }
@@ -176,6 +225,11 @@ export default function Branches() {
   function onEditSubmit(values: z.infer<typeof branchSchema>) {
     if (!selectedBranch) return;
     editBranchMutation.mutate({ id: selectedBranch.id, data: values });
+  }
+
+  function onSupplierSubmit(values: z.infer<typeof supplierSchema>) {
+    if (!selectedBranchForSupplier) return;
+    addSupplierMutation.mutate({ ...values, branchId: selectedBranchForSupplier.id });
   }
 
   function handleEditBranch(branch: Branch) {
@@ -193,6 +247,22 @@ export default function Branches() {
     if (confirm("Are you sure you want to delete this branch?")) {
       deleteBranchMutation.mutate(id);
     }
+  }
+
+  function handleManageSuppliers(branch: Branch) {
+    setSelectedBranchForSupplier(branch);
+    supplierForm.reset({
+      name: "",
+      contactPerson: "",
+      phone: "",
+      email: "",
+      address: "",
+      accountNumber: "",
+      shortCode: "",
+      notes: "",
+      branchId: branch.id,
+    });
+    setIsSupplierDialogOpen(true);
   }
 
   if (isError) {
@@ -372,30 +442,174 @@ export default function Branches() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="pt-2">
+              <CardFooter className="pt-2 space-y-2">
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditBranch(branch)}
+                    className="flex-1"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteBranch(branch.id)}
+                    className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Delete
+                  </Button>
+                </div>
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
-                  onClick={() => handleEditBranch(branch)}
-                  className="mr-2"
+                  onClick={() => handleManageSuppliers(branch)}
+                  className="w-full"
                 >
-                  <Pencil className="h-3.5 w-3.5 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDeleteBranch(branch.id)}
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Delete
+                  <Package className="h-3.5 w-3.5 mr-1" />
+                  Manage Suppliers
                 </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Add Supplier Dialog */}
+      <Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Supplier</DialogTitle>
+            <DialogDescription>
+              Add a new supplier to {selectedBranchForSupplier?.name} branch.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...supplierForm}>
+            <form onSubmit={supplierForm.handleSubmit(onSupplierSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={supplierForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Supplier Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ABC Company Ltd" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={supplierForm.control}
+                  name="contactPerson"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Person</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Smith" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={supplierForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+44 1234 567890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={supplierForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="contact@company.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={supplierForm.control}
+                  name="accountNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="12345678" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={supplierForm.control}
+                  name="shortCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Short Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ABC" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={supplierForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="123 Business Street, City, Country" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={supplierForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Additional notes about this supplier..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsSupplierDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={addSupplierMutation.isPending}
+                >
+                  {addSupplierMutation.isPending ? "Adding..." : "Add Supplier"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit branch dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

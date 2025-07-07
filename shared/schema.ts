@@ -62,7 +62,7 @@ export const branches = pgTable("branches", {
 // Suppliers table
 export const suppliers = pgTable("suppliers", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   contactPerson: text("contact_person"),
   phone: text("phone"),
   email: text("email"),
@@ -70,6 +70,7 @@ export const suppliers = pgTable("suppliers", {
   accountNumber: text("account_number"),
   shortCode: text("short_code"),
   notes: text("notes"),
+  branchId: integer("branch_id").references(() => branches.id).notNull(),
 });
 
 // Invoices table

@@ -80,6 +80,7 @@ export interface IStorage {
   // Supplier methods
   getSupplier(id: number): Promise<Supplier | undefined>;
   getAllSuppliers(): Promise<Supplier[]>;
+  getSuppliersByBranch(branchId: number): Promise<Supplier[]>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(id: number, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
   deleteSupplier(id: number): Promise<boolean>;
@@ -280,6 +281,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllSuppliers(): Promise<Supplier[]> {
     return db.select().from(suppliers);
+  }
+
+  async getSuppliersByBranch(branchId: number): Promise<Supplier[]> {
+    return db.select().from(suppliers).where(eq(suppliers.branchId, branchId));
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
