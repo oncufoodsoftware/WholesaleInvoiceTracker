@@ -422,10 +422,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/suppliers', requireRole(['admin', 'accountant']), async (req, res) => {
+  app.post('/api/suppliers', requireRole(['admin', 'accountant', 'branch_manager']), async (req, res) => {
     try {
       const supplierData = insertSupplierSchema.parse(req.body);
+      
+      // Branch managers can only create suppliers for their own branch
+      const user = req.user as any;
+      if (user?.role === 'branch_manager' && user?.branchId) {
+        supplierData.branchId = user.branchId;
+      }
+      
       const newSupplier = await storage.createSupplier(supplierData);
+      await logUserAction(req, 'create', 'supplier', newSupplier.id, `Created supplier: ${newSupplier.name}`);
       res.status(201).json(newSupplier);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -435,13 +443,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/suppliers/:id', requireRole(['admin', 'accountant']), async (req, res) => {
+  app.put('/api/suppliers/:id', requireRole(['admin', 'accountant', 'branch_manager']), async (req, res) => {
     try {
+      const supplierId = parseInt(req.params.id);
       const supplierData = insertSupplierSchema.partial().parse(req.body);
-      const updatedSupplier = await storage.updateSupplier(parseInt(req.params.id), supplierData);
+      
+      // Branch managers can only update suppliers from their own branch
+      const user = req.user as any;
+      if (user?.role === 'branch_manager' && user?.branchId) {
+        const existingSupplier = await storage.getSupplier(supplierId);
+        if (!existingSupplier || existingSupplier.branchId !== user.branchId) {
+          return res.status(403).json({ message: 'You can only update suppliers from your own branch' });
+        }
+      }
+      
+      const updatedSupplier = await storage.updateSupplier(supplierId, supplierData);
       if (!updatedSupplier) {
         return res.status(404).json({ message: 'Supplier not found' });
       }
+      await logUserAction(req, 'update', 'supplier', supplierId, `Updated supplier: ${updatedSupplier.name}`);
       res.json(updatedSupplier);
     } catch (err) {
       if (err instanceof z.ZodError) {
