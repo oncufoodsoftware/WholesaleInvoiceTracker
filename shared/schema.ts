@@ -160,6 +160,8 @@ export const insertBranchSchema = createInsertSchema(branches).omit({
 
 export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   id: true,
+}).extend({
+  branchId: z.number().optional(),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
