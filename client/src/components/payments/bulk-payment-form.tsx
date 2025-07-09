@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Banknote, Building, FileCheck } from "lucide-react";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,6 +43,7 @@ interface BulkPaymentFormProps {
 
 export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedSupplier, setSelectedSupplier] = useState<number | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
 
@@ -53,6 +55,14 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
       paymentDate: new Date().toISOString().split('T')[0],
     },
   });
+
+  // Auto-select branch for branch managers
+  useEffect(() => {
+    if (user?.role === "branch_manager" && user?.branchId) {
+      setSelectedBranch(user.branchId);
+      form.setValue("branchId", user.branchId);
+    }
+  }, [user, form]);
 
   const watchedPaymentMethod = form.watch("paymentMethod");
 
@@ -156,13 +166,18 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
               setSelectedBranch(branchId);
               form.setValue("branchId", branchId);
             }}
+            disabled={user?.role === "branch_manager"}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select branch" />
             </SelectTrigger>
             <SelectContent>
               {branches.map((branch: any) => (
-                <SelectItem key={branch.id} value={branch.id.toString()}>
+                <SelectItem 
+                  key={branch.id} 
+                  value={branch.id.toString()}
+                  disabled={user?.role === "branch_manager" && user?.branchId !== branch.id}
+                >
                   {branch.name}
                 </SelectItem>
               ))}
