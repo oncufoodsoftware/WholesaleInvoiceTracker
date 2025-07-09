@@ -135,12 +135,13 @@ export function TransactionList({
         description: "The transaction has been updated successfully",
       });
       setIsEditDialogOpen(false);
-      queryClient.invalidateQueries({ 
-        queryKey: [
-          "/api/financial-transactions/daily", 
-          "/api/financial-transactions/summary/daily"
-        ]
-      });
+      setEditingTransactionId(null);
+      // Refetch transaction data and refresh the page
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/summary/daily"] });
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -161,12 +162,12 @@ export function TransactionList({
         title: "Transaction deleted",
         description: "The transaction has been deleted successfully",
       });
-      queryClient.invalidateQueries({ 
-        queryKey: [
-          "/api/financial-transactions/daily", 
-          "/api/financial-transactions/summary/daily"
-        ]
-      });
+      // Refetch transaction data and refresh the page
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/summary/daily"] });
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -212,10 +213,14 @@ export function TransactionList({
     }).format(amount);
   };
 
-  // Format date
+  // Format date to UK 24-hour format
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false // Force 24-hour format
+    });
   };
 
   // Get transaction type badge

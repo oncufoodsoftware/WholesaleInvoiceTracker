@@ -59,7 +59,7 @@ export default function Finances() {
   useState(() => {
     if (user && user.role === "branch_manager" && user.branchId) {
       setSelectedBranch(user.branchId.toString());
-    } else if (branches.length > 0) {
+    } else if (branches.length > 0 && !selectedBranch) {
       setSelectedBranch(branches[0].id.toString());
     }
   });
@@ -78,11 +78,18 @@ export default function Finances() {
     },
   });
 
-  // Update form values when active tab changes
+  // Update form values when active tab changes or branch changes
   useState(() => {
     form.setValue("type", activeTab === "sales" ? "income" : "expense");
     form.setValue("paymentMethod", activeTab === "sales" ? "card" : undefined);
-  }, [activeTab]);
+    
+    // Set branch for branch managers
+    if (user?.role === "branch_manager" && user?.branchId) {
+      form.setValue("branchId", user.branchId.toString());
+    } else if (selectedBranch) {
+      form.setValue("branchId", selectedBranch);
+    }
+  }, [activeTab, selectedBranch, user]);
 
   // Create transaction mutation
   const createTransactionMutation = useMutation({
@@ -99,8 +106,14 @@ export default function Finances() {
         description: "The transaction has been recorded successfully",
       });
       setIsDialogOpen(false);
+      
+      // Reset form with proper branch selection for branch managers
+      const resetBranchId = user?.role === "branch_manager" && user?.branchId 
+        ? user.branchId.toString() 
+        : selectedBranch;
+      
       form.reset({
-        branchId: selectedBranch,
+        branchId: resetBranchId,
         date: selectedDate,
         type: activeTab === "sales" ? "income" : "expense",
         category: "",
@@ -108,12 +121,13 @@ export default function Finances() {
         paymentMethod: activeTab === "sales" ? "card" : undefined,
         description: "",
       });
-      queryClient.invalidateQueries({ 
-        queryKey: [
-          "/api/financial-transactions/daily", 
-          "/api/financial-transactions/summary/daily"
-        ]
-      });
+      
+      // Refresh data and reload page for immediate updates
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/summary/daily"] });
+      
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
     },
     onError: (error) => {
       toast({
@@ -222,6 +236,12 @@ export default function Finances() {
               onAddTransaction={() => {
                 form.setValue("type", "income");
                 form.setValue("paymentMethod", "card");
+                
+                // Set branch for branch managers
+                if (user?.role === "branch_manager" && user?.branchId) {
+                  form.setValue("branchId", user.branchId.toString());
+                }
+                
                 setIsDialogOpen(true);
               }}
             />
@@ -235,6 +255,12 @@ export default function Finances() {
               onAddTransaction={() => {
                 form.setValue("type", "expense");
                 form.setValue("paymentMethod", undefined);
+                
+                // Set branch for branch managers
+                if (user?.role === "branch_manager" && user?.branchId) {
+                  form.setValue("branchId", user.branchId.toString());
+                }
+                
                 setIsDialogOpen(true);
               }}
             />
@@ -244,7 +270,14 @@ export default function Finances() {
             <TransactionList
               branchId={selectedBranch ? parseInt(selectedBranch) : 0}
               date={selectedDate}
-              onAddTransaction={() => setIsDialogOpen(true)}
+              onAddTransaction={() => {
+                // Set branch for branch managers
+                if (user?.role === "branch_manager" && user?.branchId) {
+                  form.setValue("branchId", user.branchId.toString());
+                }
+                
+                setIsDialogOpen(true);
+              }}
             />
           </TabsContent>
         </Tabs>
