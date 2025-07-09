@@ -24,6 +24,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 import { AchievementDemo } from "@/components/dashboard/achievement-demo";
 import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
@@ -33,6 +38,10 @@ export default function Dashboard() {
   const { checkAchievement } = useAchievements();
   const [timeframe, setTimeframe] = useState("month");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date()
+  });
   
   // Define types for API response
   interface BranchSummary {
@@ -88,15 +97,14 @@ export default function Dashboard() {
     enabled: !!currentBranchId || user?.role === "branch_manager",
   });
 
-  // Fetch financial transactions data for Total Revenue calculation (monthly)
+  // Fetch financial transactions data for Total Revenue and Expenses calculation
   const { data: monthlyFinancialSummary } = useQuery({
-    queryKey: ["/api/financial-transactions/summary/monthly", currentBranchId],
+    queryKey: ["/api/financial-transactions/summary/monthly", currentBranchId, dateRange],
     queryFn: async () => {
       if (!currentBranchId) return null;
       
-      const currentDate = new Date();
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1; // JavaScript months are 0-based
+      const year = dateRange.from.getFullYear();
+      const month = dateRange.from.getMonth() + 1; // JavaScript months are 0-based
       
       const res = await fetch(
         `/api/financial-transactions/summary/monthly?branchId=${currentBranchId}&year=${year}&month=${month}`,
@@ -128,7 +136,7 @@ export default function Dashboard() {
     return summaryData.branchData;
   };
 
-  // Calculate revenue from financial transactions (for current month)
+  // Calculate revenue from financial transactions
   const calculateTotalRevenue = () => {
     if (!monthlyFinancialSummary) return 0;
     
@@ -136,20 +144,31 @@ export default function Dashboard() {
     return monthlyFinancialSummary.totalSales || 0;
   };
 
+  // Calculate expenses from financial transactions
+  const calculateTotalExpenses = () => {
+    if (!monthlyFinancialSummary) return 0;
+    
+    // Use totalExpenses from the monthly financial summary
+    return monthlyFinancialSummary.totalExpenses || 0;
+  };
+
   // Calculate branch-specific stats
   const branchSpecificData = () => {
     const totalRevenue = calculateTotalRevenue();
+    const totalExpenses = calculateTotalExpenses();
     
     if (user?.role === "branch_manager" && user?.branchId && summaryData) {
       const userBranch = summaryData.branchData.find(branch => branch.id === user.branchId);
       return {
         totalRevenue,
+        totalExpenses,
         outstandingAmount: userBranch?.outstandingAmount || 0
       };
     }
     
     return {
       totalRevenue,
+      totalExpenses,
       outstandingAmount: summaryData?.totalOutstandingAmount || 0
     };
   };
@@ -189,13 +208,12 @@ export default function Dashboard() {
   // Format dashboard data based on user role and branch
   const dashboardData = {
     totalRevenue: formatCurrency(dashboardFinancialData.totalRevenue),
+    totalExpenses: formatCurrency(dashboardFinancialData.totalExpenses),
     outstandingInvoices: formatCurrency(dashboardFinancialData.outstandingAmount),
     paymentRate: dashboardFinancialData.totalRevenue 
       ? Math.round(((dashboardFinancialData.totalRevenue - dashboardFinancialData.outstandingAmount) / dashboardFinancialData.totalRevenue) * 100) 
       : 0,
-    // For demo purposes - in a real app these would come from real financial data
-    totalExpenses: formatCurrency(dashboardFinancialData.totalRevenue * 0.65), 
-    cashFlow: formatCurrency(dashboardFinancialData.totalRevenue * 0.35)
+    cashFlow: formatCurrency(dashboardFinancialData.totalRevenue - dashboardFinancialData.totalExpenses)
   };
 
   // Dynamic trends based on user role
@@ -244,10 +262,91 @@ export default function Dashboard() {
             </div>
           )}
           
-          <Button variant="outline" className="flex items-center gap-1">
-            <CalendarIcon className="h-4 w-4" />
-            <span>This Month</span>
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-1">
+                <CalendarIcon className="h-4 w-4" />
+                <span>
+                  {dateRange.from && dateRange.to 
+                    ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                    : "Select date range"
+                  }
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="p-3">
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      setDateRange({
+                        from: new Date(now.getFullYear(), now.getMonth(), 1),
+                        to: now
+                      });
+                    }}
+                  >
+                    This Month
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                      setDateRange({
+                        from: lastMonth,
+                        to: endOfLastMonth
+                      });
+                    }}
+                  >
+                    Last Month
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                      setDateRange({
+                        from: threeMonthsAgo,
+                        to: now
+                      });
+                    }}
+                  >
+                    Last 3 Months
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      const yearStart = new Date(now.getFullYear(), 0, 1);
+                      setDateRange({
+                        from: yearStart,
+                        to: now
+                      });
+                    }}
+                  >
+                    This Year
+                  </Button>
+                </div>
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    if (range) {
+                      setDateRange(range);
+                    }
+                  }}
+                  numberOfMonths={2}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
           <Link href="/invoices">
             <Button className="flex items-center gap-1">
               <PlusIcon className="h-4 w-4" />

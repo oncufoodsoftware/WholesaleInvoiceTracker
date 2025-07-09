@@ -304,10 +304,9 @@ export default function Suppliers() {
       }
       
       // Refresh the page to ensure all data is up-to-date
-      // Use longer timeout to allow achievement celebration to be visible
       setTimeout(() => {
         window.location.reload();
-      }, 1000);
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -351,7 +350,9 @@ export default function Suppliers() {
       }
       
       // Refresh the page to ensure all data is up-to-date
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -389,7 +390,9 @@ export default function Suppliers() {
       }
       
       // Refresh the page to ensure all data is up-to-date
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
