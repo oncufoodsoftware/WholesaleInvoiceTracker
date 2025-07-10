@@ -630,18 +630,26 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Branch</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select 
+                      value={field.value} 
+                      onValueChange={field.onChange}
+                      disabled={user?.role === "branch_manager"}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select branch" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {branches.map((branch: any) => (
-                          <SelectItem key={branch.id} value={branch.id.toString()}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
+                        {branches
+                          .filter((branch: any) => 
+                            user?.role !== "branch_manager" || user.branchId === branch.id
+                          )
+                          .map((branch: any) => (
+                            <SelectItem key={branch.id} value={branch.id.toString()}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
