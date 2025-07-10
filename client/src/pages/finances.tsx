@@ -13,17 +13,33 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-// Removed unused Button import
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// Removed unused imports
+import { PlusIcon, Download, Upload, ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DailySummary } from "@/components/finances/daily-summary";
 import { TransactionList } from "@/components/finances/transaction-list";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Remove unused schema as buttons are no longer needed
+// Create a form schema for the transaction
+const transactionSchema = z.object({
+  branchId: z.string().min(1, "Branch is required"),
+  date: z.string().min(1, "Date is required"),
+  type: z.string().min(1, "Type is required"),
+  category: z.string().optional(),
+  amount: z.string().min(1, "Amount is required"),
+  paymentMethod: z.string().optional(),
+  description: z.string().optional(),
+  zReportImage: z.any().optional(),
+});
 
 export default function Finances() {
   const { toast } = useToast();
@@ -40,6 +56,8 @@ export default function Finances() {
     new Date().toISOString().split("T")[0]
   );
   const [activeTab, setActiveTab] = useState("sales");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Get branches
   const { data: branches = [] } = useQuery({
@@ -55,7 +73,131 @@ export default function Finances() {
     }
   });
 
-  // Remove unused form as buttons are no longer needed
+  // Form for new transaction
+  const form = useForm<z.infer<typeof transactionSchema>>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      branchId: selectedBranch,
+      date: selectedDate,
+      type: activeTab === "sales" ? "income" : "expense",
+      category: "",
+      amount: "",
+      paymentMethod: activeTab === "sales" ? "card" : undefined,
+      description: "",
+      zReportImage: undefined,
+    },
+  });
+
+  // Update form values when active tab changes or branch changes
+  useState(() => {
+    form.setValue("type", activeTab === "sales" ? "income" : "expense");
+    form.setValue("paymentMethod", activeTab === "sales" ? "card" : undefined);
+    
+    // Set branch for branch managers
+    if (user?.role === "branch_manager" && user?.branchId) {
+      form.setValue("branchId", user.branchId.toString());
+    } else if (selectedBranch) {
+      form.setValue("branchId", selectedBranch);
+    }
+  }, [activeTab, selectedBranch, user]);
+
+  // Create transaction mutation
+  const createTransactionMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof transactionSchema>) => {
+      return await apiRequest("POST", "/api/financial-transactions", {
+        ...data,
+        branchId: parseInt(data.branchId),
+        amount: parseFloat(data.amount),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Transaction created",
+        description: "The transaction has been recorded successfully",
+      });
+      setIsDialogOpen(false);
+      
+      // Reset form with proper branch selection for branch managers
+      const resetBranchId = user?.role === "branch_manager" && user?.branchId 
+        ? user.branchId.toString() 
+        : selectedBranch;
+      
+      form.reset({
+        branchId: resetBranchId,
+        date: selectedDate,
+        type: activeTab === "sales" ? "income" : "expense",
+        category: "",
+        amount: "",
+        paymentMethod: activeTab === "sales" ? "card" : undefined,
+        description: "",
+      });
+      
+      // Refresh data and reload page for immediate updates
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/summary/daily"] });
+      
+      // Refresh the page to ensure all data is up-to-date
+      window.location.reload();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create transaction: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle form submission
+  const onSubmit = (data: z.infer<typeof transactionSchema>) => {
+    createTransactionMutation.mutate(data);
+  };
+
+  // Handle file selection
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  // Export transactions to CSV
+  const exportToCSV = async () => {
+    if (!selectedBranch) {
+      toast({
+        title: "Error",
+        description: "Please select a branch first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/financial-transactions/export?branchId=${selectedBranch}&date=${selectedDate}`);
+      if (!response.ok) throw new Error("Failed to export data");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `financial-transactions-${selectedBranch}-${selectedDate}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export successful",
+        description: "Financial transactions exported to CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export financial transactions",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Update selected date based on date range
   useState(() => {
@@ -102,6 +244,16 @@ export default function Finances() {
     <div className="py-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Branch Financial Tracking</h2>
+        <div className="flex gap-2">
+          <Button onClick={exportToCSV} variant="outline" className="flex items-center gap-1">
+            <Download className="h-4 w-4" />
+            <span>Export</span>
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-1">
+            <PlusIcon className="h-4 w-4" />
+            <span>Add New Transaction</span>
+          </Button>
+        </div>
       </div>
 
       {/* Branch selector and date */}
@@ -232,7 +384,220 @@ export default function Finances() {
         </Tabs>
       </div>
 
+      {/* New Transaction Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Transaction</DialogTitle>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="branchId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={user?.role === "branch_manager"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a branch" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {branches.map((branch: any) => (
+                          <SelectItem 
+                            key={branch.id} 
+                            value={branch.id.toString()}
+                            disabled={user?.role === "branch_manager" && user?.branchId !== branch.id}
+                          >
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Transaction Type</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="expense">Expense</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("type") === "expense" && (
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="rent">Rent</SelectItem>
+                          <SelectItem value="salaries">Salaries</SelectItem>
+                          <SelectItem value="utilities">Utilities</SelectItem>
+                          <SelectItem value="supplies">Supplies</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                        <Input className="pl-8" type="number" step="0.01" min="0" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("type") === "income" && (
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Method</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="card">Card</SelectItem>
+                          <SelectItem value="cash">Cash</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Z Report Upload Section */}
+              <div className="space-y-2">
+                <FormLabel>Add Z Report (Optional)</FormLabel>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <div className="text-center">
+                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="mt-2">
+                      <label htmlFor="zreport-upload" className="cursor-pointer">
+                        <span className="mt-2 block text-sm font-medium text-gray-900">
+                          Upload Z Report Image
+                        </span>
+                        <span className="mt-1 block text-sm text-gray-500">
+                          PNG, JPG, GIF up to 10MB
+                        </span>
+                      </label>
+                      <input
+                        id="zreport-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                    {selectedFile && (
+                      <div className="mt-2 text-sm text-green-600">
+                        Selected: {selectedFile.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createTransactionMutation.isPending}
+                >
+                  {createTransactionMutation.isPending ? 
+                    "Saving..." : "Save Transaction"
+                  }
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
