@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Search, Plus, Pencil, Trash2, AlertTriangle, ArrowUpDown, Building, Phone, Mail, MapPin, ClipboardList } from "lucide-react";
 import { SupplierSearch } from "./suppliers-search";
@@ -29,13 +30,11 @@ interface SupplierWithDebt {
   accountNumber: string | null;
   shortCode: string | null;
   notes: string | null;
-  branchId?: number | null;
-  branchName?: string;
+  branches?: Array<{ id: number; name: string }>; // Array of branches this supplier works with
+  branchCount?: number;
   outstandingAmount: number;
   // Track balances by branch
   branchBalances?: {[branchId: number]: {name: string, amount: number}};
-  // Count of branches working with this supplier
-  branchCount?: number;
 }
 
 // Schema for supplier form validation
@@ -48,6 +47,7 @@ const supplierSchema = z.object({
   accountNumber: z.string().optional().nullable(),
   shortCode: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  branchIds: z.array(z.number()).optional(), // Array of branch IDs
 });
 
 export default function Suppliers() {
@@ -69,122 +69,26 @@ export default function Suppliers() {
     queryKey: ["/api/invoices"],
   });
   
-  // Get all suppliers with total debt information
+  // Get all suppliers with branch information
   const {
     data: suppliers = [],
     isLoading,
     isError,
     refetch
   } = useQuery({
-    queryKey: ["/api/suppliers", { includeSummary: true, branchId: user?.branchId }],
+    queryKey: ["/api/suppliers", { branchId: user?.branchId }],
     queryFn: async () => {
       // Branch managers only see suppliers from their branch
-      let url = "/api/suppliers?withBranchBalances=true&forceBalanceUpdate=true";
+      let url = "/api/suppliers";
       if (isBranchManager && user?.branchId) {
-        url += `&branchId=${user.branchId}`;
+        url += `?branchId=${user.branchId}`;
       }
       
       console.log("Fetching suppliers with URL:", url);
       
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch suppliers");
-      let data = await res.json();
-      
-      // Process the data to add additional needed fields
-      if (Array.isArray(data)) {
-        return data.map((supplier) => {
-          // Create a supplier with formatted balance information
-          const supplierWithDebt = {
-            ...supplier,
-            outstandingAmount: supplier.outstandingAmount || 0,
-            branchBalances: {},
-            branchCount: 0
-          };
-          
-          // Process branch balances if available
-          if (supplier.branchBalances && Array.isArray(supplier.branchBalances)) {
-            let totalOutstanding = 0;
-            
-            // Process all balances to create a structured format
-            supplier.branchBalances.forEach((balance) => {
-              const branchId = balance.branchId;
-              if (!branchId) return;
-              
-              // For branch managers, only show their own branch data
-              if (isBranchManager && user?.branchId && branchId !== user.branchId) {
-                return; // Skip this balance for branch managers if it's not their branch
-              }
-              
-              // Add to branch balances
-              if (!supplierWithDebt.branchBalances) {
-                supplierWithDebt.branchBalances = {};
-              }
-              
-              // Ensure balance is a valid number
-              const balanceAmount = typeof balance.balance === 'number' ? balance.balance : 0;
-              
-              supplierWithDebt.branchBalances[branchId] = {
-                name: balance.branchName || 'Unknown Branch',
-                amount: balanceAmount
-              };
-              
-              // Add to total outstanding amount if the balance is positive (we owe them money)
-              // This ensures consistent calculation with server-side changes
-              totalOutstanding += balanceAmount;
-            });
-            
-            // For branch managers, use only their branch balance as total outstanding
-            if (isBranchManager && user?.branchId) {
-              const branchBalance = supplierWithDebt.branchBalances?.[user.branchId];
-              supplierWithDebt.outstandingAmount = branchBalance?.amount || 0;
-            } else {
-              // For admins, use the server-calculated outstandingAmount if available
-              // If not, fall back to our calculated sum of branch balances
-              if (typeof supplier.outstandingAmount === 'number') {
-                supplierWithDebt.outstandingAmount = supplier.outstandingAmount;
-              } else {
-                supplierWithDebt.outstandingAmount = totalOutstanding;
-              }
-            }
-            
-            // Count branches working with this supplier
-            if (supplierWithDebt.branchBalances) {
-              supplierWithDebt.branchCount = Object.keys(supplierWithDebt.branchBalances).length;
-            }
-            
-            // Find primary branch from invoices if available
-            if (Array.isArray(invoices) && invoices.length > 0) {
-              const supplierInvoices = invoices.filter(invoice => invoice.supplierId === supplier.id);
-              if (supplierInvoices.length > 0) {
-                // Sort invoices by date descending
-                const sortedInvoices = [...supplierInvoices].sort((a, b) => 
-                  new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()
-                );
-                
-                // Get the branch from the most recent invoice
-                const primaryBranchId = sortedInvoices[0].branchId;
-                const branch = branches.find(b => b.id === primaryBranchId);
-                
-                if (branch) {
-                  supplierWithDebt.branchId = primaryBranchId;
-                  supplierWithDebt.branchName = branch.name;
-                }
-              }
-            }
-          }
-          
-          return supplierWithDebt;
-        });
-      } else {
-        // For branch managers or if branches not loaded yet
-        return data.map((supplier) => ({
-          ...supplier,
-          branchName: isBranchManager && user?.branchId && Array.isArray(branches) && branches.length > 0 
-            ? branches.find(b => b.id === Number(user.branchId))?.name || 'Your Branch'
-            : 'No Branch',
-          outstandingAmount: supplier.outstandingAmount || 0
-        }));
-      }
+      return await res.json();
     }
   });
   
@@ -234,6 +138,7 @@ export default function Suppliers() {
       accountNumber: "",
       shortCode: "",
       notes: "",
+      branchIds: isBranchManager && user?.branchId ? [user.branchId] : [],
     },
   });
   
@@ -249,6 +154,7 @@ export default function Suppliers() {
       accountNumber: "",
       shortCode: "",
       notes: "",
+      branchIds: [],
     },
   });
   
@@ -270,6 +176,14 @@ export default function Suppliers() {
       editForm.setValue("accountNumber", selectedSupplier.accountNumber || "");
       editForm.setValue("shortCode", selectedSupplier.shortCode || "");
       editForm.setValue("notes", selectedSupplier.notes || "");
+      
+      // Set branch IDs - if branch manager, only their branch, otherwise all branches
+      if (selectedSupplier.branches && Array.isArray(selectedSupplier.branches)) {
+        const branchIds = selectedSupplier.branches.map(branch => branch.id);
+        editForm.setValue("branchIds", branchIds);
+      } else {
+        editForm.setValue("branchIds", []);
+      }
     }
   }, [selectedSupplier, isEditDialogOpen, editForm]);
   
@@ -576,13 +490,22 @@ export default function Suppliers() {
                           </div>
                         )}
                         
-                        {/* Primary branch information */}
-                        {supplier.branchName && (
+                        {/* Working branches information */}
+                        {supplier.branches && supplier.branches.length > 0 && (
                           <div className="flex items-start gap-2 mt-1">
                             <div className="w-5 flex justify-center pt-0.5">
                               <Building className="h-4 w-4" />
                             </div>
-                            <span className="text-sm">Primary Branch: {supplier.branchName}</span>
+                            <div className="text-sm">
+                              <span className="font-medium">Working Branches:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {supplier.branches.map((branch) => (
+                                  <span key={branch.id} className="bg-primary/10 text-primary px-2 py-1 rounded text-xs">
+                                    {branch.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         )}
                         
@@ -788,6 +711,40 @@ export default function Suppliers() {
                   </FormItem>
                 )}
               />
+              
+              {/* Branch Selection */}
+              <FormField
+                control={addForm.control}
+                name="branchIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Working Branches</FormLabel>
+                    <div className="grid grid-cols-2 gap-4">
+                      {branches.map((branch) => (
+                        <div key={branch.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`branch-${branch.id}`}
+                            checked={field.value?.includes(branch.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...(field.value || []), branch.id]);
+                              } else {
+                                field.onChange(field.value?.filter(id => id !== branch.id));
+                              }
+                            }}
+                            disabled={isBranchManager && user?.branchId !== branch.id}
+                          />
+                          <label htmlFor={`branch-${branch.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            {branch.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <DialogFooter>
                 <Button type="submit" disabled={addSupplierMutation.isPending}>
                   {addSupplierMutation.isPending ? "Saving..." : "Save Supplier"}
@@ -914,6 +871,40 @@ export default function Suppliers() {
                   </FormItem>
                 )}
               />
+              
+              {/* Branch Selection */}
+              <FormField
+                control={editForm.control}
+                name="branchIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Working Branches</FormLabel>
+                    <div className="grid grid-cols-2 gap-4">
+                      {branches.map((branch) => (
+                        <div key={branch.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`edit-branch-${branch.id}`}
+                            checked={field.value?.includes(branch.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...(field.value || []), branch.id]);
+                              } else {
+                                field.onChange(field.value?.filter(id => id !== branch.id));
+                              }
+                            }}
+                            disabled={isBranchManager && user?.branchId !== branch.id}
+                          />
+                          <label htmlFor={`edit-branch-${branch.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            {branch.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <DialogFooter>
                 <Button type="submit" disabled={editSupplierMutation.isPending}>
                   {editSupplierMutation.isPending ? "Saving..." : "Update Supplier"}

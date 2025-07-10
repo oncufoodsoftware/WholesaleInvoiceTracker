@@ -261,12 +261,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetBranchId = user.branchId;
       }
       
-      // Get suppliers (filtered by branch if specified)
-      let suppliers;
+      // Get suppliers with their branch relationships
+      let suppliersWithBranches;
       if (targetBranchId) {
-        suppliers = await storage.getSuppliersByBranch(targetBranchId);
+        // Get suppliers for a specific branch
+        suppliersWithBranches = await storage.getAllSuppliersWithBranches(targetBranchId);
       } else {
-        suppliers = await storage.getAllSuppliers();
+        // Get all suppliers with all their branch relationships
+        suppliersWithBranches = await storage.getAllSuppliersWithBranches();
       }
       
       // Get invoices based on user role and branch
@@ -280,97 +282,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allInvoices = await storage.getAllInvoices();
       }
       
-      // Check if we need to include branch balances
-      if (req.query.withBranchBalances === 'true') {
-        const suppliersWithBalances = await Promise.all(suppliers.map(async (supplier) => {
-          // Get all balances for this supplier
-          let balances = await storage.getSupplierBalances(supplier.id);
+      // Format the response to include branch information
+      const formattedSuppliers = suppliersWithBranches.map(({ supplier, branches }) => {
+        // Calculate total outstanding amount across all branches for this supplier
+        let totalOutstanding = 0;
+        const branchBalances: any = {};
+        
+        // Get outstanding amounts for each branch
+        for (const branch of branches) {
+          const branchInvoices = allInvoices.filter(inv => 
+            inv.supplierId === supplier.id && inv.branchId === branch.id
+          );
           
-          // Force balance update if requested or if no balances exist
-          const forceUpdate = req.query.forceBalanceUpdate === 'true' || balances.length === 0;
-          
-          // Get all invoices for this supplier
-          const supplierInvoices = allInvoices.filter(inv => inv.supplierId === supplier.id);
-          
-          // If we have invoices, always regenerate balances to ensure they're up to date
-          if (supplierInvoices.length > 0) {
-            // Create a map of branch balances from invoices
-            const branchBalanceMap = new Map<number, number>();
-            
-            // Calculate balance per branch
-            for (const invoice of supplierInvoices) {
-              const branchId = invoice.branchId;
-              const currentBalance = branchBalanceMap.get(branchId) || 0;
-              
-              // Add to balance based on invoice type and status
-              // For standard invoices: add unpaid amount (total - paid)
-              // For cash invoices: add unpaid amount (total - paid)
-              // For credit notes: always subtract from balance
-              let amountToAdd = 0;
-              
-              if (invoice.type === 'standard' || invoice.type === 'cash') {
-                const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
-                amountToAdd = unpaidAmount;
-              } else if (invoice.type === 'credit_note') {
-                amountToAdd = -invoice.amount;
-              }
-              
-              if (amountToAdd !== 0) {
-                branchBalanceMap.set(branchId, currentBalance + amountToAdd);
-              }
+          let branchBalance = 0;
+          for (const invoice of branchInvoices) {
+            if (invoice.type === 'standard' || invoice.type === 'cash') {
+              const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+              branchBalance += unpaidAmount;
+            } else if (invoice.type === 'credit_note') {
+              branchBalance -= invoice.amount;
             }
-            
-            // If we're doing a forced update, delete existing balances first
-            if (balances.length > 0) {
-              // Reset existing balances if forcing update
-              for (const balance of balances) {
-                // Use updateSupplierBranchBalance with 0 to reset the balance
-                await storage.updateSupplierBranchBalance(supplier.id, balance.branchId, -balance.balance);
-              }
-            }
-            
-            // Create branch balances from the map
-            for (const [branchId, balance] of Array.from(branchBalanceMap.entries())) {
-              if (balance !== 0) {
-                // Create or update balance in database
-                await storage.updateSupplierBranchBalance(supplier.id, branchId, balance);
-              }
-            }
-            
-            // Fetch the newly created balances
-            balances = await storage.getSupplierBalances(supplier.id);
           }
           
-          // Get branch details for each balance
-          const branchBalances = await Promise.all(balances.map(async (balance) => {
-            const branch = await storage.getBranch(balance.branchId);
-            return {
-              ...balance,
-              branchName: branch?.name || 'Unknown Branch'
-            };
-          }));
-          
-          return {
-            ...supplier,
-            branchBalances
+          totalOutstanding += branchBalance;
+          branchBalances[branch.id] = {
+            name: branch.name,
+            amount: branchBalance
           };
-        }));
-        
-        return res.json(suppliersWithBalances);
-      }
-      
-      // If summary flag is not set, return just the suppliers
-      if (req.query.includeSummary !== 'true') {
-        return res.json(suppliers);
-      }
-      
-      // Get all invoices to calculate debt
-      const invoices = await storage.getAllInvoices();
-      
-      // Calculate summaries
-      const suppliersWithSummary = await calculateSupplierSummaries(suppliers, invoices);
-      
-      res.json(suppliersWithSummary);
+        }
+
+        return {
+          ...supplier,
+          branches: branches,
+          branchCount: branches.length,
+          outstandingAmount: totalOutstanding,
+          branchBalances: branchBalances
+        };
+      });
+
+      res.json(formattedSuppliers);
     } catch (err) {
       res.status(500).json({ message: `Error fetching suppliers: ${err}` });
     }
@@ -426,16 +376,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/suppliers', requireRole(['admin', 'accountant', 'branch_manager']), async (req, res) => {
     try {
       const supplierData = insertSupplierSchema.parse(req.body);
+      const user = req.user as any;
+      
+      // Extract branch IDs from supplier data
+      let branchIds = supplierData.branchIds || [];
       
       // Branch managers can only create suppliers for their own branch
-      const user = req.user as any;
       if (user?.role === 'branch_manager' && user?.branchId) {
-        supplierData.branchId = user.branchId;
+        branchIds = [user.branchId]; // Override to only their branch
       }
       
-      const newSupplier = await storage.createSupplier(supplierData);
-      await logUserAction(req, 'create', 'supplier', newSupplier.id, `Created supplier: ${newSupplier.name}`);
-      res.status(201).json(newSupplier);
+      // Remove branchIds from supplier data since it's not in the supplier table anymore
+      const { branchIds: _, ...supplierCreateData } = supplierData;
+      supplierCreateData.createdBy = user?.id;
+      
+      // Create the supplier
+      const newSupplier = await storage.createSupplier(supplierCreateData);
+      
+      // Add supplier to branches
+      if (branchIds.length > 0) {
+        for (const branchId of branchIds) {
+          await storage.addSupplierToBranch(newSupplier.id, branchId, user?.id);
+        }
+      }
+      
+      await logUserAction(req, 'create', 'supplier', newSupplier.id, `Created supplier: ${newSupplier.name} for branches: ${branchIds.join(', ')}`);
+      
+      // Return supplier with branch information
+      const supplierWithBranches = await storage.getSupplierWithBranches(newSupplier.id);
+      res.status(201).json(supplierWithBranches);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: 'Invalid input', errors: err.errors });
@@ -448,22 +417,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const supplierId = parseInt(req.params.id);
       const supplierData = insertSupplierSchema.partial().parse(req.body);
-      
-      // Branch managers can only update suppliers from their own branch
       const user = req.user as any;
+      
+      // Get existing supplier data
+      const existingSupplier = await storage.getSupplier(supplierId);
+      if (!existingSupplier) {
+        return res.status(404).json({ message: 'Supplier not found' });
+      }
+      
+      // Branch managers can only update suppliers from branches they work with
       if (user?.role === 'branch_manager' && user?.branchId) {
-        const existingSupplier = await storage.getSupplier(supplierId);
-        if (!existingSupplier || existingSupplier.branchId !== user.branchId) {
+        const existingBranches = await storage.getSupplierBranches(supplierId);
+        const hasAccess = existingBranches.some(sb => sb.branchId === user.branchId);
+        if (!hasAccess) {
           return res.status(403).json({ message: 'You can only update suppliers from your own branch' });
         }
       }
       
-      const updatedSupplier = await storage.updateSupplier(supplierId, supplierData);
-      if (!updatedSupplier) {
-        return res.status(404).json({ message: 'Supplier not found' });
+      // Extract branch IDs if provided
+      const branchIds = supplierData.branchIds;
+      const { branchIds: _, ...supplierUpdateData } = supplierData;
+      
+      // Update supplier basic info
+      const updatedSupplier = await storage.updateSupplier(supplierId, supplierUpdateData);
+      
+      // Update branch relationships (only for admin)
+      if (branchIds && user?.role === 'admin') {
+        // Get current branch relationships
+        const currentBranches = await storage.getSupplierBranches(supplierId);
+        const currentBranchIds = currentBranches.map(sb => sb.branchId);
+        
+        // Remove old relationships
+        for (const currentBranchId of currentBranchIds) {
+          if (!branchIds.includes(currentBranchId)) {
+            await storage.removeSupplierFromBranch(supplierId, currentBranchId);
+          }
+        }
+        
+        // Add new relationships
+        for (const branchId of branchIds) {
+          if (!currentBranchIds.includes(branchId)) {
+            await storage.addSupplierToBranch(supplierId, branchId, user?.id);
+          }
+        }
       }
-      await logUserAction(req, 'update', 'supplier', supplierId, `Updated supplier: ${updatedSupplier.name}`);
-      res.json(updatedSupplier);
+      
+      await logUserAction(req, 'update', 'supplier', supplierId, `Updated supplier: ${updatedSupplier?.name}`);
+      
+      // Return supplier with updated branch information
+      const supplierWithBranches = await storage.getSupplierWithBranches(supplierId);
+      res.json(supplierWithBranches);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: 'Invalid input', errors: err.errors });

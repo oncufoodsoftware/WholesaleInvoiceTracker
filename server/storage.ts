@@ -2,6 +2,7 @@ import {
   users, 
   branches, 
   suppliers, 
+  supplierBranches,
   invoices, 
   financialTransactions,
   userActions,
@@ -18,6 +19,8 @@ import {
   type InsertBranch,
   type Supplier,
   type InsertSupplier,
+  type SupplierBranch,
+  type InsertSupplierBranch,
   type Invoice,
   type InsertInvoice,
   type FinancialTransaction,
@@ -87,6 +90,14 @@ export interface IStorage {
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(id: number, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
   deleteSupplier(id: number): Promise<boolean>;
+  
+  // Supplier-Branch relationship methods
+  getSupplierBranches(supplierId: number): Promise<SupplierBranch[]>;
+  getBranchSuppliers(branchId: number): Promise<SupplierBranch[]>;
+  addSupplierToBranch(supplierId: number, branchId: number, createdBy?: number): Promise<SupplierBranch>;
+  removeSupplierFromBranch(supplierId: number, branchId: number): Promise<boolean>;
+  getSupplierWithBranches(supplierId: number): Promise<{ supplier: Supplier; branches: Branch[] } | undefined>;
+  getAllSuppliersWithBranches(branchId?: number): Promise<Array<{ supplier: Supplier; branches: Branch[] }>>;
   
   // Supplier-Branch Balance methods
   getSupplierBranchBalance(supplierId: number, branchId: number): Promise<SupplierBranchBalance | undefined>;
@@ -294,7 +305,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSuppliersByBranch(branchId: number): Promise<Supplier[]> {
-    return db.select().from(suppliers).where(eq(suppliers.branchId, branchId));
+    const results = await db
+      .select({ supplier: suppliers })
+      .from(suppliers)
+      .innerJoin(supplierBranches, eq(suppliers.id, supplierBranches.supplierId))
+      .where(eq(supplierBranches.branchId, branchId));
+    
+    return results.map(r => r.supplier);
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
@@ -315,7 +332,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSupplier(id: number): Promise<boolean> {
-    // First delete any supplier-branch balances
+    // First delete any supplier-branch relationships
+    await db.delete(supplierBranches).where(eq(supplierBranches.supplierId, id));
+    
+    // Delete any supplier-branch balances
     await db.delete(supplierBranchBalances).where(eq(supplierBranchBalances.supplierId, id));
     
     // Then delete the supplier
@@ -323,6 +343,82 @@ export class DatabaseStorage implements IStorage {
       .delete(suppliers)
       .where(eq(suppliers.id, id));
     return result.count > 0;
+  }
+
+  // Supplier-Branch relationship methods
+  async getSupplierBranches(supplierId: number): Promise<SupplierBranch[]> {
+    return db.select().from(supplierBranches).where(eq(supplierBranches.supplierId, supplierId));
+  }
+
+  async getBranchSuppliers(branchId: number): Promise<SupplierBranch[]> {
+    return db.select().from(supplierBranches).where(eq(supplierBranches.branchId, branchId));
+  }
+
+  async addSupplierToBranch(supplierId: number, branchId: number, createdBy?: number): Promise<SupplierBranch> {
+    const [relationship] = await db
+      .insert(supplierBranches)
+      .values({
+        supplierId,
+        branchId,
+        createdBy
+      })
+      .returning();
+    return relationship;
+  }
+
+  async removeSupplierFromBranch(supplierId: number, branchId: number): Promise<boolean> {
+    const result = await db
+      .delete(supplierBranches)
+      .where(
+        and(
+          eq(supplierBranches.supplierId, supplierId),
+          eq(supplierBranches.branchId, branchId)
+        )
+      );
+    return result.count > 0;
+  }
+
+  async getSupplierWithBranches(supplierId: number): Promise<{ supplier: Supplier; branches: Branch[] } | undefined> {
+    const supplier = await this.getSupplier(supplierId);
+    if (!supplier) return undefined;
+
+    const supplierBranchRels = await db
+      .select({ branch: branches })
+      .from(supplierBranches)
+      .innerJoin(branches, eq(supplierBranches.branchId, branches.id))
+      .where(eq(supplierBranches.supplierId, supplierId));
+
+    return {
+      supplier,
+      branches: supplierBranchRels.map(r => r.branch)
+    };
+  }
+
+  async getAllSuppliersWithBranches(branchId?: number): Promise<Array<{ supplier: Supplier; branches: Branch[] }>> {
+    const allSuppliers = await this.getAllSuppliers();
+    const result = [];
+
+    for (const supplier of allSuppliers) {
+      const supplierBranchRels = await db
+        .select({ branch: branches })
+        .from(supplierBranches)
+        .innerJoin(branches, eq(supplierBranches.branchId, branches.id))
+        .where(eq(supplierBranches.supplierId, supplier.id));
+
+      const supplierBranches = supplierBranchRels.map(r => r.branch);
+      
+      // If branchId is specified, only include suppliers that work with that branch
+      if (branchId && !supplierBranches.some(b => b.id === branchId)) {
+        continue;
+      }
+
+      result.push({
+        supplier,
+        branches: supplierBranches
+      });
+    }
+
+    return result;
   }
 
   // Supplier-Branch Balance Methods

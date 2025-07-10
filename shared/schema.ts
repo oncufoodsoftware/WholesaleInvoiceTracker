@@ -60,7 +60,7 @@ export const branches = pgTable("branches", {
   contactInfo: text("contact_info"),
 });
 
-// Suppliers table
+// Suppliers table - removed branchId as it's now many-to-many
 export const suppliers = pgTable("suppliers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -71,7 +71,17 @@ export const suppliers = pgTable("suppliers", {
   accountNumber: text("account_number"),
   shortCode: text("short_code"),
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+// Supplier-Branch junction table for many-to-many relationship
+export const supplierBranches = pgTable("supplier_branches", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
   branchId: integer("branch_id").references(() => branches.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
 });
 
 // Invoices table
@@ -177,8 +187,14 @@ export const insertBranchSchema = createInsertSchema(branches).omit({
 
 export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   id: true,
+  createdAt: true,
 }).extend({
-  branchId: z.number().optional(),
+  branchIds: z.array(z.number()).optional(), // Array of branch IDs for multi-branch assignment
+});
+
+export const insertSupplierBranchSchema = createInsertSchema(supplierBranches).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
@@ -284,6 +300,9 @@ export type InsertBranch = z.infer<typeof insertBranchSchema>;
 
 export type Supplier = typeof suppliers.$inferSelect;
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+
+export type SupplierBranch = typeof supplierBranches.$inferSelect;
+export type InsertSupplierBranch = z.infer<typeof insertSupplierBranchSchema>;
 
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
