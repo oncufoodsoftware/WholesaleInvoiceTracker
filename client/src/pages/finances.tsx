@@ -202,44 +202,59 @@ export default function Finances() {
     }
   };
 
-  // Update selected date based on date range
-  React.useEffect(() => {
+  // Calculate date range based on selection
+  const getDateRange = () => {
     const today = new Date();
-    let newDate = today.toISOString().split("T")[0];
+    let startDate = "2025-07-08"; // Default with data
+    let endDate = "2025-07-08";
     
     switch (dateRange) {
       case "today":
-        newDate = today.toISOString().split("T")[0];
+        startDate = endDate = today.toISOString().split("T")[0];
         break;
       case "yesterday":
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        newDate = yesterday.toISOString().split("T")[0];
+        startDate = endDate = yesterday.toISOString().split("T")[0];
         break;
       case "week":
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay());
-        newDate = weekStart.toISOString().split("T")[0];
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        startDate = weekStart.toISOString().split("T")[0];
+        endDate = weekEnd.toISOString().split("T")[0];
         break;
       case "month":
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        newDate = monthStart.toISOString().split("T")[0];
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        startDate = monthStart.toISOString().split("T")[0];
+        endDate = monthEnd.toISOString().split("T")[0];
         break;
       case "year":
         const yearStart = new Date(today.getFullYear(), 0, 1);
-        newDate = yearStart.toISOString().split("T")[0];
+        const yearEnd = new Date(today.getFullYear(), 11, 31);
+        startDate = yearStart.toISOString().split("T")[0];
+        endDate = yearEnd.toISOString().split("T")[0];
         break;
       case "custom":
-        newDate = customStartDate;
+        startDate = customStartDate;
+        endDate = customEndDate;
         break;
       default:
-        newDate = today.toISOString().split("T")[0];
+        startDate = endDate = "2025-07-08";
     }
     
-    if (newDate !== selectedDate) {
-      setSelectedDate(newDate);
+    return { startDate, endDate };
+  };
+
+  // Update selected date based on date range (for single date display)
+  React.useEffect(() => {
+    const { startDate } = getDateRange();
+    if (startDate !== selectedDate) {
+      setSelectedDate(startDate);
     }
-  }, [dateRange, customStartDate]);
+  }, [dateRange, customStartDate, customEndDate]);
 
   // Remove unused functions as buttons are no longer needed
 
@@ -333,6 +348,9 @@ export default function Finances() {
         <DailySummary 
           branchId={parseInt(selectedBranch)} 
           date={new Date(selectedDate)} 
+          startDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().startDate : undefined}
+          endDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().endDate : undefined}
+          isDateRange={dateRange !== "today" && dateRange !== "yesterday"}
         />
       )}
 
@@ -366,6 +384,9 @@ export default function Finances() {
             <TransactionList
               branchId={selectedBranch ? parseInt(selectedBranch) : 0}
               date={selectedDate}
+              startDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().startDate : undefined}
+              endDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().endDate : undefined}
+              isDateRange={dateRange !== "today" && dateRange !== "yesterday"}
               type="income"
             />
           </TabsContent>
@@ -374,6 +395,9 @@ export default function Finances() {
             <TransactionList
               branchId={selectedBranch ? parseInt(selectedBranch) : 0}
               date={selectedDate}
+              startDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().startDate : undefined}
+              endDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().endDate : undefined}
+              isDateRange={dateRange !== "today" && dateRange !== "yesterday"}
               type="expense"
             />
           </TabsContent>
@@ -382,6 +406,9 @@ export default function Finances() {
             <TransactionList
               branchId={selectedBranch ? parseInt(selectedBranch) : 0}
               date={selectedDate}
+              startDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().startDate : undefined}
+              endDate={dateRange !== "today" && dateRange !== "yesterday" ? getDateRange().endDate : undefined}
+              isDateRange={dateRange !== "today" && dateRange !== "yesterday"}
             />
           </TabsContent>
         </Tabs>

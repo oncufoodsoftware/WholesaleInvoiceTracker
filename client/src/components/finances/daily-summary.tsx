@@ -5,17 +5,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface DailySummaryProps {
   branchId: number;
   date: Date;
+  startDate?: string;
+  endDate?: string;
+  isDateRange?: boolean;
 }
 
-export function DailySummary({ branchId, date }: DailySummaryProps) {
+export function DailySummary({ branchId, date, startDate, endDate, isDateRange = false }: DailySummaryProps) {
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["/api/financial-transactions/summary/daily", { branchId, date }],
+    queryKey: isDateRange 
+      ? ["/api/financial-transactions/summary/range", { branchId, startDate, endDate }]
+      : ["/api/financial-transactions/summary/daily", { branchId, date }],
     queryFn: async ({ queryKey }) => {
-      const res = await fetch(
-        `/api/financial-transactions/summary/daily?branchId=${branchId}&date=${date.toISOString().split("T")[0]}`,
-        { credentials: "include" }
-      );
-      if (!res.ok) throw new Error("Failed to fetch daily summary");
+      const url = isDateRange 
+        ? `/api/financial-transactions/summary/range?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`
+        : `/api/financial-transactions/summary/daily?branchId=${branchId}&date=${date.toISOString().split("T")[0]}`;
+      
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch summary");
       return res.json();
     },
     enabled: !!branchId,

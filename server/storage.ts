@@ -626,6 +626,40 @@ export class DatabaseStorage implements IStorage {
     return summary;
   }
 
+  async getSummarizedTransactionsByDateRange(branchId: number, startDate: Date, endDate: Date): Promise<DailyFinancialSummary> {
+    const transactions = await this.getTransactionsByDateRange(branchId, startDate, endDate);
+    
+    // Initialize summary object
+    const summary: DailyFinancialSummary = {
+      totalSales: 0,
+      cardPayments: 0,
+      cashPayments: 0,
+      totalExpenses: 0,
+      expenseCategories: {},
+      netBalance: 0
+    };
+    
+    // Calculate totals
+    transactions.forEach(transaction => {
+      if (transaction.type === 'income') {
+        summary.totalSales += transaction.amount;
+        if (transaction.paymentMethod === 'card') {
+          summary.cardPayments += transaction.amount;
+        } else if (transaction.paymentMethod === 'cash') {
+          summary.cashPayments += transaction.amount;
+        }
+      } else if (transaction.type === 'expense') {
+        summary.totalExpenses += transaction.amount;
+        const category = transaction.category || 'Uncategorized';
+        summary.expenseCategories[category] = (summary.expenseCategories[category] || 0) + transaction.amount;
+      }
+    });
+    
+    summary.netBalance = summary.totalSales - summary.totalExpenses;
+    
+    return summary;
+  }
+
   async createFinancialTransaction(transaction: InsertFinancialTransaction): Promise<FinancialTransaction> {
     const [newTransaction] = await db
       .insert(financialTransactions)

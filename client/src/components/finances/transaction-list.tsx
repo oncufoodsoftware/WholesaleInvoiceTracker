@@ -46,6 +46,9 @@ import { useAuth } from "@/hooks/use-auth";
 interface TransactionListProps {
   branchId: number;
   date: string;
+  startDate?: string;
+  endDate?: string;
+  isDateRange?: boolean;
   type?: "income" | "expense";
 }
 
@@ -63,6 +66,9 @@ const transactionSchema = z.object({
 export function TransactionList({
   branchId,
   date,
+  startDate,
+  endDate,
+  isDateRange = false,
   type,
 }: TransactionListProps) {
   const { toast } = useToast();
@@ -70,19 +76,23 @@ export function TransactionList({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<number | null>(null);
 
-  // Get transactions for the branch and date
+  // Get transactions for the branch and date/date range
   const {
     data: transactions = [],
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["/api/financial-transactions/daily", { branchId, date, type }],
+    queryKey: isDateRange 
+      ? ["/api/financial-transactions/range", { branchId, startDate, endDate, type }]
+      : ["/api/financial-transactions/daily", { branchId, date, type }],
     queryFn: async ({ queryKey }) => {
       if (!branchId) return [];
-      const res = await fetch(
-        `/api/financial-transactions/daily?branchId=${branchId}&date=${date}`,
-        { credentials: "include" }
-      );
+      
+      const url = isDateRange 
+        ? `/api/financial-transactions/range?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`
+        : `/api/financial-transactions/daily?branchId=${branchId}&date=${date}`;
+      
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch transactions");
       
       const data = await res.json();
@@ -94,7 +104,7 @@ export function TransactionList({
       
       return data;
     },
-    enabled: !!branchId && !!date,
+    enabled: !!branchId && (isDateRange ? !!startDate && !!endDate : !!date),
   });
 
   // Get branches

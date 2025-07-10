@@ -782,6 +782,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Date range endpoints for financial transactions
+  app.get('/api/financial-transactions/range', async (req, res) => {
+    try {
+      const { branchId, startDate, endDate } = req.query;
+      
+      if (!branchId || !startDate || !endDate) {
+        return res.status(400).json({ message: 'Branch ID, start date, and end date are required' });
+      }
+      
+      // Branch managers can only access their own branch data
+      if (req.isAuthenticated() && req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (parseInt(branchId as string) !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only access data for your own branch' 
+          });
+        }
+      }
+      
+      const transactions = await storage.getTransactionsByDateRange(
+        parseInt(branchId as string), 
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(transactions);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching date range transactions: ${err}` });
+    }
+  });
+
+  app.get('/api/financial-transactions/summary/range', async (req, res) => {
+    try {
+      const { branchId, startDate, endDate } = req.query;
+      
+      if (!branchId || !startDate || !endDate) {
+        return res.status(400).json({ message: 'Branch ID, start date, and end date are required' });
+      }
+      
+      // Branch managers can only access their own branch data
+      if (req.isAuthenticated() && req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (parseInt(branchId as string) !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only access data for your own branch' 
+          });
+        }
+      }
+      
+      const summary = await storage.getSummarizedTransactionsByDateRange(
+        parseInt(branchId as string), 
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(summary);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching date range summary: ${err}` });
+    }
+  });
+
   app.post('/api/financial-transactions', async (req, res) => {
     try {
       let transactionData = {
