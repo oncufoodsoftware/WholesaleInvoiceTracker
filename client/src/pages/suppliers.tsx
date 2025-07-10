@@ -200,14 +200,14 @@ export default function Suppliers() {
       });
       
       setIsAddDialogOpen(false);
+      addForm.reset();
       
-      // Achievement functionality removed temporarily
-      
-      // Invalidate general supplier list
+      // Invalidate all supplier-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { branchId: user?.branchId }] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
       
-      // Invalidate branch-specific list if we're a branch manager
+      // Invalidate branch-specific queries
       if (isBranchManager && user?.branchId) {
         queryClient.invalidateQueries({ 
           queryKey: [`/api/suppliers/branch/${user.branchId}`] 
@@ -217,10 +217,8 @@ export default function Suppliers() {
         });
       }
       
-      // Refresh the page to ensure all data is up-to-date
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Force refetch the main query
+      refetch();
     },
     onError: (error: Error) => {
       toast({
@@ -249,11 +247,12 @@ export default function Suppliers() {
       setIsEditDialogOpen(false);
       setSelectedSupplier(null);
       
-      // Invalidate general supplier list
+      // Invalidate all supplier-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { branchId: user?.branchId }] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
       
-      // Invalidate branch-specific list if we're a branch manager
+      // Invalidate branch-specific queries
       if (isBranchManager && user?.branchId) {
         queryClient.invalidateQueries({ 
           queryKey: [`/api/suppliers/branch/${user.branchId}`] 
@@ -263,10 +262,8 @@ export default function Suppliers() {
         });
       }
       
-      // Refresh the page to ensure all data is up-to-date
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Force refetch the main query
+      refetch();
     },
     onError: (error: Error) => {
       toast({
@@ -289,11 +286,12 @@ export default function Suppliers() {
         description: "The supplier has been deleted successfully.",
       });
       
-      // Invalidate general supplier lists
+      // Invalidate all supplier-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { branchId: user?.branchId }] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers", { includeSummary: true }] });
       
-      // Invalidate branch-specific lists if we're a branch manager
+      // Invalidate branch-specific queries
       if (isBranchManager && user?.branchId) {
         queryClient.invalidateQueries({ 
           queryKey: [`/api/suppliers/branch/${user.branchId}`] 
@@ -303,10 +301,8 @@ export default function Suppliers() {
         });
       }
       
-      // Refresh the page to ensure all data is up-to-date
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Force refetch the main query
+      refetch();
     },
     onError: (error: Error) => {
       toast({
