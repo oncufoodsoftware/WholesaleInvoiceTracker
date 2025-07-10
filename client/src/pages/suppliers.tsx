@@ -329,8 +329,6 @@ export default function Suppliers() {
 
   function onEditSubmit(values: z.infer<typeof supplierSchema>) {
     if (!selectedSupplier) return;
-    console.log("Submitting edit form with values:", values);
-    console.log("Selected branchIds:", values.branchIds);
     editSupplierMutation.mutate({ id: selectedSupplier.id, data: values });
   }
 
@@ -341,7 +339,7 @@ export default function Suppliers() {
       if (!res.ok) throw new Error("Failed to fetch supplier details");
       
       const supplierWithBranches = await res.json();
-      console.log("Fetched supplier with branches for edit:", supplierWithBranches);
+
       
       setSelectedSupplier(supplierWithBranches);
       setIsEditDialogOpen(true);

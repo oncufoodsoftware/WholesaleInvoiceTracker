@@ -113,6 +113,13 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- July 10, 2025. Multi-branch supplier management system completed
+  - Suppliers can now be assigned to multiple branches simultaneously
+  - Edit supplier form loads complete branch information and saves changes properly
+  - Fixed React Hook Form checkbox array handling (object to array conversion)
+  - Branch assignment works correctly for both new and existing suppliers
+  - Cache invalidation and form reset mechanisms implemented
+  - All supplier operations now support multi-branch functionality
 - June 29, 2025. Enhanced branch-based access control and UI restrictions
   - Suppliers page: All users can now see all suppliers (removed branch filtering)
   - Invoices & Payment Tracking: Branch selection locked for Branch Managers (auto-selected to their branch)
