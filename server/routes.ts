@@ -375,23 +375,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/suppliers', requireRole(['admin', 'accountant', 'branch_manager']), async (req, res) => {
     try {
-      const supplierData = insertSupplierSchema.parse(req.body);
+      // Create a custom validation schema that excludes branchIds from main validation
+      const createSchema = insertSupplierSchema.omit({ branchIds: true });
+      const supplierData = createSchema.parse(req.body);
       const user = req.user as any;
       
-      // Extract branch IDs from supplier data
-      let branchIds = supplierData.branchIds || [];
+      // Handle branch IDs separately
+      let branchIds = req.body.branchIds || [];
       
       // Branch managers can only create suppliers for their own branch
       if (user?.role === 'branch_manager' && user?.branchId) {
         branchIds = [user.branchId]; // Override to only their branch
       }
       
-      // Remove branchIds from supplier data since it's not in the supplier table anymore
-      const { branchIds: _, ...supplierCreateData } = supplierData;
-      supplierCreateData.createdBy = user?.id;
+      // Ensure branchIds is an array
+      if (!Array.isArray(branchIds)) {
+        branchIds = [];
+      }
+      
+      // Add createdBy field
+      supplierData.createdBy = user?.id;
       
       // Create the supplier
-      const newSupplier = await storage.createSupplier(supplierCreateData);
+      const newSupplier = await storage.createSupplier(supplierData);
       
       // Add supplier to branches
       if (branchIds.length > 0) {
@@ -416,7 +422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/suppliers/:id', requireRole(['admin', 'accountant', 'branch_manager']), async (req, res) => {
     try {
       const supplierId = parseInt(req.params.id);
-      const supplierData = insertSupplierSchema.partial().parse(req.body);
+      
+      // Create a custom validation schema that excludes branchIds from main validation
+      const updateSchema = insertSupplierSchema.partial().omit({ branchIds: true });
+      const supplierData = updateSchema.parse(req.body);
       const user = req.user as any;
       
       // Get existing supplier data
@@ -434,30 +443,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Extract branch IDs if provided
-      const branchIds = supplierData.branchIds;
-      const { branchIds: _, ...supplierUpdateData } = supplierData;
+      // Handle branch IDs separately
+      const branchIds = req.body.branchIds;
       
       // Update supplier basic info
-      const updatedSupplier = await storage.updateSupplier(supplierId, supplierUpdateData);
+      const updatedSupplier = await storage.updateSupplier(supplierId, supplierData);
       
-      // Update branch relationships (only for admin)
-      if (branchIds && user?.role === 'admin') {
-        // Get current branch relationships
-        const currentBranches = await storage.getSupplierBranches(supplierId);
-        const currentBranchIds = currentBranches.map(sb => sb.branchId);
-        
-        // Remove old relationships
-        for (const currentBranchId of currentBranchIds) {
-          if (!branchIds.includes(currentBranchId)) {
-            await storage.removeSupplierFromBranch(supplierId, currentBranchId);
+      // Update branch relationships
+      if (Array.isArray(branchIds)) {
+        if (user?.role === 'admin') {
+          // Admin can update all branch relationships
+          const currentBranches = await storage.getSupplierBranches(supplierId);
+          const currentBranchIds = currentBranches.map(sb => sb.branchId);
+          
+          // Remove old relationships
+          for (const currentBranchId of currentBranchIds) {
+            if (!branchIds.includes(currentBranchId)) {
+              await storage.removeSupplierFromBranch(supplierId, currentBranchId);
+            }
           }
-        }
-        
-        // Add new relationships
-        for (const branchId of branchIds) {
-          if (!currentBranchIds.includes(branchId)) {
-            await storage.addSupplierToBranch(supplierId, branchId, user?.id);
+          
+          // Add new relationships
+          for (const branchId of branchIds) {
+            if (!currentBranchIds.includes(branchId)) {
+              await storage.addSupplierToBranch(supplierId, branchId, user?.id);
+            }
+          }
+        } else if (user?.role === 'branch_manager' && user?.branchId) {
+          // Branch manager can only ensure their branch is included if requested
+          if (branchIds.includes(user.branchId)) {
+            const currentBranches = await storage.getSupplierBranches(supplierId);
+            const hasOwnBranch = currentBranches.some(sb => sb.branchId === user.branchId);
+            if (!hasOwnBranch) {
+              await storage.addSupplierToBranch(supplierId, user.branchId, user?.id);
+            }
           }
         }
       }
