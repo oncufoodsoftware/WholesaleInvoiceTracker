@@ -221,10 +221,20 @@ export function TransactionList({
     }).format(amount);
   };
 
-  // Format date to UK 24-hour format
+  // Format date to UK 24-hour format with date and time
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-GB', { 
+    
+    // Check if the date object is valid
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    
+    // Format as DD/MM/YYYY HH:MM
+    return date.toLocaleString('en-GB', { 
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric',
       hour: '2-digit', 
       minute: '2-digit',
       hour12: false // Force 24-hour format
@@ -262,7 +272,7 @@ export function TransactionList({
               <TableHeader>
                 <TableRow>
                   {!type && <TableHead>Type</TableHead>}
-                  <TableHead>Time</TableHead>
+                  <TableHead>Date & Time</TableHead>
                   <TableHead>Amount</TableHead>
                   {type === "income" && <TableHead>Payment Method</TableHead>}
                   {(type === "expense" || !type) && <TableHead>Category</TableHead>}

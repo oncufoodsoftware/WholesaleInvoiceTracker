@@ -34,6 +34,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 const transactionSchema = z.object({
   branchId: z.string().min(1, "Branch is required"),
   date: z.string().min(1, "Date is required"),
+  time: z.string().min(1, "Time is required"),
   type: z.string().min(1, "Type is required"),
   category: z.string().optional(),
   amount: z.string().min(1, "Amount is required"),
@@ -82,6 +83,7 @@ export default function Finances() {
     defaultValues: {
       branchId: selectedBranch,
       date: selectedDate,
+      time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
       type: activeTab === "sales" ? "income" : "expense",
       category: "",
       amount: "",
@@ -107,8 +109,12 @@ export default function Finances() {
   // Create transaction mutation
   const createTransactionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof transactionSchema>) => {
+      // Combine date and time into a single datetime string
+      const datetime = `${data.date}T${data.time}:00`;
+      
       return await apiRequest("POST", "/api/financial-transactions", {
         ...data,
+        date: datetime, // Send combined datetime
         branchId: parseInt(data.branchId),
         amount: parseFloat(data.amount),
       });
@@ -128,6 +134,7 @@ export default function Finances() {
       form.reset({
         branchId: resetBranchId,
         date: selectedDate,
+        time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
         type: activeTab === "sales" ? "income" : "expense",
         category: "",
         amount: "",
@@ -464,6 +471,20 @@ export default function Finances() {
                     <FormLabel>Date</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
