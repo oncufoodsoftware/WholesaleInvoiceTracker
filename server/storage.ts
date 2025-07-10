@@ -405,16 +405,16 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(branches, eq(supplierBranches.branchId, branches.id))
         .where(eq(supplierBranches.supplierId, supplier.id));
 
-      const supplierBranches = supplierBranchRels.map(r => r.branch);
+      const supplierBranchList = supplierBranchRels.map(r => r.branch);
       
       // If branchId is specified, only include suppliers that work with that branch
-      if (branchId && !supplierBranches.some(b => b.id === branchId)) {
+      if (branchId && !supplierBranchList.some(b => b.id === branchId)) {
         continue;
       }
 
       result.push({
         supplier,
-        branches: supplierBranches
+        branches: supplierBranchList
       });
     }
 
