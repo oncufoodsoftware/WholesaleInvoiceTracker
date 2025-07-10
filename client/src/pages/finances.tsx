@@ -48,16 +48,16 @@ export default function Finances() {
   const { user } = useAuth();
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(
-    "2025-07-08" // Use a date with actual data
+    new Date().toISOString().split("T")[0] // Today's date
   );
-  const [dateRange, setDateRange] = useState("custom");
+  const [dateRange, setDateRange] = useState("today");
   const [customStartDate, setCustomStartDate] = useState<string>(
-    "2025-07-08" // Use a date with actual data
+    new Date().toISOString().split("T")[0] // Today's date
   );
   const [customEndDate, setCustomEndDate] = useState<string>(
-    "2025-07-08" // Use a date with actual data
+    new Date().toISOString().split("T")[0] // Today's date
   );
-  const [activeTab, setActiveTab] = useState("sales");
+  const [activeTab, setActiveTab] = useState("transactions");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -84,10 +84,10 @@ export default function Finances() {
       branchId: selectedBranch,
       date: selectedDate,
       time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
-      type: activeTab === "sales" ? "income" : "expense",
+      type: activeTab === "transactions" ? "income" : "expense",
       category: "",
       amount: "",
-      paymentMethod: activeTab === "sales" ? "card" : undefined,
+      paymentMethod: activeTab === "transactions" ? "card" : undefined,
       description: "",
       zReportImage: undefined,
     },
@@ -95,8 +95,8 @@ export default function Finances() {
 
   // Update form values when active tab changes or branch changes
   React.useEffect(() => {
-    form.setValue("type", activeTab === "sales" ? "income" : "expense");
-    form.setValue("paymentMethod", activeTab === "sales" ? "card" : undefined);
+    form.setValue("type", activeTab === "transactions" ? "income" : "expense");
+    form.setValue("paymentMethod", activeTab === "transactions" ? "card" : undefined);
     
     // Set branch for branch managers
     if (user?.role === "branch_manager" && user?.branchId) {
@@ -135,10 +135,10 @@ export default function Finances() {
         branchId: resetBranchId,
         date: selectedDate,
         time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
-        type: activeTab === "sales" ? "income" : "expense",
+        type: activeTab === "transactions" ? "income" : "expense",
         category: "",
         amount: "",
-        paymentMethod: activeTab === "sales" ? "card" : undefined,
+        paymentMethod: activeTab === "transactions" ? "card" : undefined,
         description: "",
       });
       
@@ -367,10 +367,10 @@ export default function Finances() {
           <div className="border-b">
             <TabsList className="bg-transparent">
               <TabsTrigger
-                value="sales"
+                value="transactions"
                 className="data-[state=active]:border-primary data-[state=active]:shadow-none"
               >
-                Sales
+                Transactions
               </TabsTrigger>
               <TabsTrigger
                 value="expenses"
@@ -387,7 +387,7 @@ export default function Finances() {
             </TabsList>
           </div>
 
-          <TabsContent value="sales" className="mt-4">
+          <TabsContent value="transactions" className="mt-4">
             <TransactionList
               branchId={selectedBranch ? parseInt(selectedBranch) : 0}
               date={selectedDate}

@@ -56,6 +56,7 @@ interface TransactionListProps {
 const transactionSchema = z.object({
   branchId: z.string().min(1, "Branch is required"),
   date: z.string().min(1, "Date is required"),
+  time: z.string().min(1, "Time is required"),
   type: z.string().min(1, "Type is required"),
   category: z.string().optional(),
   amount: z.string().min(1, "Amount is required"),
@@ -118,6 +119,7 @@ export function TransactionList({
     defaultValues: {
       branchId: branchId.toString(),
       date: date,
+      time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
       type: type || "income",
       category: "",
       amount: "",
@@ -131,8 +133,12 @@ export function TransactionList({
     mutationFn: async (data: z.infer<typeof transactionSchema>) => {
       if (!editingTransactionId) throw new Error("No transaction ID provided");
       
+      // Combine date and time into a single datetime string
+      const datetime = `${data.date}T${data.time}:00`;
+      
       return await apiRequest("PUT", `/api/financial-transactions/${editingTransactionId}`, {
         ...data,
+        date: datetime, // Send combined datetime
         branchId: parseInt(data.branchId),
         amount: parseFloat(data.amount),
       });
@@ -194,9 +200,16 @@ export function TransactionList({
   // Handle edit transaction
   function handleEditTransaction(transaction: any) {
     setEditingTransactionId(transaction.id);
+    
+    // Extract date and time from the transaction date
+    const transactionDate = new Date(transaction.date);
+    const dateString = transactionDate.toISOString().split("T")[0];
+    const timeString = transactionDate.toTimeString().slice(0, 5);
+    
     form.reset({
       branchId: transaction.branchId.toString(),
-      date: new Date(transaction.date).toISOString().split("T")[0],
+      date: dateString,
+      time: timeString,
       type: transaction.type,
       category: transaction.category || "",
       amount: transaction.amount.toString(),
@@ -406,6 +419,20 @@ export function TransactionList({
                     <FormLabel>Date</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
