@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Card, 
@@ -46,14 +47,14 @@ export default function Finances() {
   const { user } = useAuth();
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    "2025-07-08" // Use a date with actual data
   );
-  const [dateRange, setDateRange] = useState("today");
+  const [dateRange, setDateRange] = useState("custom");
   const [customStartDate, setCustomStartDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    "2025-07-08" // Use a date with actual data
   );
   const [customEndDate, setCustomEndDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    "2025-07-08" // Use a date with actual data
   );
   const [activeTab, setActiveTab] = useState("sales");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -65,13 +66,15 @@ export default function Finances() {
   });
 
   // Set the default branch for branch managers
-  useState(() => {
+  React.useEffect(() => {
     if (user && user.role === "branch_manager" && user.branchId) {
       setSelectedBranch(user.branchId.toString());
     } else if (branches.length > 0 && !selectedBranch) {
-      setSelectedBranch(branches[0].id.toString());
+      // Use branch 4 (Letchworth) as default since it has data
+      const branchWithData = branches.find(b => b.id === 4) || branches[0];
+      setSelectedBranch(branchWithData.id.toString());
     }
-  });
+  }, [branches, selectedBranch, user]);
 
   // Form for new transaction
   const form = useForm<z.infer<typeof transactionSchema>>({
@@ -89,7 +92,7 @@ export default function Finances() {
   });
 
   // Update form values when active tab changes or branch changes
-  useState(() => {
+  React.useEffect(() => {
     form.setValue("type", activeTab === "sales" ? "income" : "expense");
     form.setValue("paymentMethod", activeTab === "sales" ? "card" : undefined);
     
@@ -99,7 +102,7 @@ export default function Finances() {
     } else if (selectedBranch) {
       form.setValue("branchId", selectedBranch);
     }
-  }, [activeTab, selectedBranch, user]);
+  }, [activeTab, selectedBranch, user, form]);
 
   // Create transaction mutation
   const createTransactionMutation = useMutation({
@@ -200,7 +203,7 @@ export default function Finances() {
   };
 
   // Update selected date based on date range
-  useState(() => {
+  React.useEffect(() => {
     const today = new Date();
     let newDate = today.toISOString().split("T")[0];
     
