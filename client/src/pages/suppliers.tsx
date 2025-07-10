@@ -168,6 +168,10 @@ export default function Suppliers() {
   // Set form values when editing a supplier
   useEffect(() => {
     if (selectedSupplier && isEditDialogOpen) {
+      // Reset form first to clear any previous values
+      editForm.reset();
+      
+      // Set basic supplier information
       editForm.setValue("name", selectedSupplier.name || "");
       editForm.setValue("contactPerson", selectedSupplier.contactPerson || "");
       editForm.setValue("phone", selectedSupplier.phone || "");
@@ -177,11 +181,13 @@ export default function Suppliers() {
       editForm.setValue("shortCode", selectedSupplier.shortCode || "");
       editForm.setValue("notes", selectedSupplier.notes || "");
       
-      // Set branch IDs - if branch manager, only their branch, otherwise all branches
+      // Set branch IDs from the supplier's branches
       if (selectedSupplier.branches && Array.isArray(selectedSupplier.branches)) {
         const branchIds = selectedSupplier.branches.map(branch => branch.id);
+        console.log("Setting branch IDs for edit form:", branchIds);
         editForm.setValue("branchIds", branchIds);
       } else {
+        console.log("No branches found for supplier, setting empty array");
         editForm.setValue("branchIds", []);
       }
     }
@@ -246,6 +252,7 @@ export default function Suppliers() {
       
       setIsEditDialogOpen(false);
       setSelectedSupplier(null);
+      editForm.reset();
       
       // Invalidate all supplier-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
@@ -262,8 +269,11 @@ export default function Suppliers() {
         });
       }
       
-      // Force refetch the main query
+      // Force refetch and then refresh page after a short delay
       refetch();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     },
     onError: (error: Error) => {
       toast({
@@ -322,9 +332,25 @@ export default function Suppliers() {
     editSupplierMutation.mutate({ id: selectedSupplier.id, data: values });
   }
 
-  function handleEditSupplier(supplier: SupplierWithDebt) {
-    setSelectedSupplier(supplier);
-    setIsEditDialogOpen(true);
+  async function handleEditSupplier(supplier: SupplierWithDebt) {
+    try {
+      // Fetch complete supplier information with branches
+      const res = await fetch(`/api/suppliers/${supplier.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch supplier details");
+      
+      const supplierWithBranches = await res.json();
+      console.log("Fetched supplier with branches for edit:", supplierWithBranches);
+      
+      setSelectedSupplier(supplierWithBranches);
+      setIsEditDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching supplier details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load supplier details for editing.",
+        variant: "destructive",
+      });
+    }
   }
 
   function handleDeleteSupplier(id: number) {
