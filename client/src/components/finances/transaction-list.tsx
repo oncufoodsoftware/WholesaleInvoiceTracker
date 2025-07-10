@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Eye, PlusIcon, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -47,7 +47,6 @@ interface TransactionListProps {
   branchId: number;
   date: string;
   type?: "income" | "expense";
-  onAddTransaction?: () => void;
 }
 
 // Transaction form schema
@@ -65,7 +64,6 @@ export function TransactionList({
   branchId,
   date,
   type,
-  onAddTransaction,
 }: TransactionListProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -241,36 +239,12 @@ export function TransactionList({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium">
             {type === "income" ? "Sales Transactions" :
              type === "expense" ? "Expense Transactions" :
              "All Transactions"}
           </CardTitle>
-          <div className="flex gap-2">
-            <Button
-              onClick={onAddTransaction}
-              className="flex items-center gap-1"
-              variant="secondary"
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span>{type === "income" ? "Add Sale" : type === "expense" ? "Add Expense" : "Add Transaction"}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              className="flex items-center gap-1"
-              onClick={() => {
-                // This would trigger an export function in a real application
-                toast({
-                  title: "Export started",
-                  description: "Your transactions are being exported",
-                });
-              }}
-            >
-              <Eye className="h-4 w-4" />
-              <span>Export</span>
-            </Button>
-          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
