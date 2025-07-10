@@ -21,6 +21,7 @@ import { DailySummary } from "@/components/finances/daily-summary";
 import { TransactionList } from "@/components/finances/transaction-list";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 // Remove unused schema as buttons are no longer needed
 
