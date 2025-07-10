@@ -329,6 +329,8 @@ export default function Suppliers() {
 
   function onEditSubmit(values: z.infer<typeof supplierSchema>) {
     if (!selectedSupplier) return;
+    console.log("Submitting edit form with values:", values);
+    console.log("Selected branchIds:", values.branchIds);
     editSupplierMutation.mutate({ id: selectedSupplier.id, data: values });
   }
 

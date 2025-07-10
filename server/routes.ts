@@ -454,6 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle branch IDs separately
       const branchIds = req.body.branchIds;
+      console.log(`PUT /api/suppliers/${supplierId} - Received branchIds:`, branchIds);
       
       // Update supplier basic info
       const updatedSupplier = await storage.updateSupplier(supplierId, supplierData);
