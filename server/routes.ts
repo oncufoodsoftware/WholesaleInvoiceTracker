@@ -363,11 +363,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/suppliers/:id', async (req, res) => {
     try {
-      const supplier = await storage.getSupplier(parseInt(req.params.id));
-      if (!supplier) {
+      const supplierId = parseInt(req.params.id);
+      const supplierWithBranches = await storage.getSupplierWithBranches(supplierId);
+      
+      if (!supplierWithBranches) {
         return res.status(404).json({ message: 'Supplier not found' });
       }
-      res.json(supplier);
+      
+      // Format the response to match the expected structure
+      const formattedSupplier = {
+        ...supplierWithBranches.supplier,
+        branches: supplierWithBranches.branches
+      };
+      
+      res.json(formattedSupplier);
     } catch (err) {
       res.status(500).json({ message: `Error fetching supplier: ${err}` });
     }
