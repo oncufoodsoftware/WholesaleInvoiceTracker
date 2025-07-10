@@ -453,8 +453,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle branch IDs separately
-      const branchIds = req.body.branchIds;
+      let branchIds = req.body.branchIds;
       console.log(`PUT /api/suppliers/${supplierId} - Received branchIds:`, branchIds);
+      
+      // Convert object to array if needed (React Hook Form checkbox issue)
+      if (branchIds && typeof branchIds === 'object' && !Array.isArray(branchIds)) {
+        branchIds = Object.values(branchIds);
+        console.log(`PUT /api/suppliers/${supplierId} - Converted branchIds to array:`, branchIds);
+      }
       
       // Update supplier basic info
       const updatedSupplier = await storage.updateSupplier(supplierId, supplierData);
