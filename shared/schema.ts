@@ -35,6 +35,7 @@ export const actionTypeEnum = pgEnum('action_type', ['create', 'update', 'delete
 export const supportTicketStatusEnum = pgEnum('support_ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
 export const supportTicketPriorityEnum = pgEnum('support_ticket_priority', ['low', 'medium', 'high', 'critical']);
 export const paymentTypeEnum = pgEnum('payment_type', ['bank_transfer', 'cheque']);
+export const directDebitFrequencyEnum = pgEnum('direct_debit_frequency', ['weekly', 'monthly', 'quarterly', 'yearly']);
 
 // Users table
 export const users = pgTable("users", {
@@ -147,6 +148,22 @@ export const supportTickets = pgTable("support_tickets", {
   updatedAt: timestamp("updated_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
   assignedTo: integer("assigned_to").references(() => users.id),
+});
+
+// Direct Debits table
+export const directDebits = pgTable("direct_debits", {
+  id: serial("id").primaryKey(),
+  branchId: integer("branch_id").references(() => branches.id).notNull(),
+  recipientName: text("recipient_name").notNull(),
+  accountNumber: text("account_number").notNull(),
+  sortCode: text("sort_code").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  frequency: directDebitFrequencyEnum("frequency").notNull(),
+  nextPaymentDate: timestamp("next_payment_date").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
 });
 
 // Define schemas and types
@@ -294,3 +311,11 @@ export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
 
 export type SupplierPayment = typeof supplierPayments.$inferSelect;
 export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
+
+export const insertDirectDebitSchema = createInsertSchema(directDebits).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export type DirectDebit = typeof directDebits.$inferSelect;
+export type InsertDirectDebit = z.infer<typeof insertDirectDebitSchema>;

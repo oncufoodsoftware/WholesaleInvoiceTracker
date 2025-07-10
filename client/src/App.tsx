@@ -23,6 +23,7 @@ import Roles from "@/pages/roles";
 import DebugAuth from "@/pages/debug-auth";
 import SecurityDashboard from "@/pages/security-dashboard";
 import PaymentTracking from "@/pages/payment-tracking";
+import DirectDebits from "@/pages/direct-debits";
 
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -52,6 +53,7 @@ function Router() {
                 <ProtectedRoute path="/supplier-risk" component={SupplierRisk} requiredPageAccess="risk_analysis" />
                 <ProtectedRoute path="/invoices" component={Invoices} requiredPageAccess="invoices" />
                 <ProtectedRoute path="/payment-tracking" component={PaymentTracking} requiredPageAccess="payment_tracking" />
+                <ProtectedRoute path="/direct-debits" component={DirectDebits} requiredPageAccess="dashboard" />
                 <ProtectedRoute path="/finances" component={Finances} requiredPageAccess="dashboard" />
                 <ProtectedRoute path="/reports" component={Reports} requiredPageAccess="reports" />
                 <ProtectedRoute path="/analytics" component={Analytics} requiredPageAccess="reports" />

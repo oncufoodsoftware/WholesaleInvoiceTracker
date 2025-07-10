@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Shield,
   CreditCard,
+  Repeat,
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -87,6 +88,12 @@ export function Sidebar({ className }: SidebarNavProps) {
       href: "/payment-tracking",
       icon: <CreditCard className="mr-2 h-4 w-4" />,
       pageAccess: "payment_tracking",
+    },
+    {
+      title: "Direct Debits",
+      href: "/direct-debits",
+      icon: <Repeat className="mr-2 h-4 w-4" />,
+      pageAccess: "dashboard",
     },
     {
       title: "Finances",

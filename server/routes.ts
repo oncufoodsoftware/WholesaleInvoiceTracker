@@ -18,6 +18,7 @@ import {
   insertSupportTicketSchema,
   insertSupplierPaymentSchema,
   insertInvoicePaymentSchema,
+  insertDirectDebitSchema,
   actionTypeEnum,
   supportTicketStatusEnum,
   supportTicketPriorityEnum
@@ -647,6 +648,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: `Error deleting invoice: ${err}` });
+    }
+  });
+
+  // Financial transaction export endpoint
+  app.get('/api/financial-transactions/export', async (req, res) => {
+    try {
+      const { branchId, date } = req.query;
+      
+      if (!branchId || !date) {
+        return res.status(400).json({ message: 'Branch ID and date are required' });
+      }
+      
+      // Branch managers can only export their own branch data
+      if (req.isAuthenticated() && req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (parseInt(branchId as string) !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only export data for your own branch' 
+          });
+        }
+      }
+      
+      const transactions = await storage.getDailyTransactions(
+        parseInt(branchId as string), 
+        new Date(date as string)
+      );
+      
+      // Create CSV content
+      const csvHeaders = ['Date', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
+      const csvRows = transactions.map(transaction => [
+        transaction.date.toISOString().split('T')[0],
+        transaction.type,
+        transaction.category || '',
+        transaction.amount.toString(),
+        transaction.paymentMethod || '',
+        transaction.description || ''
+      ]);
+      
+      const csvContent = [csvHeaders, ...csvRows]
+        .map(row => row.map(field => `"${field.replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="financial-transactions-${branchId}-${date}.csv"`);
+      res.send(csvContent);
+    } catch (err) {
+      res.status(500).json({ message: `Error exporting transactions: ${err}` });
     }
   });
 
@@ -1749,6 +1796,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(payments);
     } catch (err) {
       res.status(500).json({ message: `Error fetching invoice payments: ${err}` });
+    }
+  });
+
+  // Direct Debits API endpoints
+  app.get('/api/direct-debits', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const { branchId } = req.query;
+      
+      // Branch managers can only access their own branch data
+      if (req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (branchId && parseInt(branchId as string) !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only access data for your own branch' 
+          });
+        }
+      }
+      
+      const directDebits = await storage.getDirectDebits(branchId ? parseInt(branchId as string) : undefined);
+      res.json(directDebits);
+    } catch (err) {
+      res.status(500).json({ message: `Error fetching direct debits: ${err}` });
+    }
+  });
+
+  app.post('/api/direct-debits', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      // Branch managers can only create direct debits for their branch
+      if (req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (req.body.branchId !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only create direct debits for your own branch' 
+          });
+        }
+      }
+      
+      const directDebitData = {
+        ...req.body,
+        createdBy: req.user?.id
+      };
+      
+      const validatedData = insertDirectDebitSchema.parse(directDebitData);
+      const newDirectDebit = await storage.createDirectDebit(validatedData);
+      
+      await logUserAction(req, 'create', 'direct_debit', newDirectDebit.id);
+      res.status(201).json(newDirectDebit);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid input', errors: err.errors });
+      }
+      res.status(500).json({ message: `Error creating direct debit: ${err}` });
+    }
+  });
+
+  app.put('/api/direct-debits/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const id = parseInt(req.params.id);
+      const existingDebit = await storage.getDirectDebit(id);
+      
+      if (!existingDebit) {
+        return res.status(404).json({ message: 'Direct debit not found' });
+      }
+      
+      // Branch managers can only update direct debits for their branch
+      if (req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (existingDebit.branchId !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only update direct debits for your own branch' 
+          });
+        }
+      }
+      
+      const validatedData = insertDirectDebitSchema.parse(req.body);
+      const updatedDirectDebit = await storage.updateDirectDebit(id, validatedData);
+      
+      await logUserAction(req, 'update', 'direct_debit', id);
+      res.json(updatedDirectDebit);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid input', errors: err.errors });
+      }
+      res.status(500).json({ message: `Error updating direct debit: ${err}` });
+    }
+  });
+
+  app.delete('/api/direct-debits/:id', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const id = parseInt(req.params.id);
+      const existingDebit = await storage.getDirectDebit(id);
+      
+      if (!existingDebit) {
+        return res.status(404).json({ message: 'Direct debit not found' });
+      }
+      
+      // Branch managers can only delete direct debits for their branch
+      if (req.user?.role === 'branch_manager' && req.user?.branchId) {
+        if (existingDebit.branchId !== req.user.branchId) {
+          return res.status(403).json({ 
+            message: 'Forbidden: You can only delete direct debits for your own branch' 
+          });
+        }
+      }
+      
+      const success = await storage.deleteDirectDebit(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Direct debit not found' });
+      }
+      
+      await logUserAction(req, 'delete', 'direct_debit', id);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: `Error deleting direct debit: ${err}` });
     }
   });
 

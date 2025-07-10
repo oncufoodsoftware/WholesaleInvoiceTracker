@@ -463,15 +463,7 @@ export default function Branches() {
                     Delete
                   </Button>
                 </div>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleManageSuppliers(branch)}
-                  className="w-full"
-                >
-                  <Package className="h-3.5 w-3.5 mr-1" />
-                  Manage Suppliers
-                </Button>
+
               </CardFooter>
             </Card>
           ))}

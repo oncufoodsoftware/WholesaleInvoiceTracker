@@ -11,6 +11,7 @@ import {
   supportTickets,
   invoicePayments,
   supplierPayments,
+  directDebits,
   type User, 
   type InsertUser, 
   type Branch,
@@ -34,7 +35,9 @@ import {
   type InvoicePayment,
   type InsertInvoicePayment,
   type SupplierPayment,
-  type InsertSupplierPayment
+  type InsertSupplierPayment,
+  type DirectDebit,
+  type InsertDirectDebit
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray, count } from "drizzle-orm";
@@ -147,6 +150,13 @@ export interface IStorage {
   getUserActionsByEntityType(entityType: string, limit?: number): Promise<UserAction[]>;
   getUserActionsByEntityId(entityType: string, entityId: number, limit?: number): Promise<UserAction[]>;
   
+  // Direct Debit methods
+  getDirectDebits(branchId?: number): Promise<DirectDebit[]>;
+  getDirectDebit(id: number): Promise<DirectDebit | undefined>;
+  createDirectDebit(debit: InsertDirectDebit): Promise<DirectDebit>;
+  updateDirectDebit(id: number, debit: Partial<InsertDirectDebit>): Promise<DirectDebit | undefined>;
+  deleteDirectDebit(id: number): Promise<boolean>;
+
   // Session store for authentication
   sessionStore: session.SessionStore;
 }
@@ -1229,6 +1239,89 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting payment tracking:', error);
       return [];
+    }
+  }
+
+  // Direct Debit methods
+  async getDirectDebits(branchId?: number): Promise<DirectDebit[]> {
+    try {
+      let query = db
+        .select({
+          id: directDebits.id,
+          branchId: directDebits.branchId,
+          branchName: branches.name,
+          recipientName: directDebits.recipientName,
+          accountNumber: directDebits.accountNumber,
+          sortCode: directDebits.sortCode,
+          amount: directDebits.amount,
+          frequency: directDebits.frequency,
+          nextPaymentDate: directDebits.nextPaymentDate,
+          description: directDebits.description,
+          isActive: directDebits.isActive,
+          createdAt: directDebits.createdAt,
+          createdBy: directDebits.createdBy
+        })
+        .from(directDebits)
+        .leftJoin(branches, eq(directDebits.branchId, branches.id));
+
+      if (branchId) {
+        query = query.where(eq(directDebits.branchId, branchId));
+      }
+
+      const debits = await query.orderBy(desc(directDebits.nextPaymentDate));
+      return debits;
+    } catch (error) {
+      console.error('Error getting direct debits:', error);
+      return [];
+    }
+  }
+
+  async getDirectDebit(id: number): Promise<DirectDebit | undefined> {
+    try {
+      const [debit] = await db.select().from(directDebits).where(eq(directDebits.id, id));
+      return debit || undefined;
+    } catch (error) {
+      console.error('Error getting direct debit:', error);
+      return undefined;
+    }
+  }
+
+  async createDirectDebit(debit: InsertDirectDebit): Promise<DirectDebit> {
+    try {
+      const [newDebit] = await db
+        .insert(directDebits)
+        .values(debit)
+        .returning();
+      return newDebit;
+    } catch (error) {
+      console.error('Error creating direct debit:', error);
+      throw new Error(`Failed to create direct debit: ${error}`);
+    }
+  }
+
+  async updateDirectDebit(id: number, debit: Partial<InsertDirectDebit>): Promise<DirectDebit | undefined> {
+    try {
+      const [updatedDebit] = await db
+        .update(directDebits)
+        .set(debit)
+        .where(eq(directDebits.id, id))
+        .returning();
+      return updatedDebit;
+    } catch (error) {
+      console.error('Error updating direct debit:', error);
+      return undefined;
+    }
+  }
+
+  async deleteDirectDebit(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(directDebits)
+        .where(eq(directDebits.id, id));
+      return result.count > 0;
+    } catch (error) {
+      console.error('Error deleting direct debit:', error);
+      return false;
     }
   }
 }
