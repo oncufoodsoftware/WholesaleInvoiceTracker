@@ -1937,6 +1937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user?.id
       };
       
+      console.log('Direct debit data received:', directDebitData);
       const validatedData = insertDirectDebitSchema.parse(directDebitData);
       const newDirectDebit = await storage.createDirectDebit(validatedData);
       

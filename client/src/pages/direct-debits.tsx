@@ -168,6 +168,7 @@ export default function DirectDebits() {
         amount: parseFloat(data.amount),
         nextPaymentDate: new Date(data.nextPaymentDate).toISOString(),
       };
+      console.log('Sending direct debit payload:', payload);
       const res = await apiRequest("POST", "/api/direct-debits", payload);
       return res.json();
     },
@@ -184,6 +185,7 @@ export default function DirectDebits() {
       }, 500);
     },
     onError: (error: Error) => {
+      console.error('Direct debit add error:', error);
       toast({
         title: "Error",
         description: error.message,
