@@ -1945,8 +1945,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newDirectDebit);
     } catch (err) {
       if (err instanceof z.ZodError) {
+        console.error('Validation errors:', err.errors);
         return res.status(400).json({ message: 'Invalid input', errors: err.errors });
       }
+      console.error('Error creating direct debit:', err);
       res.status(500).json({ message: `Error creating direct debit: ${err}` });
     }
   });
