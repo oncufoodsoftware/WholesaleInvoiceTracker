@@ -1976,7 +1976,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const validatedData = insertDirectDebitSchema.parse(req.body);
+      const directDebitData = {
+        ...req.body,
+        nextPaymentDate: new Date(req.body.nextPaymentDate),
+      };
+      
+      const validatedData = insertDirectDebitSchema.parse(directDebitData);
       const updatedDirectDebit = await storage.updateDirectDebit(id, validatedData);
       
       await logUserAction(req, 'update', 'direct_debit', id);
