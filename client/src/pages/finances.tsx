@@ -225,24 +225,30 @@ export default function Finances() {
         startDate = endDate = yesterday.toISOString().split("T")[0];
         break;
       case "week":
+        // This Week: Monday to Sunday
         const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days to Monday
+        weekStart.setDate(today.getDate() - daysToMonday);
+        
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+        
         startDate = weekStart.toISOString().split("T")[0];
         endDate = weekEnd.toISOString().split("T")[0];
         break;
       case "month":
+        // This Month: First day to last day of current month
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
         const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         startDate = monthStart.toISOString().split("T")[0];
         endDate = monthEnd.toISOString().split("T")[0];
         break;
       case "year":
+        // This Year: January 1st to current date
         const yearStart = new Date(today.getFullYear(), 0, 1);
-        const yearEnd = new Date(today.getFullYear(), 11, 31);
         startDate = yearStart.toISOString().split("T")[0];
-        endDate = yearEnd.toISOString().split("T")[0];
+        endDate = today.toISOString().split("T")[0];
         break;
       case "custom":
         startDate = customStartDate;
@@ -253,6 +259,26 @@ export default function Finances() {
     }
     
     return { startDate, endDate };
+  };
+
+  // Get formatted date range display
+  const getDateRangeDisplay = () => {
+    const { startDate, endDate } = getDateRange();
+    
+    const formatDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    };
+    
+    if (startDate === endDate) {
+      return formatDate(startDate);
+    } else {
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    }
   };
 
   // Update selected date based on date range (for single date display)
@@ -323,6 +349,10 @@ export default function Finances() {
                   <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
+              {/* Display actual date range */}
+              <div className="mt-2 text-sm text-muted-foreground">
+                Period: {getDateRangeDisplay()}
+              </div>
             </div>
           </div>
           {dateRange === "custom" && (
