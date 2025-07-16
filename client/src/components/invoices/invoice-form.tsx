@@ -59,6 +59,7 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
   const { toast } = useToast();
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
+  const [invoiceNumberError, setInvoiceNumberError] = useState<string>("");
   const isEditMode = !!invoiceId;
 
   // Get suppliers
@@ -128,6 +129,41 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
       });
     }
   }, [invoice, isEditMode, form]);
+
+  // Check for duplicate invoice number
+  const checkInvoiceNumber = async (invoiceNumber: string) => {
+    if (!invoiceNumber || invoiceNumber.length < 3) {
+      setInvoiceNumberError("");
+      return;
+    }
+    
+    try {
+      const url = `/api/invoices/check-number/${encodeURIComponent(invoiceNumber)}${
+        isEditMode ? `?excludeId=${invoiceId}` : ''
+      }`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to check invoice number");
+      
+      const data = await res.json();
+      if (data.exists) {
+        setInvoiceNumberError("This invoice number already exists");
+      } else {
+        setInvoiceNumberError("");
+      }
+    } catch (error) {
+      console.error("Error checking invoice number:", error);
+    }
+  };
+
+  // Watch invoice number changes
+  const watchedInvoiceNumber = form.watch("invoiceNumber");
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      checkInvoiceNumber(watchedInvoiceNumber);
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [watchedInvoiceNumber, isEditMode, invoiceId]);
 
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
@@ -202,6 +238,16 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
 
   // Handle form submission
   function onSubmit(values: z.infer<typeof invoiceSchema>) {
+    // Check for invoice number duplicate error before submitting
+    if (invoiceNumberError) {
+      toast({
+        title: "Error",
+        description: invoiceNumberError,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const formData = new FormData();
     
     // Add all form values to FormData
@@ -256,9 +302,16 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                 <FormItem>
                   <FormLabel>Invoice Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="INV-2023-001" {...field} />
+                    <Input 
+                      placeholder="INV-2023-001" 
+                      {...field} 
+                      className={invoiceNumberError ? "border-destructive" : ""}
+                    />
                   </FormControl>
                   <FormMessage />
+                  {invoiceNumberError && (
+                    <p className="text-sm text-destructive mt-1">{invoiceNumberError}</p>
+                  )}
                 </FormItem>
               )}
             />

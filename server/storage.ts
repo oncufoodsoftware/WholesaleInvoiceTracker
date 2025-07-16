@@ -108,6 +108,7 @@ export interface IStorage {
 
   // Invoice methods
   getInvoice(id: number): Promise<Invoice | undefined>;
+  getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined>;
   getAllInvoices(): Promise<Invoice[]>;
   getInvoicesByBranch(branchId: number): Promise<Invoice[]>;
   getInvoicesByStatus(status: string): Promise<Invoice[]>;
@@ -181,6 +182,7 @@ export interface InvoiceFilters {
   startDate?: Date;
   endDate?: Date;
   search?: string;
+  invoiceNumber?: string;
 }
 
 // Types for financial summaries
@@ -493,6 +495,11 @@ export class DatabaseStorage implements IStorage {
     return invoice || undefined;
   }
 
+  async getInvoiceByNumber(invoiceNumber: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.invoiceNumber, invoiceNumber));
+    return invoice || undefined;
+  }
+
   async getAllInvoices(): Promise<Invoice[]> {
     return db.select().from(invoices).orderBy(desc(invoices.invoiceDate));
   }
@@ -645,6 +652,10 @@ export class DatabaseStorage implements IStorage {
           like(invoices.notes, `%${filters.search}%`)
         )
       );
+    }
+    
+    if (filters.invoiceNumber) {
+      conditions.push(like(invoices.invoiceNumber, `%${filters.invoiceNumber}%`));
     }
     
     if (conditions.length > 0) {

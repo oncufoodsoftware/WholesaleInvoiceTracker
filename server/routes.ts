@@ -571,6 +571,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if invoice number already exists
+  app.get('/api/invoices/check-number/:invoiceNumber', async (req, res) => {
+    try {
+      const { invoiceNumber } = req.params;
+      const { excludeId } = req.query;
+      
+      const existingInvoice = await storage.getInvoiceByNumber(invoiceNumber);
+      
+      if (existingInvoice) {
+        // If we're editing and the existing invoice is the same one we're editing, it's okay
+        if (excludeId && existingInvoice.id === parseInt(excludeId as string)) {
+          return res.json({ exists: false });
+        }
+        return res.json({ exists: true, invoice: existingInvoice });
+      }
+      
+      res.json({ exists: false });
+    } catch (err) {
+      res.status(500).json({ message: `Error checking invoice number: ${err}` });
+    }
+  });
+
   app.post('/api/invoices', upload.single('invoiceFile'), async (req, res) => {
     try {
       // Add file URL if a file was uploaded

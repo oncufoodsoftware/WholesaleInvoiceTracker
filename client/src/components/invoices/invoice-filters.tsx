@@ -50,6 +50,7 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
       type: parsedFilters.type || "all",
       startDate: parsedFilters.startDate || "",
       endDate: parsedFilters.endDate || "",
+      invoiceNumber: parsedFilters.invoiceNumber || "",
     },
   });
 
@@ -235,6 +236,22 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                   <FormLabel>End Date</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="invoiceNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Invoice Number</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Search by invoice number..." 
+                      {...field} 
+                    />
                   </FormControl>
                 </FormItem>
               )}
