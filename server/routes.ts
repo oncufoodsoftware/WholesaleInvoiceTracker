@@ -1934,6 +1934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const directDebitData = {
         ...req.body,
+        nextPaymentDate: new Date(req.body.nextPaymentDate),
         createdBy: req.user?.id
       };
       
