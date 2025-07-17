@@ -602,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse invoice data
-      const invoiceData = insertInvoiceSchema.parse({
+      let invoiceData = {
         ...req.body,
         invoiceDate: new Date(req.body.invoiceDate),
         amount: parseFloat(req.body.amount),
@@ -610,7 +610,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         branchId: parseInt(req.body.branchId),
         createdBy: req.user?.id,
         fileUrl
-      });
+      };
+
+      // Auto-set Credit Notes as paid with full amount
+      if (req.body.type === 'credit_note') {
+        invoiceData.status = 'paid';
+        invoiceData.paidAmount = invoiceData.amount;
+      }
+
+      const validatedData = insertInvoiceSchema.parse(invoiceData);
       
       // If branch manager, can only create for their branch
       if (req.isAuthenticated() && req.user?.role === 'branch_manager' && req.user?.branchId) {

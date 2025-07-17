@@ -165,6 +165,27 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
     return () => clearTimeout(timeoutId);
   }, [watchedInvoiceNumber, isEditMode, invoiceId]);
 
+  // Watch invoice type changes - auto-set Credit Notes as paid
+  const watchedInvoiceType = form.watch("type");
+  useEffect(() => {
+    if (watchedInvoiceType === "credit_note") {
+      form.setValue("status", "paid");
+      // Set paidAmount to match amount when it's available
+      const currentAmount = form.getValues("amount");
+      if (currentAmount) {
+        form.setValue("paidAmount", currentAmount);
+      }
+    }
+  }, [watchedInvoiceType, form]);
+
+  // Watch amount changes to update paidAmount for Credit Notes
+  const watchedAmount = form.watch("amount");
+  useEffect(() => {
+    if (watchedInvoiceType === "credit_note" && watchedAmount) {
+      form.setValue("paidAmount", watchedAmount);
+    }
+  }, [watchedAmount, watchedInvoiceType, form]);
+
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -468,6 +489,7 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                         type="number" 
                         step="0.01" 
                         min="0" 
+                        disabled={watchedInvoiceType === "credit_note"}
                         {...field} 
                         onChange={(e) => {
                           field.onChange(e);
@@ -748,6 +770,7 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                           type="number" 
                           step="0.01" 
                           min="0" 
+                          disabled={watchedInvoiceType === "credit_note"}
                           {...field} 
                           onChange={(e) => {
                             field.onChange(e);
@@ -811,7 +834,7 @@ export function InvoiceForm({ invoiceId, onClose, onSuccess }: InvoiceFormProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={watchedInvoiceType === "credit_note"}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
