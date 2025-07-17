@@ -130,6 +130,7 @@ export interface IStorage {
   deleteFinancialTransaction(id: number): Promise<boolean>;
   getTransactionsByDateRange(branchId: number, startDate: Date, endDate: Date): Promise<FinancialTransaction[]>;
   getMonthlySummary(branchId: number, year: number, month: number): Promise<MonthlySummary>;
+  getDateRangeSummary(branchId: number, startDate: Date, endDate: Date): Promise<MonthlySummary>;
 
   // Support Ticket methods
   getSupportTicket(id: number): Promise<SupportTicket | undefined>;
@@ -808,6 +809,40 @@ export class DatabaseStorage implements IStorage {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59, 999); // Last day of month
     
+    const transactions = await this.getTransactionsByDateRange(branchId, startDate, endDate);
+    
+    // Initialize summary object
+    const summary: MonthlySummary = {
+      totalSales: 0,
+      totalExpenses: 0,
+      netBalance: 0,
+      salesByDay: {},
+      expensesByDay: {},
+      expensesByCategory: {}
+    };
+    
+    // Process transactions
+    transactions.forEach(transaction => {
+      const day = transaction.date.getDate().toString();
+      
+      if (transaction.type === 'income') {
+        summary.totalSales += transaction.amount;
+        summary.salesByDay[day] = (summary.salesByDay[day] || 0) + transaction.amount;
+      } else if (transaction.type === 'expense') {
+        summary.totalExpenses += transaction.amount;
+        summary.expensesByDay[day] = (summary.expensesByDay[day] || 0) + transaction.amount;
+        
+        const category = transaction.category || 'Uncategorized';
+        summary.expensesByCategory[category] = (summary.expensesByCategory[category] || 0) + transaction.amount;
+      }
+    });
+    
+    summary.netBalance = summary.totalSales - summary.totalExpenses;
+    
+    return summary;
+  }
+
+  async getDateRangeSummary(branchId: number, startDate: Date, endDate: Date): Promise<MonthlySummary> {
     const transactions = await this.getTransactionsByDateRange(branchId, startDate, endDate);
     
     // Initialize summary object

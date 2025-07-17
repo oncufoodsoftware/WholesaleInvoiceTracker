@@ -99,15 +99,17 @@ export default function Dashboard() {
 
   // Fetch financial transactions data for Total Revenue and Expenses calculation
   const { data: monthlyFinancialSummary } = useQuery({
-    queryKey: ["/api/financial-transactions/summary/monthly", currentBranchId, dateRange],
+    queryKey: ["/api/financial-transactions/summary/range", currentBranchId, dateRange],
     queryFn: async () => {
       if (!currentBranchId) return null;
       
-      const year = dateRange.from.getFullYear();
-      const month = dateRange.from.getMonth() + 1; // JavaScript months are 0-based
+      const startDate = dateRange.from?.toISOString().split('T')[0];
+      const endDate = dateRange.to?.toISOString().split('T')[0];
+      
+      if (!startDate || !endDate) return null;
       
       const res = await fetch(
-        `/api/financial-transactions/summary/monthly?branchId=${currentBranchId}&year=${year}&month=${month}`,
+        `/api/financial-transactions/summary/range?branchId=${currentBranchId}&startDate=${startDate}&endDate=${endDate}`,
         { credentials: "include" }
       );
       if (!res.ok) throw new Error("Failed to fetch financial data");

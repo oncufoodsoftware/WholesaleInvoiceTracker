@@ -894,7 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const summary = await storage.getSummarizedTransactionsByDateRange(
+      const summary = await storage.getDateRangeSummary(
         parseInt(branchId as string), 
         new Date(startDate as string),
         new Date(endDate as string)
