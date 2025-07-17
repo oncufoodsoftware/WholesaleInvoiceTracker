@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon } from "lucide-react";
+import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon, Download } from "lucide-react";
 import { format } from "date-fns";
 
 export default function PaymentTracking() {
@@ -81,6 +81,56 @@ export default function PaymentTracking() {
   const bankTransferTotal = payments.reduce((sum: number, payment: any) => sum + (payment.bankTransferAmount || 0), 0);
   const chequeTotal = payments.reduce((sum: number, payment: any) => sum + (payment.chequeAmount || 0), 0);
 
+  // CSV Export function
+  const exportToCSV = () => {
+    if (payments.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    const csvHeaders = [
+      "Payment ID",
+      "Supplier",
+      "Branch",
+      "Date",
+      "Total Amount",
+      "Bank Transfer Amount",
+      "Cheque Amount",
+      "Payment Method",
+      "Reference",
+      "Status",
+      "Notes"
+    ];
+
+    const csvData = payments.map((payment: any) => [
+      payment.id || "",
+      payment.supplierName || "",
+      payment.branchName || "",
+      payment.paymentDate ? format(new Date(payment.paymentDate), "yyyy-MM-dd") : "",
+      payment.totalAmount?.toFixed(2) || "0.00",
+      payment.bankTransferAmount?.toFixed(2) || "0.00",
+      payment.chequeAmount?.toFixed(2) || "0.00",
+      payment.paymentMethod || "",
+      payment.reference || "",
+      payment.status || "",
+      payment.notes || ""
+    ]);
+
+    const csvContent = [csvHeaders, ...csvData]
+      .map(row => row.map(field => `"${field.toString().replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `payment-tracking-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="py-4">
       <div className="flex justify-between items-center mb-6">
@@ -88,10 +138,16 @@ export default function PaymentTracking() {
           <h2 className="text-2xl font-bold">Payment Tracking</h2>
           <Badge variant="secondary">{payments.length} payments</Badge>
         </div>
-        <Button onClick={() => refetch()} variant="outline" className="flex items-center gap-1">
-          <RefreshCwIcon className="h-4 w-4" />
-          <span>Refresh</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToCSV} variant="outline" className="flex items-center gap-1">
+            <Download className="h-4 w-4" />
+            <span>Export CSV</span>
+          </Button>
+          <Button onClick={() => refetch()} variant="outline" className="flex items-center gap-1">
+            <RefreshCwIcon className="h-4 w-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
