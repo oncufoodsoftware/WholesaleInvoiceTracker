@@ -113,6 +113,13 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- July 17, 2025. Search engine indexing blocked and CSV export enhanced
+  - Added comprehensive search engine blocking with robots.txt and meta tags
+  - All major search engines (Google, Bing, Yahoo, DuckDuckGo, Baidu, Yandex) blocked from indexing
+  - Payment tracking page now has CSV export functionality with filter support
+  - CSV export includes all payment details including cheque numbers
+  - Dashboard date range filters now work properly with new backend API
+  - Credit Note automatic payment system implemented with disabled form fields
 - July 10, 2025. Multi-branch supplier management system completed
   - Suppliers can now be assigned to multiple branches simultaneously
   - Edit supplier form loads complete branch information and saves changes properly

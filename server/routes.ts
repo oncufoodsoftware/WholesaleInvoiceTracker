@@ -118,6 +118,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Access the middleware for role-based access control
   const requireRole = app.locals.requireRole;
 
+  // Robots.txt endpoint to block search engines
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send(`User-agent: *
+Disallow: /
+
+# Block all search engines from indexing this site
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Bingbot
+Disallow: /
+
+User-agent: Slurp
+Disallow: /
+
+User-agent: DuckDuckBot
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /
+
+User-agent: facebookexternalhit
+Disallow: /
+
+User-agent: Twitterbot
+Disallow: /`);
+  });
+
   // Branch API endpoints
   app.get('/api/branches', async (req, res) => {
     try {
