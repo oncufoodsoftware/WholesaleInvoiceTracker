@@ -240,9 +240,12 @@ export default function Finances() {
       case "month":
         // This Month: First day to last day of current month
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        // Get the last day of current month
         const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        startDate = monthStart.toISOString().split("T")[0];
-        endDate = monthEnd.toISOString().split("T")[0];
+        
+        // Format dates to avoid timezone issues
+        startDate = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
         break;
       case "year":
         // This Year: January 1st to current date
