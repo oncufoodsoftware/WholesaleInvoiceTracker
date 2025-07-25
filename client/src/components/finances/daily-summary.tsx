@@ -28,11 +28,13 @@ export function DailySummary({ branchId, date, startDate, endDate, isDateRange =
   });
 
   // Format currency
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined | null) => {
+    // Handle NaN, undefined, null, or invalid numbers
+    const validAmount = (amount && !isNaN(amount)) ? amount : 0;
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: 'GBP',
-    }).format(amount);
+    }).format(validAmount);
   };
 
   // Get top expenses

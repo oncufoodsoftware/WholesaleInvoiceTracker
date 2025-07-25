@@ -38,7 +38,7 @@ const transactionSchema = z.object({
   type: z.string().min(1, "Type is required"),
   category: z.string().optional(),
   amount: z.string().min(1, "Amount is required"),
-  paymentMethod: z.string().optional(),
+  paymentMethod: z.string().min(1, "Payment method is required"),
   description: z.string().optional(),
   zReportImage: z.any().optional(),
 });
@@ -87,7 +87,7 @@ export default function Finances() {
       type: activeTab === "transactions" ? "income" : "expense",
       category: "",
       amount: "",
-      paymentMethod: activeTab === "transactions" ? "card" : undefined,
+      paymentMethod: activeTab === "transactions" ? "card" : "cash",
       description: "",
       zReportImage: undefined,
     },
@@ -95,8 +95,15 @@ export default function Finances() {
 
   // Update form values when active tab changes or branch changes
   React.useEffect(() => {
-    form.setValue("type", activeTab === "transactions" ? "income" : "expense");
-    form.setValue("paymentMethod", activeTab === "transactions" ? "card" : undefined);
+    const transactionType = activeTab === "transactions" ? "income" : "expense";
+    form.setValue("type", transactionType);
+    
+    // Set payment method based on transaction type
+    if (transactionType === "income") {
+      form.setValue("paymentMethod", "card");
+    } else if (transactionType === "expense") {
+      form.setValue("paymentMethod", "cash"); // Default expense method to cash
+    }
     
     // Set branch for branch managers
     if (user?.role === "branch_manager" && user?.branchId) {
@@ -131,14 +138,15 @@ export default function Finances() {
         ? user.branchId.toString() 
         : selectedBranch;
       
+      const transactionType = activeTab === "transactions" ? "income" : "expense";
       form.reset({
         branchId: resetBranchId,
         date: selectedDate,
         time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
-        type: activeTab === "transactions" ? "income" : "expense",
+        type: transactionType,
         category: "",
         amount: "",
-        paymentMethod: activeTab === "transactions" ? "card" : undefined,
+        paymentMethod: transactionType === "income" ? "card" : "cash",
         description: "",
       });
       
@@ -547,31 +555,55 @@ export default function Finances() {
               />
 
               {form.watch("type") === "expense" && (
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="rent">Rent</SelectItem>
-                          <SelectItem value="salaries">Salaries</SelectItem>
-                          <SelectItem value="utilities">Utilities</SelectItem>
-                          <SelectItem value="supplies">Supplies</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <>
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="rent">Rent</SelectItem>
+                            <SelectItem value="salaries">Salaries</SelectItem>
+                            <SelectItem value="utilities">Utilities</SelectItem>
+                            <SelectItem value="supplies">Supplies</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Method</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select payment method" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="card">Card</SelectItem>
+                            <SelectItem value="cash">Cash</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
               )}
 
               <FormField
