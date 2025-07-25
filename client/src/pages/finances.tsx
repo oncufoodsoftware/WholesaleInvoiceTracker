@@ -191,22 +191,38 @@ export default function Finances() {
     }
 
     try {
-      const response = await fetch(`/api/financial-transactions/export?branchId=${selectedBranch}&date=${selectedDate}`);
+      const { startDate, endDate } = getDateRange();
+      const selectedBranchName = branches.find(b => b.id === parseInt(selectedBranch))?.name || 'Unknown';
+      
+      // Build URL with date range parameters
+      let url = `/api/financial-transactions/export?branchId=${selectedBranch}`;
+      
+      if (dateRange === "custom" || dateRange === "week" || dateRange === "month" || dateRange === "year") {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      } else {
+        url += `&date=${selectedDate}`;
+      }
+
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to export data");
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `financial-transactions-${selectedBranch}-${selectedDate}.csv`;
+      a.href = downloadUrl;
+      
+      // Create filename with branch name and date range
+      const dateRangeText = getDateRangeDisplay();
+      a.download = `financial-transactions-${selectedBranchName}-${dateRangeText.replace(/[\/\s]/g, '-')}.csv`;
+      
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
 
       toast({
         title: "Export successful",
-        description: "Financial transactions exported to CSV",
+        description: `Financial transactions exported for ${selectedBranchName}`,
       });
     } catch (error) {
       toast({
@@ -464,7 +480,7 @@ export default function Finances() {
 
       {/* New Transaction Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Transaction</DialogTitle>
           </DialogHeader>

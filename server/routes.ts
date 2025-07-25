@@ -752,10 +752,10 @@ Disallow: /`);
   // Financial transaction export endpoint
   app.get('/api/financial-transactions/export', async (req, res) => {
     try {
-      const { branchId, date } = req.query;
+      const { branchId, date, startDate, endDate } = req.query;
       
-      if (!branchId || !date) {
-        return res.status(400).json({ message: 'Branch ID and date are required' });
+      if (!branchId || (!date && (!startDate || !endDate))) {
+        return res.status(400).json({ message: 'Branch ID and either date or date range (startDate & endDate) are required' });
       }
       
       // Branch managers can only export their own branch data
@@ -767,14 +767,31 @@ Disallow: /`);
         }
       }
       
-      const transactions = await storage.getDailyTransactions(
-        parseInt(branchId as string), 
-        new Date(date as string)
-      );
+      // Get branch information
+      const branches = await storage.getAllBranches();
+      const branch = branches.find(b => b.id === parseInt(branchId as string));
+      const branchName = branch?.name || 'Unknown Branch';
       
-      // Create CSV content
-      const csvHeaders = ['Date', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
+      let transactions;
+      if (startDate && endDate) {
+        // Date range export
+        transactions = await storage.getTransactionsByDateRange(
+          parseInt(branchId as string), 
+          new Date(startDate as string),
+          new Date(endDate as string)
+        );
+      } else {
+        // Single date export
+        transactions = await storage.getDailyTransactions(
+          parseInt(branchId as string), 
+          new Date(date as string)
+        );
+      }
+      
+      // Create CSV content with branch information
+      const csvHeaders = ['Branch Name', 'Date', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
       const csvRows = transactions.map(transaction => [
+        branchName,
         transaction.date.toISOString().split('T')[0],
         transaction.type,
         transaction.category || '',
@@ -788,7 +805,7 @@ Disallow: /`);
         .join('\n');
       
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="financial-transactions-${branchId}-${date}.csv"`);
+      res.setHeader('Content-Disposition', `attachment; filename="financial-transactions-${branchName}-export.csv"`);
       res.send(csvContent);
     } catch (err) {
       res.status(500).json({ message: `Error exporting transactions: ${err}` });
