@@ -793,12 +793,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTransactionsByDateRange(branchId: number, startDate: Date, endDate: Date): Promise<FinancialTransaction[]> {
+    // Ensure endDate includes the entire day (23:59:59.999)
+    const adjustedEndDate = new Date(endDate);
+    adjustedEndDate.setHours(23, 59, 59, 999);
+    
     return db.select().from(financialTransactions)
       .where(
         and(
           eq(financialTransactions.branchId, branchId),
           gte(financialTransactions.date, startDate),
-          lte(financialTransactions.date, endDate)
+          lte(financialTransactions.date, adjustedEndDate)
         )
       )
       .orderBy(desc(financialTransactions.date));
