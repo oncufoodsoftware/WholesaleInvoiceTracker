@@ -1473,6 +1473,37 @@ Disallow: /`);
     }
   });
 
+  // Add individual payment tracking entry (for expenses)
+  app.post('/api/payments/tracking', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const { supplierId, branchId, totalAmount, bankTransferAmount, chequeAmount, chequeNumber, paymentDate, notes, paymentMethod, reference, status } = req.body;
+
+      // Create supplier payment record
+      const result = await storage.processBulkPayment({
+        supplierId,
+        branchId,
+        totalAmount,
+        bankTransferAmount: bankTransferAmount || 0,
+        chequeAmount: chequeAmount || 0,
+        chequeNumber,
+        paymentDate: new Date(paymentDate),
+        notes,
+        recordedBy: req.user!.id,
+      });
+
+      await logUserAction(req, 'create', 'supplier_payment', result.paymentId, `Expense payment of ${totalAmount} to supplier ${supplierId}`);
+
+      res.json(result);
+    } catch (err) {
+      console.error('Error creating payment tracking:', err);
+      res.status(500).json({ message: `Error creating payment tracking: ${err}` });
+    }
+  });
+
   app.get('/api/payments/tracking', async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
