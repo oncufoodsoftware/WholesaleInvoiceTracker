@@ -1415,16 +1415,18 @@ export class DatabaseStorage implements IStorage {
           .where(
             and(
               eq(invoices.supplierId, paymentData.supplierId),
-              eq(invoices.branchId, paymentData.branchId),
-              gt(invoices.paidAmount, 0)
+              eq(invoices.branchId, paymentData.branchId)
             )
           )
           .orderBy(asc(invoices.createdAt));
 
+        // Filter invoices that have paid amounts
+        const paidInvoices = affectedInvoices.filter(invoice => invoice.paidAmount > 0);
+
         let remainingReversal = paymentData.totalAmount;
 
         // Reverse the payment allocation for each invoice
-        for (const invoice of affectedInvoices) {
+        for (const invoice of paidInvoices) {
           if (remainingReversal <= 0) break;
 
           const reversalAmount = Math.min(remainingReversal, invoice.paidAmount);
