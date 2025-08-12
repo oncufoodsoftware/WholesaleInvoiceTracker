@@ -38,9 +38,16 @@ export default function Dashboard() {
   const { checkAchievement } = useAchievements();
   const [timeframe, setTimeframe] = useState("month");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date()
+  // Default to current month (like finances page)
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    return {
+      from: monthStart,
+      to: monthEnd
+    };
   });
   
   // Define types for API response
