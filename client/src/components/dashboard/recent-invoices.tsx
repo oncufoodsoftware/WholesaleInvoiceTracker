@@ -15,26 +15,18 @@ interface RecentInvoicesProps {
 export function RecentInvoices({ branchId }: RecentInvoicesProps) {
   const { user } = useAuth();
   
-  // Fetch invoices with optional branch filter
-  const { data: invoices, isLoading } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices", branchId],
-    queryFn: async () => {
-      // If branch manager, filter by their branch
-      const url = branchId 
-        ? `/api/invoices/filter`
-        : "/api/invoices";
-        
-      const fetchOptions = branchId ? {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branchId })
-      } : undefined;
-      
-      const res = await fetch(url, fetchOptions);
-      if (!res.ok) throw new Error("Failed to fetch invoices");
-      return res.json();
-    },
+  // Fetch invoices with branch filter
+  const { data: allInvoices, isLoading } = useQuery<Invoice[]>({
+    queryKey: ["/api/invoices"],
   });
+
+  // Filter invoices by branch and get most recent 10
+  const invoices = allInvoices
+    ? allInvoices
+        .filter(invoice => branchId ? invoice.branchId === branchId : true)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10)
+    : [];
 
   // Format currency (£)
   const formatCurrency = (amount: number) => {

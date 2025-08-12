@@ -20,20 +20,18 @@ interface RecentActivitiesProps {
   branchId?: number;
 }
 
-export function RecentActivities({ branchId }: RecentActivitiesProps) {
+export function RecentActivities({ }: RecentActivitiesProps) {
   const { user } = useAuth();
   
-  // Fetch activities with optional branch filter
+  // Fetch all user activities (admin only view)
   const { data: actions, isLoading } = useQuery<UserAction[]>({
-    queryKey: ["/api/user-actions", branchId],
+    queryKey: ["/api/user-actions"],
     queryFn: async () => {
-      const url = branchId 
-        ? `/api/user-actions?branchId=${branchId}&limit=10`
-        : "/api/user-actions?limit=10";
-      const res = await fetch(url);
+      const res = await fetch("/api/user-actions?limit=15");
       if (!res.ok) throw new Error("Failed to fetch user actions");
       return res.json();
     },
+    enabled: user?.role === 'admin', // Only fetch for admin users
   });
 
   // Function to get appropriate icon for action type
@@ -111,8 +109,8 @@ export function RecentActivities({ branchId }: RecentActivitiesProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Recent Activities</CardTitle>
-        <CardDescription>Latest system events</CardDescription>
+        <CardTitle className="text-base font-medium">System Activity Logs</CardTitle>
+        <CardDescription>All user actions and system events</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -142,6 +140,11 @@ export function RecentActivities({ branchId }: RecentActivitiesProps) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : user?.role !== 'admin' ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <Building className="h-8 w-8 mx-auto mb-2" />
+            <p>Activity logs are available for admin users only</p>
           </div>
         ) : (
           <p className="text-center py-6 text-muted-foreground">No activity data available</p>

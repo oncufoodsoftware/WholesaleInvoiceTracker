@@ -1249,7 +1249,12 @@ Disallow: /`);
       
       // Sort by outstanding amount (highest first)
       branchData.sort((a: any, b: any) => b.outstandingAmount - a.outstandingAmount);
-      supplierData.sort((a: any, b: any) => b.outstandingAmount - a.outstandingAmount);
+      
+      // Filter suppliers with outstanding amounts > 0 and get top 7
+      supplierData = Object.values(supplierSummary)
+        .filter((supplier: any) => supplier.outstandingAmount > 0)
+        .sort((a: any, b: any) => b.outstandingAmount - a.outstandingAmount)
+        .slice(0, 7);
       
       // If we're filtering by branch, we should only include that branch in the branch data
       if (branchId) {

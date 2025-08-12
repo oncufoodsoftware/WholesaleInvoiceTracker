@@ -30,8 +30,8 @@ import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
-import { AchievementDemo } from "@/components/dashboard/achievement-demo";
 import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
+import { PaymentTrackingWidget } from "@/components/dashboard/payment-tracking-widget";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -541,16 +541,14 @@ export default function Dashboard() {
 
       {/* Recent Invoices and Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RecentInvoices branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : undefined} />
-        <RecentActivities branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : undefined} />
+        <RecentInvoices branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : (selectedBranchId ? parseInt(selectedBranchId) : undefined)} />
+        <RecentActivities />
       </div>
       
-      {/* Achievement Demo Section */}
-      {user?.role === "admin" && (
-        <div className="mt-6">
-          <AchievementDemo />
-        </div>
-      )}
+      {/* Payment Tracking Section */}
+      <div className="mt-6">
+        <PaymentTrackingWidget branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : (selectedBranchId ? parseInt(selectedBranchId) : undefined)} />
+      </div>
     </div>
   );
 }
