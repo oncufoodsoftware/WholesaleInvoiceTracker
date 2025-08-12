@@ -449,14 +449,14 @@ export default function PaymentTracking() {
                               <>
                                 <CheckCircle className="h-4 w-4 text-green-600" />
                                 <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-                                  Ödendi
+                                  Processed
                                 </Badge>
                               </>
                             ) : (
                               <>
                                 <Clock className="h-4 w-4 text-orange-600" />
                                 <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-300">
-                                  Beklemede
+                                  Pending
                                 </Badge>
                               </>
                             )}
