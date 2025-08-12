@@ -791,7 +791,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(financialTransactions)
       .where(eq(financialTransactions.id, id));
-    return result.count > 0;
+    return result.rowCount > 0;
   }
 
   async getTransactionsByDateRange(branchId: number, startDate: Date, endDate: Date): Promise<FinancialTransaction[]> {
