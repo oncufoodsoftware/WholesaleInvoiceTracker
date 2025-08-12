@@ -426,7 +426,7 @@ export default function Dashboard() {
                   <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
                 </div>
               ) : summaryData?.supplierData?.length ? (
-                summaryData.supplierData.slice(0, 4).map((supplier: any) => {
+                summaryData.supplierData.slice(0, 7).map((supplier: any) => {
                   // Calculate percentage of outstanding debt
                   const percentage = supplier.totalAmount ? 
                     Math.min(100, Math.max(0, Math.round((supplier.outstandingAmount / supplier.totalAmount) * 100))) : 0;
