@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,10 +10,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+// Edit payment form schema
+const editPaymentSchema = z.object({
+  totalAmount: z.number().min(0.01, "Amount must be greater than 0"),
+  bankTransferAmount: z.number().min(0, "Bank transfer amount cannot be negative"),
+  chequeAmount: z.number().min(0, "Cheque amount cannot be negative"),
+  chequeNumber: z.string().optional(),
+  paymentDate: z.string().min(1, "Payment date is required"),
+  notes: z.string().optional(),
+}).refine((data) => {
+  return data.bankTransferAmount + data.chequeAmount === data.totalAmount;
+}, {
+  message: "Bank transfer and cheque amounts must equal total amount",
+  path: ["totalAmount"]
+}).refine((data) => {
+  if (data.chequeAmount > 0 && !data.chequeNumber) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Cheque number is required when cheque amount is greater than 0",
+  path: ["chequeNumber"]
+});
+
+type EditPaymentFormData = z.infer<typeof editPaymentSchema>;
 
 export default function PaymentTracking() {
   const { toast } = useToast();
@@ -23,6 +54,10 @@ export default function PaymentTracking() {
     startDate: "",
     endDate: "",
   });
+
+  // Edit payment dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<any>(null);
 
   // Update branch filter when user data loads
   useEffect(() => {
@@ -109,12 +144,71 @@ export default function PaymentTracking() {
     },
   });
 
-  // Handle edit payment (placeholder for now)
+  // Edit payment form
+  const editForm = useForm<EditPaymentFormData>({
+    resolver: zodResolver(editPaymentSchema),
+    defaultValues: {
+      totalAmount: 0,
+      bankTransferAmount: 0,
+      chequeAmount: 0,
+      chequeNumber: "",
+      paymentDate: "",
+      notes: "",
+    },
+  });
+
+  // Update payment mutation
+  const updatePaymentMutation = useMutation({
+    mutationFn: async (data: { paymentId: number; updateData: EditPaymentFormData }) => {
+      return await apiRequest("PUT", `/api/payments/bulk-payment/${data.paymentId}`, data.updateData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Payment updated",
+        description: "The payment has been updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      setIsEditDialogOpen(false);
+      setEditingPayment(null);
+      editForm.reset();
+      // Auto refresh page
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to update payment: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle edit payment
   const handleEditPayment = (paymentId: number) => {
-    toast({
-      title: "Edit Payment",
-      description: "Edit payment functionality will be implemented soon",
-    });
+    const payment = payments.find(p => p.id === paymentId);
+    if (payment) {
+      setEditingPayment(payment);
+      editForm.reset({
+        totalAmount: payment.totalAmount,
+        bankTransferAmount: payment.bankTransferAmount || 0,
+        chequeAmount: payment.chequeAmount || 0,
+        chequeNumber: payment.chequeNumber || "",
+        paymentDate: format(new Date(payment.paymentDate), "yyyy-MM-dd"),
+        notes: payment.notes || "",
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  // Handle edit form submission
+  const onEditSubmit = (data: EditPaymentFormData) => {
+    if (editingPayment) {
+      updatePaymentMutation.mutate({
+        paymentId: editingPayment.id,
+        updateData: data
+      });
+    }
   };
 
   // Handle delete payment
@@ -406,6 +500,142 @@ export default function PaymentTracking() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Payment</DialogTitle>
+          </DialogHeader>
+          
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="totalAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Amount (£)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="bankTransferAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bank Transfer Amount (£)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="chequeAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cheque Amount (£)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="chequeNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cheque Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter cheque number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="paymentDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Payment notes..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="flex-1"
+                  disabled={updatePaymentMutation.isPending}
+                >
+                  {updatePaymentMutation.isPending ? "Updating..." : "Update Payment"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

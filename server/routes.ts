@@ -1952,6 +1952,32 @@ Disallow: /`);
     }
   });
 
+  // Update bulk payment endpoint (admin only)
+  app.put('/api/payments/bulk-payment/:paymentId', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const user = req.user as any;
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update payments' });
+      }
+
+      const paymentId = Number(req.params.paymentId);
+      const updateData = req.body;
+      
+      await storage.updateBulkPayment(paymentId, updateData);
+      
+      await logUserAction(req, 'update', 'supplier_payment', paymentId, 
+        `Updated bulk payment with ID ${paymentId}`);
+
+      res.status(200).json({ message: 'Payment updated successfully' });
+    } catch (err) {
+      res.status(500).json({ message: `Error updating payment: ${err}` });
+    }
+  });
+
   // Delete bulk payment endpoint (admin only)
   app.delete('/api/payments/bulk-payment/:paymentId', async (req, res) => {
     try {

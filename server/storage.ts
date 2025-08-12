@@ -155,6 +155,8 @@ export interface IStorage {
   processBulkPayment(payment: InsertSupplierPayment): Promise<{ paymentId: number; updatedInvoices: number[] }>;
   getSupplierPayments(supplierId: number, branchId?: number): Promise<SupplierPayment[]>;
   getAllPaymentTracking(branchId?: number, startDate?: Date, endDate?: Date): Promise<any[]>;
+  updateBulkPayment(paymentId: number, updateData: any): Promise<void>;
+  deleteBulkPayment(paymentId: number): Promise<void>;
 
   // User actions methods
   logUserAction(action: InsertUserAction): Promise<UserAction>;
@@ -1478,6 +1480,143 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting bulk payment:', error);
       throw new Error(`Failed to delete bulk payment: ${error}`);
+    }
+  }
+
+  async updateBulkPayment(paymentId: number, updateData: any): Promise<void> {
+    try {
+      await db.transaction(async (tx) => {
+        // Get the current payment details
+        const currentPayment = await tx
+          .select()
+          .from(supplierPayments)
+          .where(eq(supplierPayments.id, paymentId))
+          .limit(1);
+
+        if (currentPayment.length === 0) {
+          throw new Error('Payment not found');
+        }
+
+        const oldPayment = currentPayment[0];
+        const amountDifference = updateData.totalAmount - oldPayment.totalAmount;
+
+        // Update the payment record
+        await tx
+          .update(supplierPayments)
+          .set({
+            totalAmount: updateData.totalAmount,
+            bankTransferAmount: updateData.bankTransferAmount,
+            chequeAmount: updateData.chequeAmount,
+            chequeNumber: updateData.chequeNumber,
+            paymentDate: new Date(updateData.paymentDate),
+            notes: updateData.notes
+          })
+          .where(eq(supplierPayments.id, paymentId));
+
+        // If amount changed, update supplier branch balance
+        if (amountDifference !== 0) {
+          const currentBalance = await tx
+            .select()
+            .from(supplierBranchBalances)
+            .where(
+              and(
+                eq(supplierBranchBalances.supplierId, oldPayment.supplierId),
+                eq(supplierBranchBalances.branchId, oldPayment.branchId)
+              )
+            );
+
+          if (currentBalance.length > 0) {
+            await tx
+              .update(supplierBranchBalances)
+              .set({
+                balance: currentBalance[0].balance - amountDifference,
+                lastUpdated: new Date()
+              })
+              .where(
+                and(
+                  eq(supplierBranchBalances.supplierId, oldPayment.supplierId),
+                  eq(supplierBranchBalances.branchId, oldPayment.branchId)
+                )
+              );
+          }
+
+          // If amount increased, apply additional payment to unpaid invoices
+          if (amountDifference > 0) {
+            const unpaidInvoices = await tx
+              .select()
+              .from(invoices)
+              .where(
+                and(
+                  eq(invoices.supplierId, oldPayment.supplierId),
+                  eq(invoices.branchId, oldPayment.branchId),
+                  or(
+                    eq(invoices.status, 'pending'),
+                    eq(invoices.status, 'partially_paid')
+                  )
+                )
+              )
+              .orderBy(asc(invoices.createdAt));
+
+            let remainingAmount = amountDifference;
+
+            for (const invoice of unpaidInvoices) {
+              if (remainingAmount <= 0) break;
+
+              const remainingInvoiceAmount = invoice.amount - invoice.paidAmount;
+              const paymentAmount = Math.min(remainingAmount, remainingInvoiceAmount);
+              const newPaidAmount = invoice.paidAmount + paymentAmount;
+              const newStatus = newPaidAmount >= invoice.amount ? 'paid' : 'partially_paid';
+
+              await tx
+                .update(invoices)
+                .set({
+                  paidAmount: newPaidAmount,
+                  status: newStatus
+                })
+                .where(eq(invoices.id, invoice.id));
+
+              remainingAmount -= paymentAmount;
+            }
+          }
+          // If amount decreased, reverse some payments from paid invoices
+          else if (amountDifference < 0) {
+            const recentlyPaidInvoices = await tx
+              .select()
+              .from(invoices)
+              .where(
+                and(
+                  eq(invoices.supplierId, oldPayment.supplierId),
+                  eq(invoices.branchId, oldPayment.branchId)
+                )
+              )
+              .orderBy(desc(invoices.createdAt));
+
+            const filteredInvoices = recentlyPaidInvoices.filter(invoice => invoice.paidAmount > 0);
+            let reversalAmount = Math.abs(amountDifference);
+
+            for (const invoice of filteredInvoices) {
+              if (reversalAmount <= 0) break;
+
+              const reverseAmount = Math.min(reversalAmount, invoice.paidAmount);
+              const newPaidAmount = invoice.paidAmount - reverseAmount;
+              const newStatus = newPaidAmount === 0 ? 'pending' : newPaidAmount >= invoice.amount ? 'paid' : 'partially_paid';
+
+              await tx
+                .update(invoices)
+                .set({
+                  paidAmount: newPaidAmount,
+                  status: newStatus
+                })
+                .where(eq(invoices.id, invoice.id));
+
+              reversalAmount -= reverseAmount;
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error updating bulk payment:', error);
+      throw new Error(`Failed to update bulk payment: ${error}`);
     }
   }
 
