@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon, Download } from "lucide-react";
+import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon, Download, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -416,6 +416,7 @@ export default function PaymentTracking() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Supplier</TableHead>
                     <TableHead>Branch</TableHead>
                     <TableHead>Total Amount</TableHead>
@@ -427,16 +428,42 @@ export default function PaymentTracking() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                          {format(new Date(payment.paymentDate), "dd/MM/yyyy")}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{payment.supplierName}</TableCell>
-                      <TableCell>
+                  {payments.map((payment: any) => {
+                    const paymentDate = new Date(payment.paymentDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    paymentDate.setHours(0, 0, 0, 0);
+                    const isProcessed = paymentDate <= today;
+                    
+                    return (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            {format(new Date(payment.paymentDate), "dd/MM/yyyy")}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {isProcessed ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+                                  Ödendi
+                                </Badge>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="h-4 w-4 text-orange-600" />
+                                <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-300">
+                                  Beklemede
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">{payment.supplierName}</TableCell>
+                        <TableCell>
                         <Badge variant="outline">{payment.branchName}</Badge>
                       </TableCell>
                       <TableCell className="font-medium">
@@ -492,8 +519,9 @@ export default function PaymentTracking() {
                           </div>
                         </TableCell>
                       )}
-                    </TableRow>
-                  ))}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
