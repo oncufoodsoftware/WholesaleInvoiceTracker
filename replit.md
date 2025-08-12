@@ -113,6 +113,16 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- August 12, 2025. Critical security fixes and UI enhancements completed
+  - **SECURITY FIX**: Added proper authentication and branch restrictions to dashboard API
+  - **SECURITY FIX**: Removed duplicate payment tracking endpoint that bypassed branch controls
+  - **SECURITY FIX**: Branch managers now strictly limited to their own branch data across all endpoints
+  - Payment tracking page: Admin-only Edit/Delete buttons added for payment management
+  - Bulk Payment form: Supplier list now sorted alphabetically (A-Z)
+  - Auto-refresh implemented: Pages refresh after add/edit/delete operations
+  - Payment deletion system: Complete reversal of invoice payments and supplier balances
+  - Export functionality: Branch-specific CSV exports with proper date range filtering
+  - UI improvements: Scrollable transaction popup and proper payment method defaults
 - July 17, 2025. Search engine indexing blocked and CSV export enhanced
   - Added comprehensive search engine blocking with robots.txt and meta tags
   - All major search engines (Google, Bing, Yahoo, DuckDuckGo, Baidu, Yandex) blocked from indexing

@@ -93,6 +93,8 @@ export default function Invoices() {
         queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      // Auto refresh page
+      window.location.reload();
     },
     onError: (error) => {
       toast({

@@ -1162,15 +1162,27 @@ Disallow: /`);
   // Dashboard summary API endpoint
   app.get('/api/dashboard/summary', async (req, res) => {
     try {
-      // Check if we need to filter by branch
-      const branchId = req.query.branchId ? parseInt(req.query.branchId as string) : null;
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const user = req.user as any;
+      let branchId = req.query.branchId ? parseInt(req.query.branchId as string) : null;
+      
+      // Branch managers can only see their own branch data
+      if (user?.role === 'branch_manager' && user?.branchId) {
+        branchId = user.branchId;
+      }
       
       // Get invoices - either all or filtered by branch
       let invoices;
       if (branchId) {
         invoices = await storage.getInvoicesByBranch(branchId);
-      } else {
+      } else if (user?.role === 'admin') {
         invoices = await storage.getAllInvoices();
+      } else {
+        // Branch managers without proper branchId should see empty data
+        invoices = [];
       }
       
       // Calculate total invoice amount and outstanding amount per branch
@@ -1940,22 +1952,31 @@ Disallow: /`);
     }
   });
 
-  app.get('/api/payments/tracking', async (req, res) => {
+  // Delete bulk payment endpoint (admin only)
+  app.delete('/api/payments/bulk-payment/:paymentId', async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).send("Unauthorized");
       }
 
-      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
-      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const user = req.user as any;
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can delete payments' });
+      }
+
+      const paymentId = Number(req.params.paymentId);
+      await storage.deleteBulkPayment(paymentId);
       
-      const payments = await storage.getAllPaymentTracking(branchId, startDate, endDate);
-      res.json(payments);
+      await logUserAction(req, 'delete', 'supplier_payment', paymentId, 
+        `Deleted bulk payment with ID ${paymentId}`);
+
+      res.status(200).json({ message: 'Payment deleted successfully' });
     } catch (err) {
-      res.status(500).json({ message: `Error fetching payment tracking: ${err}` });
+      res.status(500).json({ message: `Error deleting payment: ${err}` });
     }
   });
+
+
 
   app.get('/api/invoices/:invoiceId/payments', async (req, res) => {
     try {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon, Download } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function PaymentTracking() {
+  const { toast } = useToast();
+  
   // Get current user info
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
     
@@ -80,6 +84,45 @@ export default function PaymentTracking() {
   const totalAmount = payments.reduce((sum: number, payment: any) => sum + payment.totalAmount, 0);
   const bankTransferTotal = payments.reduce((sum: number, payment: any) => sum + (payment.bankTransferAmount || 0), 0);
   const chequeTotal = payments.reduce((sum: number, payment: any) => sum + (payment.chequeAmount || 0), 0);
+
+  // Delete payment mutation
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (paymentId: number) => {
+      return await apiRequest("DELETE", `/api/payments/bulk-payment/${paymentId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Payment deleted",
+        description: "The payment has been deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      // Auto refresh page
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete payment: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle edit payment (placeholder for now)
+  const handleEditPayment = (paymentId: number) => {
+    toast({
+      title: "Edit Payment",
+      description: "Edit payment functionality will be implemented soon",
+    });
+  };
+
+  // Handle delete payment
+  const handleDeletePayment = (paymentId: number) => {
+    if (confirm("Are you sure you want to delete this payment? This action cannot be undone.")) {
+      deletePaymentMutation.mutate(paymentId);
+    }
+  };
 
   // CSV Export function
   const exportToCSV = () => {
@@ -286,6 +329,7 @@ export default function PaymentTracking() {
                     <TableHead>Cheque</TableHead>
                     <TableHead>Cheque No.</TableHead>
                     <TableHead>Notes</TableHead>
+                    {(user as any)?.role === 'admin' && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -334,6 +378,26 @@ export default function PaymentTracking() {
                       <TableCell className="max-w-[200px] truncate">
                         {payment.notes || <span className="text-muted-foreground">-</span>}
                       </TableCell>
+                      {(user as any)?.role === 'admin' && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditPayment(payment.id)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleDeletePayment(payment.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -67,7 +67,7 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
   const watchedPaymentMethod = form.watch("paymentMethod");
 
   // Fetch suppliers
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliersData = [] } = useQuery({
     queryKey: ["/api/suppliers"],
     queryFn: async () => {
       const res = await fetch("/api/suppliers", { credentials: "include" });
@@ -75,6 +75,11 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
       return await res.json();
     }
   });
+
+  // Sort suppliers A-Z by name
+  const suppliers = suppliersData.sort((a: any, b: any) => 
+    (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' })
+  );
 
   // Fetch branches
   const { data: branches = [] } = useQuery({
@@ -100,6 +105,8 @@ export function BulkPaymentForm({ onClose }: BulkPaymentFormProps) {
         description: `Bulk payment has been applied to invoices`,
       });
       onClose();
+      // Auto refresh page
+      window.location.reload();
     },
     onError: (error: any) => {
       toast({

@@ -1392,6 +1392,93 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteBulkPayment(paymentId: number): Promise<void> {
+    try {
+      await db.transaction(async (tx) => {
+        // Get the payment details first to reverse the effects
+        const payment = await tx
+          .select()
+          .from(supplierPayments)
+          .where(eq(supplierPayments.id, paymentId))
+          .limit(1);
+
+        if (payment.length === 0) {
+          throw new Error('Payment not found');
+        }
+
+        const paymentData = payment[0];
+
+        // Find invoices that were affected by this payment and reverse them
+        const affectedInvoices = await tx
+          .select()
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.supplierId, paymentData.supplierId),
+              eq(invoices.branchId, paymentData.branchId),
+              gt(invoices.paidAmount, 0)
+            )
+          )
+          .orderBy(asc(invoices.createdAt));
+
+        let remainingReversal = paymentData.totalAmount;
+
+        // Reverse the payment allocation for each invoice
+        for (const invoice of affectedInvoices) {
+          if (remainingReversal <= 0) break;
+
+          const reversalAmount = Math.min(remainingReversal, invoice.paidAmount);
+          const newPaidAmount = invoice.paidAmount - reversalAmount;
+          const newStatus = newPaidAmount === 0 ? 'pending' : newPaidAmount >= invoice.amount ? 'paid' : 'partially_paid';
+
+          await tx
+            .update(invoices)
+            .set({
+              paidAmount: newPaidAmount,
+              status: newStatus
+            })
+            .where(eq(invoices.id, invoice.id));
+
+          remainingReversal -= reversalAmount;
+        }
+
+        // Reverse the supplier branch balance change
+        const currentBalance = await tx
+          .select()
+          .from(supplierBranchBalances)
+          .where(
+            and(
+              eq(supplierBranchBalances.supplierId, paymentData.supplierId),
+              eq(supplierBranchBalances.branchId, paymentData.branchId)
+            )
+          );
+
+        if (currentBalance.length > 0) {
+          await tx
+            .update(supplierBranchBalances)
+            .set({
+              balance: currentBalance[0].balance + paymentData.totalAmount,
+              lastUpdated: new Date()
+            })
+            .where(
+              and(
+                eq(supplierBranchBalances.supplierId, paymentData.supplierId),
+                eq(supplierBranchBalances.branchId, paymentData.branchId)
+              )
+            );
+        }
+
+        // Finally delete the payment record
+        await tx
+          .delete(supplierPayments)
+          .where(eq(supplierPayments.id, paymentId));
+      });
+    } catch (error) {
+      console.error('Error deleting bulk payment:', error);
+      throw new Error(`Failed to delete bulk payment: ${error}`);
+    }
+  }
+
   // Direct Debit methods
   async getDirectDebits(branchId?: number): Promise<DirectDebit[]> {
     try {
