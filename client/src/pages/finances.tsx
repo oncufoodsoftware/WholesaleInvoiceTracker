@@ -172,7 +172,7 @@ export default function Finances() {
           chequeAmount: data.paymentMethod === "cheque" ? parseFloat(data.amount) : 0,
           chequeNumber: data.paymentMethod === "cheque" ? `EXP-${Date.now()}` : null,
           paymentDate: datetime,
-          notes: data.description ? `Expense: ${data.description}` : "Supplier expense payment",
+          notes: data.description ? `Expense: ${data.description} (Supplier: ${data.supplierName})` : `Supplier expense payment: ${data.supplierName}`,
           paymentMethod: data.paymentMethod === "card" ? "online" : data.paymentMethod,
           reference: `EXP-${transactionResult.id}`,
           status: "processed"
@@ -209,6 +209,8 @@ export default function Finances() {
       // Refresh data and reload page for immediate updates
       queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/daily"] });
       queryClient.invalidateQueries({ queryKey: ["/api/financial-transactions/summary/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments/tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       
       // Refresh the page to ensure all data is up-to-date
       window.location.reload();
