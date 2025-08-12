@@ -37,6 +37,7 @@ const transactionSchema = z.object({
   time: z.string().min(1, "Time is required"),
   type: z.string().min(1, "Type is required"),
   category: z.string().optional(),
+  supplierId: z.string().optional(),
   amount: z.string().min(1, "Amount is required"),
   paymentMethod: z.string().min(1, "Payment method is required"),
   description: z.string().optional(),
@@ -66,6 +67,11 @@ export default function Finances() {
     queryKey: ["/api/branches"],
   });
 
+  // Get suppliers for the dropdown
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["/api/suppliers"],
+  });
+
   // Set the default branch for branch managers
   React.useEffect(() => {
     if (user && user.role === "branch_manager" && user.branchId) {
@@ -86,6 +92,7 @@ export default function Finances() {
       time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
       type: activeTab === "transactions" ? "income" : "expense",
       category: "",
+      supplierId: "",
       amount: "",
       paymentMethod: activeTab === "transactions" ? "card" : "cash",
       description: "",
@@ -119,12 +126,32 @@ export default function Finances() {
       // Combine date and time into a single datetime string
       const datetime = `${data.date}T${data.time}:00`;
       
-      return await apiRequest("POST", "/api/financial-transactions", {
+      // Create the financial transaction
+      const transactionResult = await apiRequest("POST", "/api/financial-transactions", {
         ...data,
         date: datetime, // Send combined datetime
         branchId: parseInt(data.branchId),
         amount: parseFloat(data.amount),
       });
+
+      // If it's an expense with Supplies category and supplier selected, also create payment tracking entry
+      if (data.type === "expense" && data.category === "Supplies" && data.supplierId) {
+        await apiRequest("POST", "/api/payments/tracking", {
+          supplierId: parseInt(data.supplierId),
+          branchId: parseInt(data.branchId),
+          totalAmount: parseFloat(data.amount),
+          bankTransferAmount: data.paymentMethod === "card" || data.paymentMethod === "bank_transfer" ? parseFloat(data.amount) : 0,
+          chequeAmount: data.paymentMethod === "cheque" ? parseFloat(data.amount) : 0,
+          chequeNumber: data.paymentMethod === "cheque" ? `EXP-${Date.now()}` : null,
+          paymentDate: datetime,
+          notes: data.description ? `Expense: ${data.description}` : "Supplier expense payment",
+          paymentMethod: data.paymentMethod === "card" ? "online" : data.paymentMethod,
+          reference: `EXP-${transactionResult.id}`,
+          status: "processed"
+        });
+      }
+
+      return transactionResult;
     },
     onSuccess: () => {
       toast({
@@ -145,6 +172,7 @@ export default function Finances() {
         time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
         type: transactionType,
         category: "",
+        supplierId: "",
         amount: "",
         paymentMethod: transactionType === "income" ? "card" : "cash",
         description: "",
@@ -588,7 +616,7 @@ export default function Finances() {
                             <SelectItem value="rent">Rent</SelectItem>
                             <SelectItem value="salaries">Salaries</SelectItem>
                             <SelectItem value="utilities">Utilities</SelectItem>
-                            <SelectItem value="supplies">Supplies</SelectItem>
+                            <SelectItem value="Supplies">Supplies</SelectItem>
                             <SelectItem value="maintenance">Maintenance</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
@@ -597,6 +625,34 @@ export default function Finances() {
                       </FormItem>
                     )}
                   />
+
+                  {/* Show Supplier Name field only when category is Supplies */}
+                  {form.watch("category") === "Supplies" && (
+                    <FormField
+                      control={form.control}
+                      name="supplierId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Supplier Name</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select supplier" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {suppliers.map((supplier: any) => (
+                                <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   
                   <FormField
                     control={form.control}
