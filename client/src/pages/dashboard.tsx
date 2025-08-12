@@ -516,32 +516,38 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Branch-specific payment stats - Only show for branch managers */}
+      {/* Branch Financial Overview - Only show for branch managers */}
       {user?.role === "branch_manager" && (
         <div className="mb-6">
           <Card className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Branch Payment Status</h3>
-            <p className="text-sm text-muted-foreground mb-4">Current payment metrics for your branch</p>
+            <h3 className="text-lg font-semibold mb-2">Branch Financial Overview</h3>
+            <p className="text-sm text-muted-foreground mb-4">Financial metrics for your branch</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-4 border">
-                <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Payment Rate</CardTitle>
-                <div className="text-2xl font-bold">{dashboardData.paymentRate}%</div>
-                <p className="text-xs text-muted-foreground mt-1">Of invoices paid</p>
-              </Card>
-              
-              <Card className="p-4 border">
-                <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Invoices</CardTitle>
-                <div className="text-2xl font-bold">{dashboardData.totalRevenue}</div>
-                <p className="text-xs text-muted-foreground mt-1">Invoice amount</p>
-              </Card>
-              
-              <Card className="p-4 border">
-                <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Outstanding</CardTitle>
-                <div className="text-2xl font-bold">{dashboardData.outstandingInvoices}</div>
-                <p className="text-xs text-muted-foreground mt-1">Amount to be paid</p>
-              </Card>
-            </div>
+            {isSummaryLoading ? (
+              <div className="flex items-center justify-center p-6">
+                <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="p-4 border">
+                  <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Payment Rate</CardTitle>
+                  <div className="text-2xl font-bold">{dashboardData.paymentRate}%</div>
+                  <p className="text-xs text-muted-foreground mt-1">Of invoices paid</p>
+                </Card>
+                
+                <Card className="p-4 border">
+                  <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Revenue</CardTitle>
+                  <div className="text-2xl font-bold">{dashboardData.totalRevenue}</div>
+                  <p className="text-xs text-muted-foreground mt-1">This month</p>
+                </Card>
+                
+                <Card className="p-4 border">
+                  <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Outstanding</CardTitle>
+                  <div className="text-2xl font-bold">{dashboardData.outstandingInvoices}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Amount to be paid</p>
+                </Card>
+              </div>
+            )}
           </Card>
         </div>
       )}
