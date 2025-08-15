@@ -337,6 +337,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteSupplier(id: number): Promise<boolean> {
+    // Check if supplier has any invoices
+    const existingInvoices = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.supplierId, id))
+      .limit(1);
+    
+    if (existingInvoices.length > 0) {
+      throw new Error('Cannot delete supplier: There are existing invoices associated with this supplier. Please remove all invoices first.');
+    }
+    
+    // Check if supplier has any payments
+    const existingPayments = await db
+      .select()
+      .from(supplierPayments)
+      .where(eq(supplierPayments.supplierId, id))
+      .limit(1);
+    
+    if (existingPayments.length > 0) {
+      throw new Error('Cannot delete supplier: There are existing payments associated with this supplier. Please remove all payments first.');
+    }
+    
     // First delete any supplier-branch relationships
     await db.delete(supplierBranches).where(eq(supplierBranches.supplierId, id));
     
@@ -347,7 +369,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(suppliers)
       .where(eq(suppliers.id, id));
-    return result.count > 0;
+    return result.rowCount > 0;
   }
 
   // Supplier-Branch relationship methods
