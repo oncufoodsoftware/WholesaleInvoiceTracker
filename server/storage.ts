@@ -336,27 +336,29 @@ export class DatabaseStorage implements IStorage {
     return updatedSupplier;
   }
 
-  async deleteSupplier(id: number): Promise<boolean> {
-    // Check if supplier has any invoices
-    const existingInvoices = await db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.supplierId, id))
-      .limit(1);
-    
-    if (existingInvoices.length > 0) {
-      throw new Error('Cannot delete supplier: There are existing invoices associated with this supplier. Please remove all invoices first.');
-    }
-    
-    // Check if supplier has any payments
-    const existingPayments = await db
-      .select()
-      .from(supplierPayments)
-      .where(eq(supplierPayments.supplierId, id))
-      .limit(1);
-    
-    if (existingPayments.length > 0) {
-      throw new Error('Cannot delete supplier: There are existing payments associated with this supplier. Please remove all payments first.');
+  async deleteSupplier(id: number, forceDelete = false): Promise<boolean> {
+    if (!forceDelete) {
+      // Check if supplier has any invoices
+      const existingInvoices = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.supplierId, id))
+        .limit(1);
+      
+      if (existingInvoices.length > 0) {
+        throw new Error('Cannot delete supplier: There are existing invoices associated with this supplier. Please remove all invoices first.');
+      }
+      
+      // Check if supplier has any payments
+      const existingPayments = await db
+        .select()
+        .from(supplierPayments)
+        .where(eq(supplierPayments.supplierId, id))
+        .limit(1);
+      
+      if (existingPayments.length > 0) {
+        throw new Error('Cannot delete supplier: There are existing payments associated with this supplier. Please remove all payments first.');
+      }
     }
     
     // First delete any supplier-branch relationships

@@ -571,15 +571,17 @@ export default function Suppliers() {
                         <Pencil className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="text-destructive hover:text-destructive h-8 px-2"
-                        onClick={() => handleDeleteSupplier(supplier.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
+                      {user?.role === 'admin' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-destructive hover:text-destructive h-8 px-2"
+                          onClick={() => handleDeleteSupplier(supplier.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
