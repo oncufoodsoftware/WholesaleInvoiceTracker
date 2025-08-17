@@ -774,31 +774,53 @@ Disallow: /`);
       
       let transactions;
       if (startDate && endDate) {
+        console.log('Export date range:', { startDate, endDate });
+        
+        // Parse dates manually to avoid timezone issues
+        const [startYear, startMonth, startDay] = (startDate as string).split('-').map(Number);
+        const [endYear, endMonth, endDay] = (endDate as string).split('-').map(Number);
+        
+        const start = new Date(startYear, startMonth - 1, startDay);
+        const end = new Date(endYear, endMonth - 1, endDay);
+        
+        console.log('Parsed dates:', { start: start.toISOString(), end: end.toISOString() });
+        
         // Date range export
         transactions = await storage.getTransactionsByDateRange(
           parseInt(branchId as string), 
-          new Date(startDate as string),
-          new Date(endDate as string)
+          start,
+          end
         );
       } else {
-        // Single date export
+        // Single date export - also fix timezone issue
+        const [year, month, day] = (date as string).split('-').map(Number);
+        const singleDate = new Date(year, month - 1, day);
+        
         transactions = await storage.getDailyTransactions(
           parseInt(branchId as string), 
-          new Date(date as string)
+          singleDate
         );
       }
       
+      console.log('Found transactions:', transactions.length);
+      
       // Create CSV content with branch information
       const csvHeaders = ['Branch Name', 'Date', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
-      const csvRows = transactions.map(transaction => [
-        branchName,
-        transaction.date.toISOString().split('T')[0],
-        transaction.type,
-        transaction.category || '',
-        transaction.amount.toString(),
-        transaction.paymentMethod || '',
-        transaction.description || ''
-      ]);
+      const csvRows = transactions.map(transaction => {
+        // Format date as DD/MM/YYYY to match frontend display
+        const date = new Date(transaction.date);
+        const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+        
+        return [
+          branchName,
+          formattedDate,
+          transaction.type,
+          transaction.category || '',
+          transaction.amount.toString(),
+          transaction.paymentMethod || '',
+          transaction.description || ''
+        ];
+      });
       
       const csvContent = [csvHeaders, ...csvRows]
         .map(row => row.map(field => `"${field.replace(/"/g, '""')}"`).join(','))
