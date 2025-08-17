@@ -814,10 +814,23 @@ Disallow: /`);
       // Create CSV content with branch information
       const csvHeaders = ['Branch Name', 'Date', 'Time', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
       const csvRows = uniqueTransactions.map(transaction => {
-        // Format date and time separately to match frontend display
-        const date = new Date(transaction.date);
-        const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-        const formattedTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        // Parse date manually to avoid timezone issues in CSV export
+        const dateStr = transaction.date.toISOString();
+        console.log('Transaction date ISO:', dateStr);
+        
+        // Extract date components from ISO string manually
+        const [datePart] = dateStr.split('T');
+        const [year, month, day] = datePart.split('-');
+        
+        // Format as DD/MM/YYYY 
+        const formattedDate = `${day}/${month}/${year}`;
+        
+        // Extract time from ISO string  
+        const [, timePart] = dateStr.split('T');
+        const [hour, minute] = timePart.split(':');
+        const formattedTime = `${hour}:${minute}`;
+        
+        console.log('Formatted date for CSV:', formattedDate, formattedTime);
         
         return [
           branchName,
