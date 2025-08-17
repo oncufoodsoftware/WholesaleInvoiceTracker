@@ -120,13 +120,15 @@ export default function Finances() {
   // Create transaction mutation
   const createTransactionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof transactionSchema>) => {
-      // Combine date and time into a single datetime string
-      const datetime = `${data.date}T${data.time}:00`;
+      // Create a local date object to avoid timezone conversion issues
+      const [year, month, day] = data.date.split('-').map(Number);
+      const [hours, minutes] = data.time.split(':').map(Number);
+      const localDate = new Date(year, month - 1, day, hours, minutes);
       
       // Create the financial transaction
       const transactionResult = await apiRequest("POST", "/api/financial-transactions", {
         ...data,
-        date: datetime, // Send combined datetime
+        date: localDate.toISOString(), // This will be correct local time
         branchId: parseInt(data.branchId),
         amount: parseFloat(data.amount),
       });
@@ -171,7 +173,7 @@ export default function Finances() {
           bankTransferAmount: data.paymentMethod === "card" || data.paymentMethod === "bank_transfer" ? parseFloat(data.amount) : 0,
           chequeAmount: data.paymentMethod === "cheque" ? parseFloat(data.amount) : 0,
           chequeNumber: data.paymentMethod === "cheque" ? `EXP-${Date.now()}` : null,
-          paymentDate: datetime,
+          paymentDate: localDate.toISOString(),
           notes: data.description ? `Expense: ${data.description} (Supplier: ${data.supplierName})` : `Supplier expense payment: ${data.supplierName}`,
           paymentMethod: data.paymentMethod === "card" ? "online" : data.paymentMethod,
           reference: `EXP-${transactionResult.id}`,
