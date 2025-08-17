@@ -804,16 +804,25 @@ Disallow: /`);
       
       console.log('Found transactions:', transactions.length);
       
+      // Remove duplicates by transaction ID (just in case)
+      const uniqueTransactions = transactions.filter((transaction, index, self) => 
+        index === self.findIndex(t => t.id === transaction.id)
+      );
+      
+      console.log('Unique transactions after deduplication:', uniqueTransactions.length);
+      
       // Create CSV content with branch information
-      const csvHeaders = ['Branch Name', 'Date', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
-      const csvRows = transactions.map(transaction => {
-        // Format date as DD/MM/YYYY to match frontend display
+      const csvHeaders = ['Branch Name', 'Date', 'Time', 'Type', 'Category', 'Amount', 'Payment Method', 'Description'];
+      const csvRows = uniqueTransactions.map(transaction => {
+        // Format date and time separately to match frontend display
         const date = new Date(transaction.date);
         const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+        const formattedTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         
         return [
           branchName,
           formattedDate,
+          formattedTime,
           transaction.type,
           transaction.category || '',
           transaction.amount.toString(),
