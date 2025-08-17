@@ -353,7 +353,9 @@ export default function Finances() {
     const { startDate, endDate } = getDateRange();
     
     const formatDate = (dateStr: string) => {
-      const date = new Date(dateStr);
+      // Parse the date string manually to avoid timezone issues
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
       return date.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: '2-digit',
