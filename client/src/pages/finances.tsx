@@ -51,13 +51,15 @@ export default function Finances() {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0] // Today's date
   );
-  const [dateRange, setDateRange] = useState("today");
-  const [customStartDate, setCustomStartDate] = useState<string>(
-    new Date().toISOString().split("T")[0] // Today's date
-  );
-  const [customEndDate, setCustomEndDate] = useState<string>(
-    new Date().toISOString().split("T")[0] // Today's date
-  );
+  const [dateRange, setDateRange] = useState(() => {
+    return localStorage.getItem('finances-date-range') || "today";
+  });
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    return localStorage.getItem('finances-custom-start-date') || new Date().toISOString().split("T")[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    return localStorage.getItem('finances-custom-end-date') || new Date().toISOString().split("T")[0];
+  });
   const [activeTab, setActiveTab] = useState("transactions");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -425,7 +427,10 @@ export default function Finances() {
             </div>
             <div>
               <Label>Select Date Range</Label>
-              <Select value={dateRange} onValueChange={setDateRange}>
+              <Select value={dateRange} onValueChange={(value) => {
+                setDateRange(value);
+                localStorage.setItem('finances-date-range', value);
+              }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select date range" />
                 </SelectTrigger>
@@ -451,7 +456,10 @@ export default function Finances() {
                 <Input
                   type="date"
                   value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setCustomStartDate(e.target.value);
+                    localStorage.setItem('finances-custom-start-date', e.target.value);
+                  }}
                   className="w-full"
                 />
               </div>
@@ -460,7 +468,10 @@ export default function Finances() {
                 <Input
                   type="date"
                   value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setCustomEndDate(e.target.value);
+                    localStorage.setItem('finances-custom-end-date', e.target.value);
+                  }}
                   className="w-full"
                 />
               </div>
