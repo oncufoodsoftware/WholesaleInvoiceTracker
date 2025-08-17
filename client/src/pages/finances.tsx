@@ -259,11 +259,11 @@ export default function Finances() {
       // Build URL with date range parameters
       let url = `/api/financial-transactions/export?branchId=${selectedBranch}`;
       
-      if (dateRange === "custom" || dateRange === "week" || dateRange === "month" || dateRange === "year") {
-        url += `&startDate=${startDate}&endDate=${endDate}`;
-      } else {
-        url += `&date=${selectedDate}`;
-      }
+      // Always use date range parameters for consistency
+      url += `&startDate=${startDate}&endDate=${endDate}`;
+      
+      console.log('Export URL:', url);
+      console.log('Date Range:', { startDate, endDate, dateRange, customStartDate, customEndDate });
 
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to export data");
