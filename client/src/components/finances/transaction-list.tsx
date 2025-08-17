@@ -133,12 +133,14 @@ export function TransactionList({
     mutationFn: async (data: z.infer<typeof transactionSchema>) => {
       if (!editingTransactionId) throw new Error("No transaction ID provided");
       
-      // Combine date and time into a single datetime string
-      const datetime = `${data.date}T${data.time}:00`;
+      // Create a local date object to avoid timezone conversion issues
+      const [year, month, day] = data.date.split('-').map(Number);
+      const [hours, minutes] = data.time.split(':').map(Number);
+      const localDate = new Date(year, month - 1, day, hours, minutes);
       
       return await apiRequest("PUT", `/api/financial-transactions/${editingTransactionId}`, {
         ...data,
-        date: datetime, // Send combined datetime
+        date: localDate.toISOString(), // This will be correct local time
         branchId: parseInt(data.branchId),
         amount: parseFloat(data.amount),
       });
@@ -201,9 +203,15 @@ export function TransactionList({
   function handleEditTransaction(transaction: any) {
     setEditingTransactionId(transaction.id);
     
-    // Extract date and time from the transaction date
+    // Extract date and time from the transaction date without timezone conversion
     const transactionDate = new Date(transaction.date);
-    const dateString = transactionDate.toISOString().split("T")[0];
+    
+    // Format date manually to avoid timezone issues
+    const year = transactionDate.getFullYear();
+    const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
+    const day = String(transactionDate.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
     const timeString = transactionDate.toTimeString().slice(0, 5);
     
     form.reset({
