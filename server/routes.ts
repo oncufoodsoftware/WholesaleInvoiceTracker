@@ -816,7 +816,6 @@ Disallow: /`);
       const csvRows = uniqueTransactions.map(transaction => {
         // Parse date manually to avoid timezone issues in CSV export
         const dateStr = transaction.date.toISOString();
-        console.log('Transaction date ISO:', dateStr);
         
         // Extract date components from ISO string manually
         const [datePart] = dateStr.split('T');
@@ -829,8 +828,6 @@ Disallow: /`);
         const [, timePart] = dateStr.split('T');
         const [hour, minute] = timePart.split(':');
         const formattedTime = `${hour}:${minute}`;
-        
-        console.log('Formatted date for CSV:', formattedDate, formattedTime);
         
         return [
           branchName,

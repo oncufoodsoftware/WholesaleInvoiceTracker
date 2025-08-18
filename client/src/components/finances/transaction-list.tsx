@@ -242,24 +242,20 @@ export function TransactionList({
     }).format(amount);
   };
 
-  // Format date to UK 24-hour format with date and time
+  // Format date manually to avoid timezone conversion issues
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    
-    // Check if the date object is valid
-    if (isNaN(date.getTime())) {
+    try {
+      // Parse ISO string manually to avoid timezone conversion
+      const isoStr = new Date(dateString).toISOString();
+      const [datePart, timePart] = isoStr.split('T');
+      const [year, month, day] = datePart.split('-');
+      const [hour, minute] = timePart.split(':');
+      
+      // Format as DD/MM/YYYY HH:MM
+      return `${day}/${month}/${year} ${hour}:${minute}`;
+    } catch {
       return "Invalid Date";
     }
-    
-    // Format as DD/MM/YYYY HH:MM
-    return date.toLocaleString('en-GB', { 
-      day: '2-digit',
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false // Force 24-hour format
-    });
   };
 
   // Get transaction type badge
