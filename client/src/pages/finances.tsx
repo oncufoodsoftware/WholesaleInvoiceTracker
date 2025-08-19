@@ -120,15 +120,17 @@ export default function Finances() {
   // Create transaction mutation
   const createTransactionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof transactionSchema>) => {
-      // Create a local date object to avoid timezone conversion issues
+      // Create UK timezone aware date - no conversion needed
       const [year, month, day] = data.date.split('-').map(Number);
       const [hours, minutes] = data.time.split(':').map(Number);
-      const localDate = new Date(year, month - 1, day, hours, minutes);
+      
+      // Create date string in UK timezone format for database storage
+      const ukDateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`;
       
       // Create the financial transaction
       const transactionResult = await apiRequest("POST", "/api/financial-transactions", {
         ...data,
-        date: localDate.toISOString(), // This will be correct local time
+        date: ukDateString, // Direct UK time without timezone conversion
         branchId: parseInt(data.branchId),
         amount: parseFloat(data.amount),
       });
@@ -157,7 +159,6 @@ export default function Finances() {
         time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
         type: transactionType,
         category: "",
-        supplierName: "",
         amount: "",
         paymentMethod: transactionType === "income" ? "card" : "cash",
         description: "",
