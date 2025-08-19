@@ -257,25 +257,47 @@ export default function Finances() {
     
     switch (dateRange) {
       case "today":
-        startDate = endDate = today.toISOString().split("T")[0];
+        // Format today manually to avoid timezone issues
+        const todayYear = today.getFullYear();
+        const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const todayDay = String(today.getDate()).padStart(2, '0');
+        startDate = endDate = `${todayYear}-${todayMonth}-${todayDay}`;
         break;
       case "yesterday":
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        startDate = endDate = yesterday.toISOString().split("T")[0];
+        // Format manually to avoid timezone issues
+        const year = yesterday.getFullYear();
+        const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+        const day = String(yesterday.getDate()).padStart(2, '0');
+        startDate = endDate = `${year}-${month}-${day}`;
         break;
       case "week":
-        // This Week: Monday to Sunday
-        const weekStart = new Date(today);
-        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        // This Week: Monday to Sunday (UK timezone calculation)
+        const ukToday = new Date(); // Get current UK date
+        const dayOfWeek = ukToday.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        
+        // Calculate days to go back to Monday
         const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days to Monday
-        weekStart.setDate(today.getDate() - daysToMonday);
         
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+        // Create Monday date (start of week)
+        const mondayDate = new Date(ukToday);
+        mondayDate.setDate(ukToday.getDate() - daysToMonday);
         
-        startDate = weekStart.toISOString().split("T")[0];
-        endDate = weekEnd.toISOString().split("T")[0];
+        // Create Sunday date (end of week) 
+        const sundayDate = new Date(mondayDate);
+        sundayDate.setDate(mondayDate.getDate() + 6);
+        
+        // Format as YYYY-MM-DD manually to avoid timezone issues
+        const formatUKDate = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        startDate = formatUKDate(mondayDate);
+        endDate = formatUKDate(sundayDate);
         break;
       case "month":
         // This Month: First day to last day of current month
@@ -289,9 +311,14 @@ export default function Finances() {
         break;
       case "year":
         // This Year: January 1st to current date
-        const yearStart = new Date(today.getFullYear(), 0, 1);
-        startDate = yearStart.toISOString().split("T")[0];
-        endDate = today.toISOString().split("T")[0];
+        const currentYear = today.getFullYear();
+        startDate = `${currentYear}-01-01`;
+        
+        // Format current date manually
+        const currentYear2 = today.getFullYear();
+        const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const currentDay = String(today.getDate()).padStart(2, '0');
+        endDate = `${currentYear2}-${currentMonth}-${currentDay}`;
         break;
       case "custom":
         startDate = customStartDate;
