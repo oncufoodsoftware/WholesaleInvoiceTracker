@@ -37,7 +37,6 @@ const transactionSchema = z.object({
   time: z.string().min(1, "Time is required"),
   type: z.string().min(1, "Type is required"),
   category: z.string().optional(),
-  supplierName: z.string().optional(),
   amount: z.string().min(1, "Amount is required"),
   paymentMethod: z.string().min(1, "Payment method is required"),
   description: z.string().optional(),
@@ -91,7 +90,6 @@ export default function Finances() {
       time: new Date().toTimeString().slice(0, 5), // Current time in HH:MM format
       type: activeTab === "transactions" ? "income" : "expense",
       category: "",
-      supplierName: "",
       amount: "",
       paymentMethod: activeTab === "transactions" ? "card" : "cash",
       description: "",
@@ -135,53 +133,8 @@ export default function Finances() {
         amount: parseFloat(data.amount),
       });
 
-      // If it's an expense with Supplies category and supplier name provided, also create payment tracking entry
-      if (data.type === "expense" && data.category === "Supplies" && data.supplierName) {
-        // First, try to find existing supplier or create a new one
-        let supplierId = null;
-        try {
-          // Try to find existing supplier by name
-          const existingSuppliers = await fetch("/api/suppliers", { credentials: "include" });
-          const suppliers = await existingSuppliers.json();
-          const existingSupplier = suppliers.find((s: any) => 
-            s.name.toLowerCase().trim() === data.supplierName.toLowerCase().trim()
-          );
-          
-          if (existingSupplier) {
-            supplierId = existingSupplier.id;
-          } else {
-            // Create new supplier
-            const newSupplier = await apiRequest("POST", "/api/suppliers", {
-              name: data.supplierName,
-              contactPerson: "Auto-created",
-              phone: "",
-              email: "",
-              address: "",
-              paymentTerms: "30 days",
-              notes: "Auto-created from expense transaction",
-              branchIds: [parseInt(data.branchId)]
-            });
-            supplierId = newSupplier.id;
-          }
-        } catch (error) {
-          console.error("Error handling supplier:", error);
-          supplierId = 1; // Fallback to first supplier
-        }
-
-        await apiRequest("POST", "/api/payments/tracking", {
-          supplierId: supplierId,
-          branchId: parseInt(data.branchId),
-          totalAmount: parseFloat(data.amount),
-          bankTransferAmount: data.paymentMethod === "card" || data.paymentMethod === "bank_transfer" ? parseFloat(data.amount) : 0,
-          chequeAmount: data.paymentMethod === "cheque" ? parseFloat(data.amount) : 0,
-          chequeNumber: data.paymentMethod === "cheque" ? `EXP-${Date.now()}` : null,
-          paymentDate: localDate.toISOString(),
-          notes: data.description ? `Expense: ${data.description} (Supplier: ${data.supplierName})` : `Supplier expense payment: ${data.supplierName}`,
-          paymentMethod: data.paymentMethod === "card" ? "online" : data.paymentMethod,
-          reference: `EXP-${transactionResult.id}`,
-          status: "processed"
-        });
-      }
+      // Note: Expense transactions no longer automatically create suppliers or payment tracking entries
+      // Small suppliers can be tracked manually in payment tracking if needed
 
       return transactionResult;
     },
@@ -671,25 +624,7 @@ export default function Finances() {
                     )}
                   />
 
-                  {/* Show Supplier Name field only when category is Supplies */}
-                  {form.watch("category") === "Supplies" && (
-                    <FormField
-                      control={form.control}
-                      name="supplierName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Supplier Name</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Enter supplier name" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+
                   
                   <FormField
                     control={form.control}
