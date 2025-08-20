@@ -2073,7 +2073,7 @@ Disallow: /`);
       await logUserAction(req, 'delete', 'supplier_payment', paymentId, 
         `Deleted bulk payment with ID ${paymentId}`);
 
-      res.status(200).json({ message: 'Payment deleted successfully' });
+      res.status(204).send(); // No content response for successful deletion
     } catch (err) {
       res.status(500).json({ message: `Error deleting payment: ${err}` });
     }

@@ -1457,7 +1457,7 @@ export class DatabaseStorage implements IStorage {
 
           const reversalAmount = Math.min(remainingReversal, invoice.paidAmount);
           const newPaidAmount = invoice.paidAmount - reversalAmount;
-          const newStatus = newPaidAmount === 0 ? 'pending' : newPaidAmount >= invoice.amount ? 'paid' : 'partially_paid';
+          const newStatus = newPaidAmount === 0 ? 'unpaid' : newPaidAmount >= invoice.amount ? 'paid' : 'partially_paid';
 
           await tx
             .update(invoices)
