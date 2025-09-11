@@ -201,7 +201,10 @@ export default function SupplierRiskDashboard() {
           
           // Calculate metrics based on invoices
           const invoiceCount = supplierInvoices.length;
-          const totalAmount = supplierInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
+          const totalAmount = supplierInvoices.reduce((sum: number, inv: any) => {
+            const amount = inv.type === 'credit_note' ? -inv.amount : inv.amount;
+            return sum + amount;
+          }, 0);
           const outstandingAmount = supplier.outstandingAmount || 0;
           
           // Calculate risk score (0-100)

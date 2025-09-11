@@ -145,12 +145,12 @@ export default function Dashboard() {
     return summaryData.branchData;
   };
 
-  // Calculate revenue from financial transactions
+  // Calculate revenue from invoice summary (includes credit notes properly)
   const calculateTotalRevenue = () => {
-    if (!monthlyFinancialSummary) return 0;
+    if (!summaryData) return 0;
     
-    // Use totalSales from the monthly financial summary
-    return monthlyFinancialSummary.totalSales || 0;
+    // Use totalInvoiceAmount from dashboard summary (handles credit notes correctly)
+    return summaryData.totalInvoiceAmount || 0;
   };
 
   // Calculate expenses from financial transactions
