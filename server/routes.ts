@@ -270,10 +270,8 @@ Disallow: /`);
           // Include invoice amount minus any paid amount
           const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
           supplierSummaries[invoice.supplierId].outstandingAmount += unpaidAmount;
-        } else if (invoice.type === 'credit_note') {
-          // Subtract credit notes from outstanding amount
-          supplierSummaries[invoice.supplierId].outstandingAmount -= invoice.amount;
         }
+        // Credit notes are auto-paid, so they don't affect outstanding amount
       }
     }
     
@@ -331,9 +329,8 @@ Disallow: /`);
             if (invoice.type === 'standard' || invoice.type === 'cash') {
               const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
               branchBalance += unpaidAmount;
-            } else if (invoice.type === 'credit_note') {
-              branchBalance -= invoice.amount;
             }
+            // Credit notes are auto-paid, so they don't affect outstanding balance
           }
           
           totalOutstanding += branchBalance;
