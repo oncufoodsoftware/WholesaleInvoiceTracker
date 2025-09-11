@@ -331,8 +331,10 @@ Disallow: /`);
             if (invoice.type === 'standard' || invoice.type === 'cash') {
               const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
               branchBalance += unpaidAmount;
+            } else if (invoice.type === 'credit_note') {
+              // Credit notes reduce the outstanding balance
+              branchBalance -= invoice.amount;
             }
-            // Credit notes are auto-paid, so they don't affect outstanding balance
           }
           
           totalOutstanding += branchBalance;
