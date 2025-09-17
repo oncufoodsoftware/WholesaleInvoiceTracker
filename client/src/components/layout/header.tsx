@@ -1,4 +1,4 @@
-import { LogOut, BellIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { SupportTicketGenerator } from "@/components/support-ticket-generator";
+import { NotificationDropdown } from "@/components/layout/notification-dropdown";
 
 export function Header() {
   const { user, logoutMutation } = useAuth();
@@ -56,12 +57,7 @@ export function Header() {
             className="hidden md:flex"
           />
         )}
-        <Button variant="outline" size="icon" className="relative">
-          <BellIcon className="h-5 w-5" />
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-            3
-          </span>
-        </Button>
+        <NotificationDropdown />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
