@@ -12,13 +12,15 @@ interface DailySummaryProps {
 
 export function DailySummary({ branchId, date, startDate, endDate, isDateRange = false }: DailySummaryProps) {
   const { data: summary, isLoading } = useQuery({
-    queryKey: isDateRange 
-      ? ["/api/financial-transactions/summary/range", { branchId, startDate, endDate }]
-      : ["/api/financial-transactions/summary/daily", { branchId, date }],
+    queryKey: ["/api/financial-transactions/summary/range", { branchId, startDate, endDate, isDateRange }],
     queryFn: async ({ queryKey }) => {
-      const url = isDateRange 
-        ? `/api/financial-transactions/summary/range?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`
-        : `/api/financial-transactions/summary/daily?branchId=${branchId}&date=${date.toISOString().split("T")[0]}`;
+      // Always use range endpoint for consistency with Dashboard
+      const finalStartDate = isDateRange ? startDate : date.toISOString().split("T")[0];
+      const finalEndDate = isDateRange ? endDate : date.toISOString().split("T")[0];
+      
+      const url = `/api/financial-transactions/summary/range?branchId=${branchId}&startDate=${finalStartDate}&endDate=${finalEndDate}`;
+      
+      console.log("DailySummary API call:", { branchId, startDate: finalStartDate, endDate: finalEndDate, url });
       
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch summary");

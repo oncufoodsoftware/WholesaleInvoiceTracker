@@ -113,10 +113,11 @@ export default function Dashboard() {
       
       if (!startDate || !endDate) return null;
       
-      const res = await fetch(
-        `/api/financial-transactions/summary/range?branchId=${currentBranchId}&startDate=${startDate}&endDate=${endDate}`,
-        { credentials: "include" }
-      );
+      const url = `/api/financial-transactions/summary/range?branchId=${currentBranchId}&startDate=${startDate}&endDate=${endDate}`;
+      
+      console.log("Dashboard API call:", { branchId: currentBranchId, startDate, endDate, url });
+      
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch financial data");
       return res.json();
     },
