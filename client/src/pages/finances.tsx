@@ -51,13 +51,13 @@ export default function Finances() {
     new Date().toISOString().split("T")[0] // Today's date
   );
   const [dateRange, setDateRange] = useState(() => {
-    return localStorage.getItem('finances-date-range') || "today";
+    return localStorage.getItem('finances-date-range') || "custom";
   });
   const [customStartDate, setCustomStartDate] = useState<string>(() => {
-    return localStorage.getItem('finances-custom-start-date') || new Date().toISOString().split("T")[0];
+    return localStorage.getItem('finances-custom-start-date') || "2025-07-08";
   });
   const [customEndDate, setCustomEndDate] = useState<string>(() => {
-    return localStorage.getItem('finances-custom-end-date') || new Date().toISOString().split("T")[0];
+    return localStorage.getItem('finances-custom-end-date') || "2025-07-08";
   });
   const [activeTab, setActiveTab] = useState("transactions");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
