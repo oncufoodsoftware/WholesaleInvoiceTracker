@@ -74,6 +74,42 @@ export function RecentActivities({ branchId }: RecentActivitiesProps) {
     }).format(amount);
   };
 
+  // Function to get appropriate icon for action type
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'create':
+        return <UserPlus className="h-4 w-4" />;
+      case 'update':
+        return <FileEdit className="h-4 w-4" />;
+      case 'delete':
+        return <Trash2 className="h-4 w-4" />;
+      case 'login':
+        return <ArrowUpRight className="h-4 w-4" />;
+      case 'logout':
+        return <ArrowDownRight className="h-4 w-4" />;
+      default:
+        return <RefreshCw className="h-4 w-4" />;
+    }
+  };
+
+  // Function to get appropriate style for action type
+  const getActionStyle = (type: string) => {
+    switch (type) {
+      case 'create':
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
+      case 'update':
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
+      case 'delete':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
+      case 'login':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400';
+      case 'logout':
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400';
+      default:
+        return 'bg-slate-100 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400';
+    }
+  };
+
   // Map UserActions to ActivityItems
   const mapUserActionsToActivityItems = (actions: UserAction[]): ActivityItem[] => {
     return actions.map(action => {
@@ -144,41 +180,6 @@ export function RecentActivities({ branchId }: RecentActivitiesProps) {
     ...mapDirectDebitsToActivityItems(directDebits || [])
   ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 10);
 
-  // Function to get appropriate icon for action type
-  const getActionIcon = (type: string) => {
-    switch (type) {
-      case 'create':
-        return <UserPlus className="h-4 w-4" />;
-      case 'update':
-        return <FileEdit className="h-4 w-4" />;
-      case 'delete':
-        return <Trash2 className="h-4 w-4" />;
-      case 'login':
-        return <ArrowUpRight className="h-4 w-4" />;
-      case 'logout':
-        return <ArrowDownRight className="h-4 w-4" />;
-      default:
-        return <RefreshCw className="h-4 w-4" />;
-    }
-  };
-
-  // Function to get appropriate style for action type
-  const getActionStyle = (type: string) => {
-    switch (type) {
-      case 'create':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-      case 'update':
-        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
-      case 'delete':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
-      case 'login':
-        return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
-      case 'logout':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
-      default:
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400';
-    }
-  };
 
   // Format action description
   const formatActionDescription = (action: UserAction) => {
