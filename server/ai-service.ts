@@ -51,7 +51,7 @@ async function getBusinessDataSummary(branchId?: number) {
           SELECT category, SUM(amount) as total
           FROM financial_transactions
           WHERE branch_id = ${branchId}
-          AND transaction_type = 'expense'
+          AND type = 'expense'
           AND created_at > NOW() - INTERVAL '30 days'
           GROUP BY category
           ORDER BY total DESC
@@ -60,7 +60,7 @@ async function getBusinessDataSummary(branchId?: number) {
       : sql`
           SELECT category, SUM(amount) as total
           FROM financial_transactions
-          WHERE transaction_type = 'expense'
+          WHERE type = 'expense'
           AND created_at > NOW() - INTERVAL '30 days'
           GROUP BY category
           ORDER BY total DESC
