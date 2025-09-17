@@ -13,7 +13,10 @@ import {
   Landmark,
   Building,
   ArrowDownRight,
-  ArrowUpRight
+  ArrowUpRight,
+  CreditCard,
+  Banknote,
+  ArrowDownUp
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
 import { PaymentTrackingWidget } from "@/components/dashboard/payment-tracking-widget";
+import { PaymentTrackingSection } from "@/components/dashboard/payment-tracking-section";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -574,24 +578,36 @@ export default function Dashboard() {
                 <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="p-4 border">
-                  <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Payment Rate</CardTitle>
-                  <div className="text-2xl font-bold">{dashboardData.paymentRate}%</div>
-                  <p className="text-xs text-muted-foreground mt-1">Of invoices paid</p>
-                </Card>
+              <div className="space-y-6">
+                {/* Financial Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="p-4 border">
+                    <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Sales</CardTitle>
+                    <div className="text-2xl font-bold">{formatCurrency(summaryData?.totalSales || 0)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
+                  </Card>
+                  
+                  <Card className="p-4 border">
+                    <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Expenses</CardTitle>
+                    <div className="text-2xl font-bold">{formatCurrency(summaryData?.totalExpenses || 0)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
+                  </Card>
+                  
+                  <Card className="p-4 border">
+                    <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Net Profit</CardTitle>
+                    <div className="text-2xl font-bold">{formatCurrency((summaryData?.totalSales || 0) - (summaryData?.totalExpenses || 0))}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
+                  </Card>
+                </div>
                 
-                <Card className="p-4 border">
-                  <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Revenue</CardTitle>
-                  <div className="text-2xl font-bold">{dashboardData.totalRevenue}</div>
-                  <p className="text-xs text-muted-foreground mt-1">This month</p>
-                </Card>
-                
-                <Card className="p-4 border">
-                  <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Outstanding</CardTitle>
-                  <div className="text-2xl font-bold">{dashboardData.outstandingInvoices}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Amount to be paid</p>
-                </Card>
+                {/* Payment Tracking Section */}
+                <div>
+                  <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Payment Tracking
+                  </h4>
+                  <PaymentTrackingSection branchId={user?.branchId ? Number(user.branchId) : undefined} />
+                </div>
               </div>
             )}
           </Card>
@@ -601,6 +617,8 @@ export default function Dashboard() {
       {/* Recent Invoices and Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentInvoices branchId={user?.role === "branch_manager" && user?.branchId ? Number(user.branchId) : (selectedBranchId ? parseInt(selectedBranchId) : undefined)} />
+        
+        {/* System Activity Logs */}
         <RecentActivities />
       </div>
       
