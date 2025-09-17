@@ -24,10 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { DateRange } from "react-day-picker";
-import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
@@ -38,14 +35,15 @@ export default function Dashboard() {
   const { checkAchievement } = useAchievements();
   const [timeframe, setTimeframe] = useState("month");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  // Use same default date as Finances page for data consistency
-  const [dateRange, setDateRange] = useState(() => {
-    // Match Finances page default date range for consistent data display
-    const defaultDate = new Date("2025-07-08");
-    return {
-      from: defaultDate,
-      to: defaultDate
-    };
+  // Modern date range state like Finances page
+  const [dateRangeType, setDateRangeType] = useState(() => {
+    return localStorage.getItem('dashboard-date-range') || "custom";
+  });
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    return localStorage.getItem('dashboard-custom-start-date') || "2025-07-08";
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    return localStorage.getItem('dashboard-custom-end-date') || "2025-07-08";
   });
   
   // Define types for API response
@@ -102,16 +100,88 @@ export default function Dashboard() {
     enabled: !!currentBranchId || user?.role === "branch_manager",
   });
 
+  // Calculate date range based on selection (same logic as Finances)
+  const getDateRange = () => {
+    let startDate = "2025-07-08"; // Default with data
+    let endDate = "2025-07-08";
+    
+    switch (dateRangeType) {
+      case "today":
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        startDate = endDate = todayStr;
+        break;
+      case "yesterday":
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+        startDate = endDate = yesterdayStr;
+        break;
+      case "week":
+        const weekEnd = new Date();
+        const weekStart = new Date();
+        weekStart.setDate(weekEnd.getDate() - 7);
+        startDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+        endDate = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
+        break;
+      case "month":
+        const monthEnd = new Date();
+        const monthStart = new Date();
+        monthStart.setDate(monthEnd.getDate() - 30);
+        startDate = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-${String(monthStart.getDate()).padStart(2, '0')}`;
+        endDate = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
+        break;
+      case "year":
+        const yearEnd = new Date();
+        const yearStart = new Date();
+        yearStart.setFullYear(yearEnd.getFullYear() - 1);
+        startDate = `${yearStart.getFullYear()}-${String(yearStart.getMonth() + 1).padStart(2, '0')}-${String(yearStart.getDate()).padStart(2, '0')}`;
+        endDate = `${yearEnd.getFullYear()}-${String(yearEnd.getMonth() + 1).padStart(2, '0')}-${String(yearEnd.getDate()).padStart(2, '0')}`;
+        break;
+      case "custom":
+        startDate = customStartDate;
+        endDate = customEndDate;
+        break;
+    }
+    
+    return { startDate, endDate };
+  };
+
+  // Get formatted date range display
+  const getDateRangeDisplay = () => {
+    const { startDate, endDate } = getDateRange();
+    
+    const formatDate = (dateStr: string) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    };
+    
+    if (startDate === endDate) {
+      return formatDate(startDate);
+    } else {
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    }
+  };
+
+  // Save date range to localStorage
+  useEffect(() => {
+    localStorage.setItem('dashboard-date-range', dateRangeType);
+    localStorage.setItem('dashboard-custom-start-date', customStartDate);
+    localStorage.setItem('dashboard-custom-end-date', customEndDate);
+  }, [dateRangeType, customStartDate, customEndDate]);
+
   // Fetch financial transactions data for Total Revenue and Expenses calculation
   const { data: monthlyFinancialSummary } = useQuery({
-    queryKey: ["/api/financial-transactions/summary/range", currentBranchId, dateRange],
+    queryKey: ["/api/financial-transactions/summary/range", currentBranchId, dateRangeType, customStartDate, customEndDate],
     queryFn: async () => {
       if (!currentBranchId) return null;
       
-      const startDate = dateRange.from?.toISOString().split('T')[0];
-      const endDate = dateRange.to?.toISOString().split('T')[0];
-      
-      if (!startDate || !endDate) return null;
+      const { startDate, endDate } = getDateRange();
       
       const url = `/api/financial-transactions/summary/range?branchId=${currentBranchId}&startDate=${startDate}&endDate=${endDate}`;
       
@@ -251,118 +321,83 @@ export default function Dashboard() {
             </Badge>
           )}
         </div>
-        <div className="flex gap-2">
-          {/* Branch selection for admin users */}
-          {user?.role !== "branch_manager" && (
-            <div className="flex items-center gap-2">
-              <Label htmlFor="branch-select" className="text-sm font-medium">Branch:</Label>
-              <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select branch" />
+        <Link href="/invoices">
+          <Button className="flex items-center gap-1">
+            <PlusIcon className="h-4 w-4" />
+            <span>New Invoice</span>
+          </Button>
+        </Link>
+        </div>
+
+      {/* Modern Date and Branch Selection Card */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {user?.role !== "branch_manager" && (
+              <div>
+                <Label>Select Branch</Label>
+                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(branches as any[]).map((branch: any) => (
+                      <SelectItem key={branch.id} value={branch.id.toString()}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div>
+              <Label>Select Date Range</Label>
+              <Select value={dateRangeType} onValueChange={(value) => {
+                setDateRangeType(value);
+              }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select date range" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(branches as any[]).map((branch: any) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="year">This Year</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="mt-2 text-sm text-muted-foreground">
+                Period: {getDateRangeDisplay()}
+              </div>
             </div>
-          )}
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-1">
-                <CalendarIcon className="h-4 w-4" />
-                <span>
-                  {dateRange.from && dateRange.to 
-                    ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-                    : "Select date range"
-                  }
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <div className="p-3">
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date();
-                      setDateRange({
-                        from: new Date(now.getFullYear(), now.getMonth(), 1),
-                        to: now
-                      });
-                    }}
-                  >
-                    This Month
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date();
-                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-                      setDateRange({
-                        from: lastMonth,
-                        to: endOfLastMonth
-                      });
-                    }}
-                  >
-                    Last Month
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date();
-                      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-                      setDateRange({
-                        from: threeMonthsAgo,
-                        to: now
-                      });
-                    }}
-                  >
-                    Last 3 Months
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date();
-                      const yearStart = new Date(now.getFullYear(), 0, 1);
-                      setDateRange({
-                        from: yearStart,
-                        to: now
-                      });
-                    }}
-                  >
-                    This Year
-                  </Button>
-                </div>
-                <Calendar
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    if (range) {
-                      setDateRange(range);
-                    }
-                  }}
-                  numberOfMonths={2}
+          </div>
+          {dateRangeType === "custom" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full"
                 />
               </div>
-            </PopoverContent>
-          </Popover>
-          <Link href="/invoices">
-            <Button className="flex items-center gap-1">
-              <PlusIcon className="h-4 w-4" />
-              <span>New Invoice</span>
-            </Button>
-          </Link>
-        </div>
+              <div>
+                <Label>End Date</Label>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <div className="flex gap-2 justify-end mb-4">
       </div>
 
       {/* Overview Cards */}
