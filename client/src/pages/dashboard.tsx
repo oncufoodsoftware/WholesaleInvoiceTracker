@@ -145,12 +145,12 @@ export default function Dashboard() {
     return summaryData.branchData;
   };
 
-  // Calculate revenue from invoice summary (includes credit notes properly)
+  // Calculate revenue from financial transactions (includes date filtering)
   const calculateTotalRevenue = () => {
-    if (!summaryData) return 0;
+    if (!monthlyFinancialSummary) return 0;
     
-    // Use totalInvoiceAmount from dashboard summary (handles credit notes correctly)
-    return summaryData.totalInvoiceAmount || 0;
+    // Use totalSales from the monthly financial summary (handles date range filtering)
+    return monthlyFinancialSummary.totalSales || 0;
   };
 
   // Calculate expenses from financial transactions
@@ -161,11 +161,12 @@ export default function Dashboard() {
     return monthlyFinancialSummary.totalExpenses || 0;
   };
 
-  // Calculate branch-specific stats
+  // Calculate branch-specific stats - all data should be current and filtered by date range
   const branchSpecificData = () => {
     const totalRevenue = calculateTotalRevenue();
     const totalExpenses = calculateTotalExpenses();
     
+    // Outstanding amount should come from summary data (current state, not date-filtered)
     if (user?.role === "branch_manager" && user?.branchId && summaryData) {
       const userBranch = summaryData.branchData.find(branch => branch.id === user.branchId);
       return {
