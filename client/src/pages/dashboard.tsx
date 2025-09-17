@@ -38,15 +38,13 @@ export default function Dashboard() {
   const { checkAchievement } = useAchievements();
   const [timeframe, setTimeframe] = useState("month");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
-  // Default to current month (like finances page)
+  // Use same default date as Finances page for data consistency
   const [dateRange, setDateRange] = useState(() => {
-    const today = new Date();
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    
+    // Match Finances page default date range for consistent data display
+    const defaultDate = new Date("2025-07-08");
     return {
-      from: monthStart,
-      to: monthEnd
+      from: defaultDate,
+      to: defaultDate
     };
   });
   
