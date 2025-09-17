@@ -119,12 +119,17 @@ export default function Dashboard() {
         break;
       case "week":
         const currentDate = new Date();
-        // Get Sunday of current week (start of week)
+        // Get Monday of current week (start of week) - Monday = 1, Sunday = 0
+        const dayOfWeek = currentDate.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days to Monday
+        
         const currentWeekStart = new Date(currentDate);
-        currentWeekStart.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday
-        // Get Saturday of current week (end of week)  
+        currentWeekStart.setDate(currentDate.getDate() - daysToMonday); // Monday
+        
+        // Get Sunday of current week (end of week)  
         const currentWeekEnd = new Date(currentWeekStart);
-        currentWeekEnd.setDate(currentWeekStart.getDate() + 6); // Saturday
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6); // Sunday
+        
         startDate = `${currentWeekStart.getFullYear()}-${String(currentWeekStart.getMonth() + 1).padStart(2, '0')}-${String(currentWeekStart.getDate()).padStart(2, '0')}`;
         endDate = `${currentWeekEnd.getFullYear()}-${String(currentWeekEnd.getMonth() + 1).padStart(2, '0')}-${String(currentWeekEnd.getDate()).padStart(2, '0')}`;
         break;
