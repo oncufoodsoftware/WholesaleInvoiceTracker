@@ -273,40 +273,23 @@ export default function Finances() {
         startDate = endDate = `${year}-${month}-${day}`;
         break;
       case "week":
-        // This Week: Monday to Sunday (UK timezone calculation)
-        const ukToday = new Date(); // Get current UK date
-        const dayOfWeek = ukToday.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-        
-        // Calculate days to go back to Monday
-        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days to Monday
-        
-        // Create Monday date (start of week)
-        const mondayDate = new Date(ukToday);
-        mondayDate.setDate(ukToday.getDate() - daysToMonday);
-        
-        // Create Sunday date (end of week) 
-        const sundayDate = new Date(mondayDate);
-        sundayDate.setDate(mondayDate.getDate() + 6);
-        
-        // Format as YYYY-MM-DD manually to avoid timezone issues
-        const formatUKDate = (date: Date) => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-        
-        startDate = formatUKDate(mondayDate);
-        endDate = formatUKDate(sundayDate);
+        const currentDate = new Date();
+        // Get Sunday of current week (start of week)
+        const currentWeekStart = new Date(currentDate);
+        currentWeekStart.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday
+        // Get Saturday of current week (end of week)  
+        const currentWeekEnd = new Date(currentWeekStart);
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6); // Saturday
+        startDate = `${currentWeekStart.getFullYear()}-${String(currentWeekStart.getMonth() + 1).padStart(2, '0')}-${String(currentWeekStart.getDate()).padStart(2, '0')}`;
+        endDate = `${currentWeekEnd.getFullYear()}-${String(currentWeekEnd.getMonth() + 1).padStart(2, '0')}-${String(currentWeekEnd.getDate()).padStart(2, '0')}`;
         break;
       case "month":
-        // This Month: First day to last day of current month
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        // Get the last day of current month
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
-        // Format dates to avoid timezone issues
-        startDate = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-01`;
+        const now = new Date();
+        // First day of current month
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Last day of current month
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startDate = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-${String(monthStart.getDate()).padStart(2, '0')}`;
         endDate = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
         break;
       case "year":

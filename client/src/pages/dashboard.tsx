@@ -118,16 +118,22 @@ export default function Dashboard() {
         startDate = endDate = yesterdayStr;
         break;
       case "week":
-        const weekEnd = new Date();
-        const weekStart = new Date();
-        weekStart.setDate(weekEnd.getDate() - 7);
-        startDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
-        endDate = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
+        const currentDate = new Date();
+        // Get Sunday of current week (start of week)
+        const currentWeekStart = new Date(currentDate);
+        currentWeekStart.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday
+        // Get Saturday of current week (end of week)  
+        const currentWeekEnd = new Date(currentWeekStart);
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6); // Saturday
+        startDate = `${currentWeekStart.getFullYear()}-${String(currentWeekStart.getMonth() + 1).padStart(2, '0')}-${String(currentWeekStart.getDate()).padStart(2, '0')}`;
+        endDate = `${currentWeekEnd.getFullYear()}-${String(currentWeekEnd.getMonth() + 1).padStart(2, '0')}-${String(currentWeekEnd.getDate()).padStart(2, '0')}`;
         break;
       case "month":
-        const monthEnd = new Date();
-        const monthStart = new Date();
-        monthStart.setDate(monthEnd.getDate() - 30);
+        const now = new Date();
+        // First day of current month
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Last day of current month
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         startDate = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-${String(monthStart.getDate()).padStart(2, '0')}`;
         endDate = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
         break;
