@@ -46,8 +46,17 @@ export default function Invoices() {
   });
 
   // Get all suppliers to show selected supplier balance
+  // If branch is selected, get supplier balance for that specific branch
   const { data: suppliers = [] } = useQuery({
-    queryKey: ["/api/suppliers"],
+    queryKey: ["/api/suppliers", filters.branchId],
+    queryFn: async () => {
+      const url = filters.branchId && filters.branchId !== "all"
+        ? `/api/suppliers?branchId=${filters.branchId}`
+        : "/api/suppliers";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch suppliers");
+      return res.json();
+    }
   });
 
   // Find selected supplier and get their balance

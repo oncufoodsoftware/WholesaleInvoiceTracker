@@ -316,7 +316,7 @@ Disallow: /`);
       
       // Format the response to include branch information
       const formattedSuppliers = suppliersWithBranches.map(({ supplier, branches }) => {
-        // Calculate total outstanding amount across all branches for this supplier
+        // Calculate outstanding amount - if targetBranchId is specified, only for that branch
         let totalOutstanding = 0;
         const branchBalances: any = {};
         
@@ -337,7 +337,12 @@ Disallow: /`);
             }
           }
           
-          totalOutstanding += branchBalance;
+          // If targetBranchId is specified, only include that branch's balance
+          // Otherwise, include all branches
+          if (!targetBranchId || branch.id === targetBranchId) {
+            totalOutstanding += branchBalance;
+          }
+          
           branchBalances[branch.id] = {
             name: branch.name,
             amount: branchBalance
