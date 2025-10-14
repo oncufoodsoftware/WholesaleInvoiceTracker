@@ -1552,6 +1552,7 @@ Disallow: /`);
       }
 
       let branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const supplierId = req.query.supplierId ? Number(req.query.supplierId) : undefined;
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -1561,7 +1562,14 @@ Disallow: /`);
         branchId = user.branchId;
       }
 
-      const payments = await storage.getAllPaymentTracking(branchId, startDate, endDate);
+      // Get all payments first
+      let payments = await storage.getAllPaymentTracking(branchId, startDate, endDate);
+      
+      // Filter by supplierId if provided
+      if (supplierId) {
+        payments = payments.filter((payment: any) => payment.supplierId === supplierId);
+      }
+      
       res.json(payments);
     } catch (err) {
       res.status(500).json({ message: `Error fetching payment tracking data: ${err}` });

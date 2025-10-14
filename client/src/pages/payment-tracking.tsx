@@ -51,6 +51,7 @@ export default function PaymentTracking() {
     
   const [filters, setFilters] = useState({
     branchId: "all",
+    supplierId: "all",
     startDate: "",
     endDate: "",
   });
@@ -79,12 +80,28 @@ export default function PaymentTracking() {
     }
   });
 
+  // Fetch suppliers for filter dropdown
+  const { data: suppliersRaw = [] } = useQuery({
+    queryKey: ["/api/suppliers"],
+    queryFn: async () => {
+      const res = await fetch("/api/suppliers", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch suppliers");
+      return await res.json();
+    }
+  });
+
+  // Sort suppliers alphabetically
+  const suppliers = Array.isArray(suppliersRaw) 
+    ? [...suppliersRaw].sort((a: any, b: any) => (a?.name || '').localeCompare(b?.name || ''))
+    : [];
+
   // Fetch payment tracking data
   const { data: payments = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/payments/tracking", filters],
     queryFn: async () => {
       const queryParams = new URLSearchParams();
       if (filters.branchId && filters.branchId !== "all") queryParams.append("branchId", filters.branchId);
+      if (filters.supplierId && filters.supplierId !== "all") queryParams.append("supplierId", filters.supplierId);
       if (filters.startDate) queryParams.append("startDate", filters.startDate);
       if (filters.endDate) queryParams.append("endDate", filters.endDate);
 
@@ -111,6 +128,7 @@ export default function PaymentTracking() {
       
     setFilters({
       branchId: resetBranchId,
+      supplierId: "all",
       startDate: "",
       endDate: "",
     });
@@ -338,10 +356,10 @@ export default function PaymentTracking() {
             <FilterIcon className="h-4 w-4" />
             Filters
           </CardTitle>
-          <CardDescription>Filter payments by branch and date range</CardDescription>
+          <CardDescription>Filter payments by branch, supplier and date range</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="branch">Branch</Label>
               <Select
@@ -366,6 +384,26 @@ export default function PaymentTracking() {
                   Branch selection is locked to your assigned branch
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Supplier</Label>
+              <Select
+                value={filters.supplierId}
+                onValueChange={(value) => handleFilterChange("supplierId", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All suppliers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All suppliers</SelectItem>
+                  {suppliers.map((supplier: any) => (
+                    <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
