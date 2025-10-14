@@ -105,11 +105,16 @@ export default function PaymentTracking() {
       if (filters.startDate) queryParams.append("startDate", filters.startDate);
       if (filters.endDate) queryParams.append("endDate", filters.endDate);
 
-      const res = await fetch(`/api/payments/tracking?${queryParams}`, { 
+      const url = `/api/payments/tracking?${queryParams}`;
+      console.log("Payment Tracking API URL:", url, "Filters:", filters);
+
+      const res = await fetch(url, { 
         credentials: "include" 
       });
       if (!res.ok) throw new Error("Failed to fetch payment tracking data");
-      return await res.json();
+      const data = await res.json();
+      console.log("Payment Tracking Response:", data.length, "payments");
+      return data;
     }
   });
 
@@ -118,7 +123,12 @@ export default function PaymentTracking() {
     if (key === 'branchId' && (user as any)?.role === 'branch_manager') {
       return;
     }
-    setFilters(prev => ({ ...prev, [key]: value }));
+    console.log("Filter changed:", key, "=", value);
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value };
+      console.log("New filters:", newFilters);
+      return newFilters;
+    });
   };
 
   const clearFilters = () => {
