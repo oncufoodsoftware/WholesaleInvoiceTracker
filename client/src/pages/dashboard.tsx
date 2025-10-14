@@ -200,8 +200,6 @@ export default function Dashboard() {
       
       const url = `/api/financial-transactions/summary/range?branchId=${currentBranchId}&startDate=${startDate}&endDate=${endDate}`;
       
-      console.log("Dashboard API call:", { branchId: currentBranchId, startDate, endDate, url });
-      
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch financial data");
       return res.json();
@@ -573,7 +571,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-semibold mb-2">Branch Financial Overview</h3>
             <p className="text-sm text-muted-foreground mb-4">Financial metrics for your branch</p>
             
-            {isSummaryLoading ? (
+            {!monthlyFinancialSummary ? (
               <div className="flex items-center justify-center p-6">
                 <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
               </div>
@@ -583,19 +581,19 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card className="p-4 border">
                     <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Sales</CardTitle>
-                    <div className="text-2xl font-bold">{formatCurrency(summaryData?.totalSales || 0)}</div>
+                    <div className="text-2xl font-bold">{formatCurrency(monthlyFinancialSummary?.totalSales || 0)}</div>
                     <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
                   </Card>
                   
                   <Card className="p-4 border">
                     <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Expenses</CardTitle>
-                    <div className="text-2xl font-bold">{formatCurrency(summaryData?.totalExpenses || 0)}</div>
+                    <div className="text-2xl font-bold">{formatCurrency(monthlyFinancialSummary?.totalExpenses || 0)}</div>
                     <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
                   </Card>
                   
                   <Card className="p-4 border">
                     <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Net Profit</CardTitle>
-                    <div className="text-2xl font-bold">{formatCurrency((summaryData?.totalSales || 0) - (summaryData?.totalExpenses || 0))}</div>
+                    <div className="text-2xl font-bold">{formatCurrency((monthlyFinancialSummary?.totalSales || 0) - (monthlyFinancialSummary?.totalExpenses || 0))}</div>
                     <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
                   </Card>
                 </div>

@@ -106,14 +106,12 @@ export default function PaymentTracking() {
       if (filters.endDate) queryParams.append("endDate", filters.endDate);
 
       const url = `/api/payments/tracking?${queryParams}`;
-      console.log("Payment Tracking API URL:", url, "Filters:", filters);
 
       const res = await fetch(url, { 
         credentials: "include" 
       });
       if (!res.ok) throw new Error("Failed to fetch payment tracking data");
       const data = await res.json();
-      console.log("Payment Tracking Response:", data.length, "payments");
       return data;
     }
   });
@@ -123,12 +121,7 @@ export default function PaymentTracking() {
     if (key === 'branchId' && (user as any)?.role === 'branch_manager') {
       return;
     }
-    console.log("Filter changed:", key, "=", value);
-    setFilters(prev => {
-      const newFilters = { ...prev, [key]: value };
-      console.log("New filters:", newFilters);
-      return newFilters;
-    });
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const clearFilters = () => {
@@ -214,7 +207,7 @@ export default function PaymentTracking() {
 
   // Handle edit payment
   const handleEditPayment = (paymentId: number) => {
-    const payment = payments.find(p => p.id === paymentId);
+    const payment = payments.find((p: any) => p.id === paymentId);
     if (payment) {
       setEditingPayment(payment);
       editForm.reset({
@@ -284,7 +277,7 @@ export default function PaymentTracking() {
     ]);
 
     const csvContent = [csvHeaders, ...csvData]
-      .map(row => row.map(field => `"${field.toString().replace(/"/g, '""')}"`).join(','))
+      .map(row => row.map((field: any) => `"${field.toString().replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
