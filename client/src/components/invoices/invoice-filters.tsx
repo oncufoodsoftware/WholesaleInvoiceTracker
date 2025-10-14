@@ -108,7 +108,11 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                 <FormItem>
                   <FormLabel>Supplier</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      // Auto-apply filters when supplier changes
+                      setTimeout(() => form.handleSubmit(handleSubmit)(), 0);
+                    }} 
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -136,7 +140,11 @@ export function InvoiceFilters({ onApplyFilters, onResetFilters }: InvoiceFilter
                 <FormItem>
                   <FormLabel>Branch</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      // Auto-apply filters when branch changes
+                      setTimeout(() => form.handleSubmit(handleSubmit)(), 0);
+                    }} 
                     defaultValue={field.value}
                     disabled={(user as any)?.role === 'branch_manager'}
                   >
