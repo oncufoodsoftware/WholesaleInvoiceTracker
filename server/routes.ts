@@ -1238,17 +1238,20 @@ Disallow: /`);
         // Calculate amount based on invoice type (credit notes are negative)
         const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
         const paidAmount = invoice.paidAmount || 0;
-        const outstandingAmount = invoice.type === 'credit_note' 
-          ? -(invoice.amount - paidAmount) // Credit note outstanding is negative
-          : (invoice.amount - paidAmount); // Normal invoice outstanding is positive
+        
+        // Calculate outstanding amount properly based on paidAmount (same logic as suppliers page)
+        let outstandingAmount = 0;
+        if (invoice.type === 'standard' || invoice.type === 'cash') {
+          // For standard and cash invoices, outstanding = invoice amount - paid amount
+          outstandingAmount = invoice.amount - paidAmount;
+        } else if (invoice.type === 'credit_note') {
+          // Credit notes reduce the outstanding balance
+          outstandingAmount = -invoice.amount;
+        }
         
         // Add to totals
         totalInvoiceAmount += calculatedAmount;
-        
-        // Add to outstanding if not paid
-        if (invoice.status !== 'paid') {
-          totalOutstandingAmount += outstandingAmount;
-        }
+        totalOutstandingAmount += outstandingAmount;
         
         // Branch summary
         if (!branchSummary[invoice.branchId]) {
@@ -1262,9 +1265,7 @@ Disallow: /`);
         }
         
         branchSummary[invoice.branchId].totalAmount += calculatedAmount;
-        if (invoice.status !== 'paid') {
-          branchSummary[invoice.branchId].outstandingAmount += outstandingAmount;
-        }
+        branchSummary[invoice.branchId].outstandingAmount += outstandingAmount;
         
         // Supplier summary - only include suppliers related to the filtered branch if branchId is provided
         if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
@@ -1279,9 +1280,7 @@ Disallow: /`);
           }
           
           supplierSummary[invoice.supplierId].totalAmount += calculatedAmount;
-          if (invoice.status !== 'paid') {
-            supplierSummary[invoice.supplierId].outstandingAmount += outstandingAmount;
-          }
+          supplierSummary[invoice.supplierId].outstandingAmount += outstandingAmount;
         }
       }
       
