@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, FileDownIcon, GridIcon, ListIcon, CreditCardIcon } from "lucide-react";
+import { PlusIcon, FileDownIcon, GridIcon, ListIcon, CreditCardIcon, Building2 } from "lucide-react";
 import { InvoiceFilters } from "@/components/invoices/invoice-filters";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 import { InvoiceForm } from "@/components/invoices/invoice-form";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { InvoiceTipTooltip } from "@/components/financial-tip-tooltip";
 import { BulkPaymentForm } from "@/components/payments/bulk-payment-form";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -43,6 +44,25 @@ export default function Invoices() {
       }
     }
   });
+
+  // Get all suppliers to show selected supplier balance
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["/api/suppliers"],
+  });
+
+  // Find selected supplier and get their balance
+  const selectedSupplier = filters.supplierId 
+    ? suppliers.find((s: any) => s.id.toString() === filters.supplierId.toString())
+    : null;
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
 
   // Delete invoice mutation
   const deleteInvoiceMutation = useMutation({
@@ -162,6 +182,40 @@ export default function Invoices() {
         onApplyFilters={handleApplyFilters} 
         onResetFilters={handleResetFilters}
       />
+
+      {/* Selected Supplier Balance - Show when a supplier is selected */}
+      {selectedSupplier && (
+        <Card className="mt-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Selected Supplier</p>
+                  <p className="text-lg font-semibold">{selectedSupplier.name}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Total Outstanding Balance</p>
+                <p className={`text-2xl font-bold ${
+                  selectedSupplier.outstandingAmount > 0 
+                    ? 'text-red-600 dark:text-red-400' 
+                    : selectedSupplier.outstandingAmount < 0 
+                      ? 'text-green-600 dark:text-green-400' 
+                      : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {formatCurrency(selectedSupplier.outstandingAmount || 0)}
+                </p>
+                {selectedSupplier.outstandingAmount < 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">Credit Balance</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invoice List */}
       <div className="card mt-6">
