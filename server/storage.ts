@@ -154,6 +154,7 @@ export interface IStorage {
   // Supplier Payment methods
   processBulkPayment(payment: InsertSupplierPayment): Promise<{ paymentId: number; updatedInvoices: number[] }>;
   getSupplierPayments(supplierId: number, branchId?: number): Promise<SupplierPayment[]>;
+  getAllSupplierPayments(): Promise<SupplierPayment[]>;
   getAllPaymentTracking(branchId?: number, startDate?: Date, endDate?: Date): Promise<any[]>;
   updateBulkPayment(paymentId: number, updateData: any): Promise<void>;
   deleteBulkPayment(paymentId: number): Promise<void>;
@@ -1369,6 +1370,19 @@ export class DatabaseStorage implements IStorage {
       return payments;
     } catch (error) {
       console.error('Error getting supplier payments:', error);
+      return [];
+    }
+  }
+
+  async getAllSupplierPayments(): Promise<SupplierPayment[]> {
+    try {
+      const payments = await db
+        .select()
+        .from(supplierPayments)
+        .orderBy(desc(supplierPayments.paymentDate));
+      return payments;
+    } catch (error) {
+      console.error('Error getting all supplier payments:', error);
       return [];
     }
   }

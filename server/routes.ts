@@ -314,6 +314,9 @@ Disallow: /`);
         allInvoices = await storage.getAllInvoices();
       }
       
+      // Get all supplier payments to calculate actual outstanding balance
+      const allSupplierPayments = await storage.getAllSupplierPayments();
+      
       // Format the response to include branch information
       const formattedSuppliers = suppliersWithBranches.map(({ supplier, branches }) => {
         // Calculate outstanding amount - if targetBranchId is specified, only for that branch
@@ -326,16 +329,25 @@ Disallow: /`);
             inv.supplierId === supplier.id && inv.branchId === branch.id
           );
           
-          let branchBalance = 0;
+          // Get supplier payments for this branch
+          const branchPayments = allSupplierPayments.filter(payment => 
+            payment.supplierId === supplier.id && payment.branchId === branch.id
+          );
+          
+          // Calculate balance: Invoices - Credit Notes - Bulk Payments
+          let totalInvoices = 0;
+          let totalCreditNotes = 0;
+          
           for (const invoice of branchInvoices) {
             if (invoice.type === 'standard' || invoice.type === 'cash') {
-              const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
-              branchBalance += unpaidAmount;
+              totalInvoices += invoice.amount;
             } else if (invoice.type === 'credit_note') {
-              // Credit notes reduce the outstanding balance
-              branchBalance -= invoice.amount;
+              totalCreditNotes += invoice.amount;
             }
           }
+          
+          const totalBulkPayments = branchPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
+          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments;
           
           // If targetBranchId is specified, only include that branch's balance
           // Otherwise, include all branches
@@ -1232,61 +1244,99 @@ Disallow: /`);
         invoices = [];
       }
       
+      // Get all supplier payments for balance calculation
+      const allSupplierPayments = await storage.getAllSupplierPayments();
+      
       // Calculate total invoice amount and outstanding amount per branch
       const branchSummary = {};
       const supplierSummary = {};
       let totalInvoiceAmount = 0;
       let totalOutstandingAmount = 0;
       
+      // Track invoices and payments per branch/supplier for correct balance calculation
+      const invoicesByBranch: any = {};
+      const paymentsByBranch: any = {};
+      const invoicesBySupplier: any = {};
+      const paymentsBySupplier: any = {};
+      
       // Process all invoices
       for (const invoice of invoices) {
         // Calculate amount based on invoice type (credit notes are negative)
         const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
-        const paidAmount = invoice.paidAmount || 0;
-        
-        // Calculate outstanding amount properly based on paidAmount (same logic as suppliers page)
-        let outstandingAmount = 0;
-        if (invoice.type === 'standard' || invoice.type === 'cash') {
-          // For standard and cash invoices, outstanding = invoice amount - paid amount
-          outstandingAmount = invoice.amount - paidAmount;
-        } else if (invoice.type === 'credit_note') {
-          // Credit notes reduce the outstanding balance
-          outstandingAmount = -invoice.amount;
-        }
         
         // Add to totals
         totalInvoiceAmount += calculatedAmount;
-        totalOutstandingAmount += outstandingAmount;
         
-        // Branch summary
-        if (!branchSummary[invoice.branchId]) {
-          const branch = await storage.getBranch(invoice.branchId);
-          branchSummary[invoice.branchId] = {
-            id: invoice.branchId,
-            name: branch?.name || `Branch ${invoice.branchId}`,
-            totalAmount: 0,
-            outstandingAmount: 0
-          };
+        // Group by branch
+        if (!invoicesByBranch[invoice.branchId]) {
+          invoicesByBranch[invoice.branchId] = { standard: 0, creditNotes: 0 };
+        }
+        if (invoice.type === 'standard' || invoice.type === 'cash') {
+          invoicesByBranch[invoice.branchId].standard += invoice.amount;
+        } else if (invoice.type === 'credit_note') {
+          invoicesByBranch[invoice.branchId].creditNotes += invoice.amount;
         }
         
-        branchSummary[invoice.branchId].totalAmount += calculatedAmount;
-        branchSummary[invoice.branchId].outstandingAmount += outstandingAmount;
-        
-        // Supplier summary - only include suppliers related to the filtered branch if branchId is provided
+        // Group by supplier (only for filtered branch)
         if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
-          if (!supplierSummary[invoice.supplierId]) {
-            const supplier = await storage.getSupplier(invoice.supplierId);
-            supplierSummary[invoice.supplierId] = {
-              id: invoice.supplierId,
-              name: supplier?.name || `Supplier ${invoice.supplierId}`,
-              totalAmount: 0,
-              outstandingAmount: 0
-            };
+          if (!invoicesBySupplier[invoice.supplierId]) {
+            invoicesBySupplier[invoice.supplierId] = { standard: 0, creditNotes: 0 };
           }
-          
-          supplierSummary[invoice.supplierId].totalAmount += calculatedAmount;
-          supplierSummary[invoice.supplierId].outstandingAmount += outstandingAmount;
+          if (invoice.type === 'standard' || invoice.type === 'cash') {
+            invoicesBySupplier[invoice.supplierId].standard += invoice.amount;
+          } else if (invoice.type === 'credit_note') {
+            invoicesBySupplier[invoice.supplierId].creditNotes += invoice.amount;
+          }
         }
+      }
+      
+      // Process supplier payments
+      for (const payment of allSupplierPayments) {
+        // Group by branch
+        if (!paymentsByBranch[payment.branchId]) {
+          paymentsByBranch[payment.branchId] = 0;
+        }
+        paymentsByBranch[payment.branchId] += payment.totalAmount;
+        
+        // Group by supplier (only for filtered branch)
+        if (payment.supplierId && (!branchId || payment.branchId === branchId)) {
+          if (!paymentsBySupplier[payment.supplierId]) {
+            paymentsBySupplier[payment.supplierId] = 0;
+          }
+          paymentsBySupplier[payment.supplierId] += payment.totalAmount;
+        }
+      }
+      
+      // Calculate branch summaries using: Invoices - Credit Notes - Bulk Payments
+      for (const [branchIdKey, invoiceData] of Object.entries(invoicesByBranch)) {
+        const branchIdNum = parseInt(branchIdKey);
+        const branch = await storage.getBranch(branchIdNum);
+        const payments = paymentsByBranch[branchIdNum] || 0;
+        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - payments;
+        
+        branchSummary[branchIdNum] = {
+          id: branchIdNum,
+          name: branch?.name || `Branch ${branchIdNum}`,
+          totalAmount: (invoiceData as any).standard - (invoiceData as any).creditNotes,
+          outstandingAmount: outstanding
+        };
+        
+        totalOutstandingAmount += outstanding;
+      }
+      
+      // Calculate supplier summaries using: Invoices - Credit Notes - Bulk Payments
+      for (const [supplierIdKey, invoiceData] of Object.entries(invoicesBySupplier)) {
+        const supplierIdNum = parseInt(supplierIdKey);
+        const supplier = await storage.getSupplier(supplierIdNum);
+        const payments = paymentsBySupplier[supplierIdNum] || 0;
+        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - payments;
+        
+        supplierSummary[supplierIdNum] = {
+          id: supplierIdNum,
+          name: supplier?.name || `Supplier ${supplierIdNum}`,
+          totalAmount: (invoiceData as any).standard - (invoiceData as any).creditNotes,
+          outstandingAmount: outstanding
+        };
       }
       
       // Convert to arrays
