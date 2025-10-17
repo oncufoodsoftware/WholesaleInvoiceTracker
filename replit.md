@@ -113,17 +113,23 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
-- October 17, 2025. Dashboard enhancements and notification system fixes completed
-  - **NEW FEATURE**: Branch Financial Overview widget added to dashboard for branch managers
-  - Shows real-time financial metrics: Total Revenue, Total Expenses, Outstanding Balance, Cash Flow
-  - Displays current month data with color-coded indicators and payment rate badges
-  - **NEW FEATURE**: Direct Debits & Standing Orders widget added to dashboard for branch managers
-  - Direct Debits widget shows: total active, monthly amount, upcoming payments (7-day window)
-  - Fixed upcoming payments filter using startOfDay date normalization (includes today's payments)
-  - **NOTIFICATION SYSTEM FIX**: Removed all custom queryFn implementations from notification dropdown
-  - Notifications now use default fetcher pattern with proper object-style query keys
-  - Fixed "Query error: {}" console errors caused by primitive query key values
-  - All widgets follow template guidelines with branch-specific filtering
+- October 17, 2025. Complete dashboard redesign and invoice display bug fixes
+  - **DASHBOARD REDESIGN**: Completely new modern, clean dashboard layout
+  - Removed complex widgets and replaced with simple, effective metric cards
+  - Added 4 key metric cards: Total Invoices, Paid Amount, Outstanding, Payment Rate
+  - Added 2 analytics charts: Revenue Trend (line chart), Payment Status (pie chart)
+  - Added Recent Activity sections: Recent Invoices and Recent Payments lists
+  - Added Quick Actions section with 4 common task buttons
+  - **NOTIFICATION FIX**: Removed admin-only user-actions endpoint causing 403 errors
+  - Notifications now only show Direct Debits and Payment Tracking data
+  - All queries use default fetcher pattern with proper object-based query keys
+  - **INVOICE DISPLAY BUG FIX**: Fixed "Recent Invoices" showing £NaN and incorrect status
+  - Enhanced GET /api/invoices endpoint with SQL joins to include supplierName and branchName
+  - Dashboard now correctly uses invoice.amount (not invoice.totalAmount)
+  - Status display now uses invoice.status === 'fully_paid' (supports: Paid, Partial, Pending)
+  - **SECURITY FIX**: Restored accountant role branch filtering (was missing in initial fix)
+  - Branch managers AND accountants now properly restricted to their own branch invoices
+  - Supports ?limit=5 query parameter for dashboard Recent Invoices widget
 - October 17, 2025. Critical security fixes and supplier balance calculation bug resolved
   - **CRITICAL BUG FIX**: Supplier balance calculation was double-counting credit notes (using paidAmount + credit note subtraction)
   - **CRITICAL SECURITY FIX**: Branch managers could see other branches' balances in suppliers page response
