@@ -3,15 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { 
   BellIcon, 
-  CheckIcon, 
   CreditCard, 
-  FileText, 
-  UserPlus,
-  FileEdit,
-  Trash2,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
   Banknote,
   RotateCcw
 } from "lucide-react";
@@ -23,18 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface UserAction {
-  id: number;
-  userId: number;
-  actionType: string;
-  entityType: string;
-  entityId?: number;
-  details?: string;
-  timestamp: string;
-}
 
 interface DirectDebit {
   id: number;
@@ -64,7 +45,7 @@ interface PaymentTracking {
 
 interface NotificationItem {
   id: string;
-  type: 'user_action' | 'direct_debit' | 'payment';
+  type: 'direct_debit' | 'payment';
   title: string;
   subtitle: string;
   timestamp: Date;
@@ -77,11 +58,6 @@ export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
 
-  // Fetch user actions (using default fetcher pattern)
-  const { data: userActions = [], isLoading: actionsLoading, error: actionsError } = useQuery<UserAction[]>({
-    queryKey: ["/api/user-actions", { limit: 10 }],
-  });
-
   // Fetch direct debits (using default fetcher pattern)
   const { data: directDebits = [], isLoading: debitsLoading, error: debitsError } = useQuery<DirectDebit[]>({
     queryKey: ["/api/direct-debits"],
@@ -91,24 +67,6 @@ export function NotificationDropdown() {
   const { data: recentPayments = [], isLoading: paymentsLoading, error: paymentsError } = useQuery<PaymentTracking[]>({
     queryKey: ["/api/payments/tracking", { limit: 10 }],
   });
-
-  // Get action icon based on action type
-  const getActionIcon = (actionType: string) => {
-    switch (actionType) {
-      case 'create':
-        return <UserPlus className="h-4 w-4 text-blue-500" />;
-      case 'update':
-        return <FileEdit className="h-4 w-4 text-amber-500" />;
-      case 'delete':
-        return <Trash2 className="h-4 w-4 text-red-500" />;
-      case 'login':
-        return <ArrowUpRight className="h-4 w-4 text-green-500" />;
-      case 'logout':
-        return <ArrowDownRight className="h-4 w-4 text-gray-500" />;
-      default:
-        return <RefreshCw className="h-4 w-4 text-slate-500" />;
-    }
-  };
 
   // Get payment icon
   const getPaymentIcon = () => <CreditCard className="h-4 w-4 text-green-500" />;
@@ -125,28 +83,9 @@ export function NotificationDropdown() {
     }).format(amount);
   };
 
-  // Helper function to format action titles properly
-  const formatActionTitle = (actionType: string, entityType: string) => {
-    const entity = entityType.charAt(0).toUpperCase() + entityType.slice(1);
-    switch (actionType) {
-      case 'login':
-        return 'Logged in';
-      case 'logout':
-        return 'Logged out';
-      case 'create':
-        return `Created ${entity}`;
-      case 'update':
-        return `Updated ${entity}`;
-      case 'delete':
-        return `Deleted ${entity}`;
-      default:
-        return `${actionType.charAt(0).toUpperCase() + actionType.slice(1)} ${entity}`;
-    }
-  };
-
   // Check loading states
-  const isLoading = actionsLoading || debitsLoading || paymentsLoading;
-  const hasError = actionsError || debitsError || paymentsError;
+  const isLoading = debitsLoading || paymentsLoading;
+  const hasError = debitsError || paymentsError;
 
   // Filter direct debits to show only upcoming (within 7 days from now)
   const now = new Date();
@@ -159,16 +98,6 @@ export function NotificationDropdown() {
 
   // Combine all notifications
   const notifications: NotificationItem[] = [
-    // User actions
-    ...userActions.map(action => ({
-      id: `action-${action.id}`,
-      type: 'user_action' as const,
-      title: formatActionTitle(action.actionType, action.entityType),
-      subtitle: action.details || `User #${action.userId}`,
-      timestamp: new Date(action.timestamp),
-      icon: getActionIcon(action.actionType),
-      isRead: readNotifications.has(`action-${action.id}`),
-    })),
     // Recent payments
     ...recentPayments.slice(0, 5).map(payment => ({
       id: `payment-${payment.id}`,
