@@ -33,6 +33,7 @@ import { useAchievements, AchievementTrigger } from "@/hooks/use-achievements";
 import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/components/financial-tip-tooltip";
 import { PaymentTrackingWidget } from "@/components/dashboard/payment-tracking-widget";
 import { PaymentTrackingSection } from "@/components/dashboard/payment-tracking-section";
+import { DirectDebitsWidget } from "@/components/dashboard/direct-debits-widget";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -564,51 +565,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Branch Financial Overview - Only show for branch managers */}
-      {user?.role === "branch_manager" && (
+      {/* Direct Debits & Standing Orders - Only show for branch managers */}
+      {user?.role === "branch_manager" && user?.branchId && (
         <div className="mb-6">
-          <Card className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Branch Financial Overview</h3>
-            <p className="text-sm text-muted-foreground mb-4">Financial metrics for your branch</p>
-            
-            {!monthlyFinancialSummary ? (
-              <div className="flex items-center justify-center p-6">
-                <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Financial Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="p-4 border">
-                    <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Sales</CardTitle>
-                    <div className="text-2xl font-bold">{formatCurrency(monthlyFinancialSummary?.totalSales || 0)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
-                  </Card>
-                  
-                  <Card className="p-4 border">
-                    <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Total Expenses</CardTitle>
-                    <div className="text-2xl font-bold">{formatCurrency(monthlyFinancialSummary?.totalExpenses || 0)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
-                  </Card>
-                  
-                  <Card className="p-4 border">
-                    <CardTitle className="text-sm font-medium text-muted-foreground mb-1">Net Profit</CardTitle>
-                    <div className="text-2xl font-bold">{formatCurrency((monthlyFinancialSummary?.totalSales || 0) - (monthlyFinancialSummary?.totalExpenses || 0))}</div>
-                    <p className="text-xs text-muted-foreground mt-1">{getDateRangeDisplay()}</p>
-                  </Card>
-                </div>
-                
-                {/* Payment Tracking Section */}
-                <div>
-                  <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Payment Tracking
-                  </h4>
-                  <PaymentTrackingSection branchId={user?.branchId ? Number(user.branchId) : undefined} />
-                </div>
-              </div>
-            )}
-          </Card>
+          <DirectDebitsWidget branchId={user.branchId} />
         </div>
       )}
 
