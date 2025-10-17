@@ -277,9 +277,9 @@ export default function Dashboard() {
                         <p className="text-sm text-muted-foreground truncate">{invoice.supplierName}</p>
                       </div>
                       <div className="text-right ml-4">
-                        <p className="font-medium">{formatCurrency(invoice.totalAmount)}</p>
-                        <Badge variant={invoice.fullyPaid ? "default" : "secondary"} className="text-xs">
-                          {invoice.fullyPaid ? "Paid" : "Pending"}
+                        <p className="font-medium">{formatCurrency(invoice.amount)}</p>
+                        <Badge variant={invoice.status === 'fully_paid' ? "default" : "secondary"} className="text-xs">
+                          {invoice.status === 'fully_paid' ? "Paid" : invoice.status === 'partially_paid' ? 'Partial' : "Pending"}
                         </Badge>
                       </div>
                     </div>

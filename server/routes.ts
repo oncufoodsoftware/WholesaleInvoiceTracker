@@ -8,6 +8,9 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
+import { eq, and, desc } from "drizzle-orm";
+import { db } from "./db";
+import { invoices, suppliers, branches } from "@shared/schema";
 import { 
   insertInvoiceSchema, 
   insertBranchSchema,
@@ -591,9 +594,63 @@ Disallow: /`);
   // Invoice API endpoints
   app.get('/api/invoices', requireAuth, async (req, res) => {
     try {
-      const invoices = await storage.getAllInvoices();
-      const filteredInvoices = filterByUserAccess(invoices, req.user);
-      res.json(filteredInvoices);
+      const { limit, branchId } = req.query;
+      
+      // Build where conditions based on user access
+      const whereConditions = [];
+      
+      // Branch managers and accountants can only see their branch invoices
+      if ((req.user?.role === 'branch_manager' || req.user?.role === 'accountant') && req.user?.branchId) {
+        whereConditions.push(eq(invoices.branchId, req.user.branchId));
+      } else if (branchId) {
+        whereConditions.push(eq(invoices.branchId, parseInt(branchId as string)));
+      }
+      
+      // Build query with joins
+      const baseQuery = db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceDate: invoices.invoiceDate,
+          supplierId: invoices.supplierId,
+          supplierName: suppliers.name,
+          branchId: invoices.branchId,
+          branchName: branches.name,
+          amount: invoices.amount,
+          paidAmount: invoices.paidAmount,
+          status: invoices.status,
+          type: invoices.type,
+          notes: invoices.notes,
+          fileUrl: invoices.fileUrl,
+          createdAt: invoices.createdAt,
+          createdBy: invoices.createdBy,
+        })
+        .from(invoices)
+        .leftJoin(suppliers, eq(invoices.supplierId, suppliers.id))
+        .leftJoin(branches, eq(invoices.branchId, branches.id))
+        .$dynamic();
+      
+      // Apply where and limit dynamically
+      let enrichedInvoices;
+      if (whereConditions.length > 0 && limit) {
+        enrichedInvoices = await baseQuery
+          .where(and(...whereConditions))
+          .orderBy(desc(invoices.invoiceDate))
+          .limit(parseInt(limit as string));
+      } else if (whereConditions.length > 0) {
+        enrichedInvoices = await baseQuery
+          .where(and(...whereConditions))
+          .orderBy(desc(invoices.invoiceDate));
+      } else if (limit) {
+        enrichedInvoices = await baseQuery
+          .orderBy(desc(invoices.invoiceDate))
+          .limit(parseInt(limit as string));
+      } else {
+        enrichedInvoices = await baseQuery
+          .orderBy(desc(invoices.invoiceDate));
+      }
+      
+      res.json(enrichedInvoices);
     } catch (err) {
       res.status(500).json({ message: `Error fetching invoices: ${err}` });
     }
