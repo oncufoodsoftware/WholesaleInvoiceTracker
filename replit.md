@@ -113,6 +113,15 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- October 17, 2025. Critical security fixes and supplier balance calculation bug resolved
+  - **CRITICAL BUG FIX**: Supplier balance calculation was double-counting credit notes (using paidAmount + credit note subtraction)
+  - **CRITICAL SECURITY FIX**: Branch managers could see other branches' balances in suppliers page response
+  - Supplier balance calculation corrected to: Standard/Cash Invoices - Credit Notes - Bulk Payments
+  - GET /api/suppliers endpoint now restricts branchBalances object to branch manager's own branch only
+  - GET /api/suppliers endpoint now filters branches array to show only branch manager's own branch
+  - Added getAllSupplierPayments() storage method to fetch bulk payment data for accurate balance calculation
+  - Verified: Wholesale Catering Ltd balance changed from incorrect £576.05 to correct £2,000.03
+  - Verified: Finances page branch dropdown already disabled for branch managers (no changes needed)
 - August 12, 2025. Critical security fixes and UI enhancements completed
   - **SECURITY FIX**: Added proper authentication and branch restrictions to dashboard API
   - **SECURITY FIX**: Removed duplicate payment tracking endpoint that bypassed branch controls
