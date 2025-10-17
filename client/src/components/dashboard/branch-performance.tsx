@@ -10,14 +10,14 @@ interface BranchPerformance {
 }
 
 export function BranchPerformance() {
-  const { data: branches, isLoading } = useQuery({
+  const { data: branches, isLoading } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ["/api/branches"],
   });
 
   // This would be a separate query in a real application
   // For now, we'll create sample data based on branches
   const branchPerformance: BranchPerformance[] = branches ? 
-    branches.map((branch: any, index: number) => {
+    branches.map((branch, index) => {
       const multiplier = 1 - (index * 0.15); // Decreasing values for each branch
       return {
         id: branch.id,

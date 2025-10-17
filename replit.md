@@ -113,13 +113,17 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
-- October 17, 2025. Dashboard Direct Debits widget and critical fixes completed
+- October 17, 2025. Dashboard enhancements and notification system fixes completed
+  - **NEW FEATURE**: Branch Financial Overview widget added to dashboard for branch managers
+  - Shows real-time financial metrics: Total Revenue, Total Expenses, Outstanding Balance, Cash Flow
+  - Displays current month data with color-coded indicators and payment rate badges
   - **NEW FEATURE**: Direct Debits & Standing Orders widget added to dashboard for branch managers
-  - **REPLACED**: Broken "Branch Financial Overview" section removed (had DOM nesting errors)
   - Direct Debits widget shows: total active, monthly amount, upcoming payments (7-day window)
   - Fixed upcoming payments filter using startOfDay date normalization (includes today's payments)
-  - Widget follows default fetcher pattern (no custom queryFn), branch-specific filtering
-  - Eliminates console errors and improves branch manager UX
+  - **NOTIFICATION SYSTEM FIX**: Removed all custom queryFn implementations from notification dropdown
+  - Notifications now use default fetcher pattern with proper object-style query keys
+  - Fixed "Query error: {}" console errors caused by primitive query key values
+  - All widgets follow template guidelines with branch-specific filtering
 - October 17, 2025. Critical security fixes and supplier balance calculation bug resolved
   - **CRITICAL BUG FIX**: Supplier balance calculation was double-counting credit notes (using paidAmount + credit note subtraction)
   - **CRITICAL SECURITY FIX**: Branch managers could see other branches' balances in suppliers page response

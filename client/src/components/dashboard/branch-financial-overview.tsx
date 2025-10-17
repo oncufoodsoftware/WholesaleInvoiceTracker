@@ -49,7 +49,10 @@ export function BranchFinancialOverview({ branchId }: BranchFinancialOverviewPro
 
   const dateRange = getCurrentMonthRange();
 
-  const { data: monthlyFinancialSummary, isLoading: isFinancialLoading } = useQuery({
+  const { data: monthlyFinancialSummary, isLoading: isFinancialLoading } = useQuery<{
+    totalSales: number;
+    totalExpenses: number;
+  }>({
     queryKey: ["/api/financial-transactions/summary/range", { 
       branchId, 
       startDate: dateRange.startDate, 
