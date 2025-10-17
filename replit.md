@@ -113,6 +113,13 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- October 17, 2025. Dashboard Direct Debits widget and critical fixes completed
+  - **NEW FEATURE**: Direct Debits & Standing Orders widget added to dashboard for branch managers
+  - **REPLACED**: Broken "Branch Financial Overview" section removed (had DOM nesting errors)
+  - Direct Debits widget shows: total active, monthly amount, upcoming payments (7-day window)
+  - Fixed upcoming payments filter using startOfDay date normalization (includes today's payments)
+  - Widget follows default fetcher pattern (no custom queryFn), branch-specific filtering
+  - Eliminates console errors and improves branch manager UX
 - October 17, 2025. Critical security fixes and supplier balance calculation bug resolved
   - **CRITICAL BUG FIX**: Supplier balance calculation was double-counting credit notes (using paidAmount + credit note subtraction)
   - **CRITICAL SECURITY FIX**: Branch managers could see other branches' balances in suppliers page response
