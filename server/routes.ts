@@ -355,16 +355,34 @@ Disallow: /`);
             totalOutstanding += branchBalance;
           }
           
-          branchBalances[branch.id] = {
-            name: branch.name,
-            amount: branchBalance
-          };
+          // Branch managers can only see their own branch balances
+          // Admin can see all branch balances
+          if (user?.role === 'branch_manager') {
+            // Only show balance for the branch manager's own branch
+            if (branch.id === targetBranchId) {
+              branchBalances[branch.id] = {
+                name: branch.name,
+                amount: branchBalance
+              };
+            }
+          } else {
+            // Admin sees all branch balances
+            branchBalances[branch.id] = {
+              name: branch.name,
+              amount: branchBalance
+            };
+          }
         }
 
+        // Filter branches array for branch managers - they only see their own branch
+        const visibleBranches = (user?.role === 'branch_manager' && targetBranchId)
+          ? branches.filter(b => b.id === targetBranchId)
+          : branches;
+        
         return {
           ...supplier,
-          branches: branches,
-          branchCount: branches.length,
+          branches: visibleBranches,
+          branchCount: visibleBranches.length,
           outstandingAmount: totalOutstanding,
           branchBalances: branchBalances
         };
