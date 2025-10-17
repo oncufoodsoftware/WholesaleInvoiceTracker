@@ -77,34 +77,19 @@ export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
 
-  // Fetch user actions
+  // Fetch user actions (using default fetcher pattern)
   const { data: userActions = [], isLoading: actionsLoading, error: actionsError } = useQuery<UserAction[]>({
-    queryKey: ["/api/user-actions"],
-    queryFn: async () => {
-      const res = await fetch("/api/user-actions?limit=10");
-      if (!res.ok) throw new Error("Failed to fetch user actions");
-      return res.json();
-    },
+    queryKey: ["/api/user-actions", { limit: 10 }],
   });
 
-  // Fetch direct debits
+  // Fetch direct debits (using default fetcher pattern)
   const { data: directDebits = [], isLoading: debitsLoading, error: debitsError } = useQuery<DirectDebit[]>({
     queryKey: ["/api/direct-debits"],
-    queryFn: async () => {
-      const res = await fetch('/api/direct-debits');
-      if (!res.ok) throw new Error("Failed to fetch direct debits");
-      return res.json();
-    },
   });
 
-  // Fetch recent payments
+  // Fetch recent payments (using default fetcher pattern)
   const { data: recentPayments = [], isLoading: paymentsLoading, error: paymentsError } = useQuery<PaymentTracking[]>({
-    queryKey: ["/api/payments/tracking"],
-    queryFn: async () => {
-      const res = await fetch('/api/payments/tracking?limit=10');
-      if (!res.ok) throw new Error("Failed to fetch payments");
-      return res.json();
-    },
+    queryKey: ["/api/payments/tracking", { limit: 10 }],
   });
 
   // Get action icon based on action type

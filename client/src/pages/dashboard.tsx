@@ -34,6 +34,7 @@ import { FinancialTipTooltip, CashFlowTipTooltip, AnalyticsTipTooltip } from "@/
 import { PaymentTrackingWidget } from "@/components/dashboard/payment-tracking-widget";
 import { PaymentTrackingSection } from "@/components/dashboard/payment-tracking-section";
 import { DirectDebitsWidget } from "@/components/dashboard/direct-debits-widget";
+import { BranchFinancialOverview } from "@/components/dashboard/branch-financial-overview";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -93,15 +94,9 @@ export default function Dashboard() {
 
   // Fetch summary data from the API - adjust query based on user role
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary", currentBranchId],
-    queryFn: async () => {
-      const endpoint = currentBranchId && currentBranchId !== "all"
-        ? `/api/dashboard/summary?branchId=${currentBranchId}`
-        : "/api/dashboard/summary";
-      const res = await fetch(endpoint);
-      if (!res.ok) throw new Error("Failed to fetch summary data");
-      return res.json();
-    },
+    queryKey: currentBranchId && currentBranchId !== "all"
+      ? ["/api/dashboard/summary", { branchId: currentBranchId }]
+      : ["/api/dashboard/summary"],
     enabled: !!currentBranchId || user?.role === "branch_manager",
   });
 
@@ -562,6 +557,13 @@ export default function Dashboard() {
               )}
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Branch Financial Overview - Only show for branch managers */}
+      {user?.role === "branch_manager" && user?.branchId && (
+        <div className="mb-6">
+          <BranchFinancialOverview branchId={user.branchId} />
         </div>
       )}
 
