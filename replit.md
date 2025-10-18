@@ -113,7 +113,15 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
-- October 18, 2025. Dashboard enhanced with branch/date filtering and top suppliers widget
+- October 18, 2025. Dashboard branch filtering fixes and balance calculation consistency
+  - **CRITICAL FIX**: Fixed default query fetcher to properly pass URL query parameters
+  - Query fetcher now extracts params from queryKey[1] and builds URLSearchParams
+  - Fixes branch filtering completely broken - dashboard was ignoring branchId parameter
+  - All dashboard API calls now correctly include ?branchId=X in URL
+  - **TOP SUPPLIERS BALANCE FIX**: Dashboard and /suppliers page now show identical balances
+  - /api/suppliers/top-balance now uses dynamic calculation from invoices (not cached table)
+  - Both endpoints use identical formula: Standard/Cash Invoices - Credit Notes - Bulk Payments
+  - Eliminates inconsistency between dashboard widget and suppliers page data
   - **DASHBOARD FILTERS**: Added admin-only branch dropdown and date range picker
   - Branch dropdown allows admin to filter by specific branch or view "All Branches"
   - Date range picker (calendar component) allows admin to filter by custom date ranges
@@ -123,9 +131,9 @@ This is a comprehensive finance management system built with a modern full-stack
   - "Show More" link redirects to full suppliers page
   - **BACKEND DATE FILTERING**: Comprehensive date range support across all dashboard APIs
   - /api/dashboard/summary: Filters invoices and supplier payments by startDate/endDate
-  - /api/reports/revenue: getMonthlyRevenue() accepts date range, adjusts monthly buckets
+  - /api/reports/revenue: getMonthlyRevenu() accepts date range, adjusts monthly buckets
   - /api/invoices: Added gte/lte SQL operators for invoice date filtering
-  - /api/suppliers/top-balance: Dynamic calculation when date filtering, filters both invoices and payments
+  - /api/suppliers/top-balance: Dynamic calculation filters both invoices and payments by date/branch
   - All endpoints properly filter supplier payments by branch AND date range
   - **QUERY OPTIMIZATION**: Frontend uses queryParams object with proper cache invalidation
   - All TanStack Query keys include branchId, startDate, endDate for accurate caching
