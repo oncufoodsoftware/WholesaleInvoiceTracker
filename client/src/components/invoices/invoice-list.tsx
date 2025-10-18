@@ -115,20 +115,14 @@ export function InvoiceList({
 
   // Get row background color based on invoice type
   const getRowClassName = (invoice: any) => {
-    // Debug: log invoice types
-    if (Math.random() < 0.01) { // Log occasionally to avoid spam
-      console.log('Invoice type:', invoice.type, 'Invoice #:', invoice.invoiceNumber);
-    }
-    
     switch (invoice.type) {
       case "standard":
-        return "bg-sky-200/60 hover:bg-sky-200 dark:bg-sky-800/30 dark:hover:bg-sky-800/40";
+        return "bg-sky-300/70 hover:bg-sky-300 dark:bg-sky-700/40 dark:hover:bg-sky-700/50";
       case "credit_note":
-        return "bg-violet-200/60 hover:bg-violet-200 dark:bg-violet-800/30 dark:hover:bg-violet-800/40";
+        return "bg-violet-300/70 hover:bg-violet-300 dark:bg-violet-700/40 dark:hover:bg-violet-700/50";
       case "cash":
-        return "bg-orange-200/60 hover:bg-orange-200 dark:bg-orange-800/30 dark:hover:bg-orange-800/40";
+        return "bg-orange-300/70 hover:bg-orange-300 dark:bg-orange-700/40 dark:hover:bg-orange-700/50";
       default:
-        console.warn('Unknown invoice type:', invoice.type);
         return "";
     }
   };

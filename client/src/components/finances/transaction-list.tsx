@@ -262,13 +262,13 @@ export function TransactionList({
   const getRowClassName = (transaction: any) => {
     // Priority: Expense > Card > Cash
     if (transaction.type === "expense") {
-      return "bg-rose-200/60 hover:bg-rose-200 dark:bg-rose-800/30 dark:hover:bg-rose-800/40";
+      return "bg-rose-300/70 hover:bg-rose-300 dark:bg-rose-700/40 dark:hover:bg-rose-700/50";
     }
     if (transaction.paymentMethod === "card") {
-      return "bg-blue-200/60 hover:bg-blue-200 dark:bg-blue-800/30 dark:hover:bg-blue-800/40";
+      return "bg-blue-300/70 hover:bg-blue-300 dark:bg-blue-700/40 dark:hover:bg-blue-700/50";
     }
     if (transaction.paymentMethod === "cash") {
-      return "bg-amber-200/60 hover:bg-amber-200 dark:bg-amber-800/30 dark:hover:bg-amber-800/40";
+      return "bg-amber-300/70 hover:bg-amber-300 dark:bg-amber-700/40 dark:hover:bg-amber-700/50";
     }
     return "";
   };
