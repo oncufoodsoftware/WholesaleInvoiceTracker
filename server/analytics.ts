@@ -3,7 +3,7 @@ import { storage } from "./storage";
 import { Invoice, FinancialTransaction } from "@shared/schema";
 
 // Calculate monthly revenue from invoices
-export async function getMonthlyRevenue(branchId?: number): Promise<any[]> {
+export async function getMonthlyRevenue(branchId?: number, startDate?: string, endDate?: string): Promise<any[]> {
   try {
     // Get all invoices
     let invoices: Invoice[];
@@ -13,32 +13,43 @@ export async function getMonthlyRevenue(branchId?: number): Promise<any[]> {
       invoices = await storage.getAllInvoices();
     }
 
+    // Apply date range filtering if provided
+    if (startDate || endDate) {
+      invoices = invoices.filter((invoice) => {
+        const invoiceDate = new Date(invoice.invoiceDate);
+        if (startDate && invoiceDate < new Date(startDate)) return false;
+        if (endDate && invoiceDate > new Date(endDate)) return false;
+        return true;
+      });
+    }
+
     // Group invoices by month and year
     const monthlyRevenue = new Map<string, number>();
     
-    // Get data for the past 12 months
+    // Get data for the past 12 months (or use custom date range)
     const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date();
-      date.setMonth(now.getMonth() - i);
-      const key = date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    const rangeEnd = endDate ? new Date(endDate) : now;
+    const rangeStart = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    
+    // Initialize monthly buckets
+    const currentDate = new Date(rangeStart);
+    while (currentDate <= rangeEnd) {
+      const key = currentDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
       monthlyRevenue.set(key, 0);
+      currentDate.setMonth(currentDate.getMonth() + 1);
     }
 
     // Process invoices
     invoices.forEach(invoice => {
       const invoiceDate = new Date(invoice.invoiceDate);
-      // Only include invoices from the last 12 months
-      if (invoiceDate >= new Date(now.setMonth(now.getMonth() - 12))) {
-        const key = invoiceDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-        
-        // Calculate amount based on invoice type (credit notes are negative)
-        const amount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
-        
-        // Add to monthly total if the key exists
-        if (monthlyRevenue.has(key)) {
-          monthlyRevenue.set(key, monthlyRevenue.get(key)! + amount);
-        }
+      const key = invoiceDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+      
+      // Calculate amount based on invoice type (credit notes are negative)
+      const amount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
+      
+      // Add to monthly total if the key exists
+      if (monthlyRevenue.has(key)) {
+        monthlyRevenue.set(key, monthlyRevenue.get(key)! + amount);
       }
     });
 
@@ -372,9 +383,11 @@ export async function getRevenueForecast(req: Request, res: Response) {
   try {
     // Check if we need to filter by branch
     const branchId = req.query.branchId ? parseInt(req.query.branchId as string) : undefined;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
     
     // Get historical revenue data
-    const revenue = await getMonthlyRevenue(branchId);
+    const revenue = await getMonthlyRevenue(branchId, startDate, endDate);
     
     // Get historical expense data
     const expenses = await getMonthlyExpenses(branchId);

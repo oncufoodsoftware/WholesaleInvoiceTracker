@@ -51,29 +51,44 @@ export default function Dashboard() {
     ? user?.branchId 
     : selectedBranchId;
 
+  // Build query parameters including date range
+  const queryParams = {
+    ...(branchId && { branchId }),
+    ...(dateRange.from && { startDate: format(dateRange.from, 'yyyy-MM-dd') }),
+    ...(dateRange.to && { endDate: format(dateRange.to, 'yyyy-MM-dd') }),
+  };
+
   // Fetch dashboard summary
   const { data: summary, isLoading: summaryLoading } = useQuery<{
     totalInvoiceAmount: number;
     totalOutstandingAmount: number;
   }>({
-    queryKey: branchId ? ["/api/dashboard/summary", { branchId }] : ["/api/dashboard/summary"],
+    queryKey: Object.keys(queryParams).length > 0 
+      ? ["/api/dashboard/summary", queryParams] 
+      : ["/api/dashboard/summary"],
   });
 
   // Fetch revenue chart data
   const { data: revenueData } = useQuery<{
     revenue: Array<{ month: string; amount: number }>;
   }>({
-    queryKey: branchId ? ["/api/reports/revenue", { branchId }] : ["/api/reports/revenue"],
+    queryKey: Object.keys(queryParams).length > 0 
+      ? ["/api/reports/revenue", queryParams] 
+      : ["/api/reports/revenue"],
   });
 
   // Fetch recent invoices
   const { data: recentInvoices = [] } = useQuery<Array<any>>({
-    queryKey: branchId ? ["/api/invoices", { branchId, limit: 5 }] : ["/api/invoices", { limit: 5 }],
+    queryKey: Object.keys(queryParams).length > 0 
+      ? ["/api/invoices", { ...queryParams, limit: 5 }] 
+      : ["/api/invoices", { limit: 5 }],
   });
 
   // Fetch recent payments
   const { data: recentPayments = [] } = useQuery<Array<any>>({
-    queryKey: branchId ? ["/api/payments/tracking", { branchId, limit: 5 }] : ["/api/payments/tracking", { limit: 5 }],
+    queryKey: Object.keys(queryParams).length > 0 
+      ? ["/api/payments/tracking", { ...queryParams, limit: 5 }] 
+      : ["/api/payments/tracking", { limit: 5 }],
   });
 
   // Fetch all branches (for admin)
@@ -84,7 +99,9 @@ export default function Dashboard() {
 
   // Fetch top suppliers by balance
   const { data: topSuppliers = [] } = useQuery<Array<any>>({
-    queryKey: branchId ? ["/api/suppliers/top-balance", { branchId, limit: 10 }] : ["/api/suppliers/top-balance", { limit: 10 }],
+    queryKey: Object.keys(queryParams).length > 0 
+      ? ["/api/suppliers/top-balance", { ...queryParams, limit: 10 }] 
+      : ["/api/suppliers/top-balance", { limit: 10 }],
   });
 
   const formatCurrency = (amount: number) => {

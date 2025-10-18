@@ -407,6 +407,8 @@ Disallow: /`);
       const user = req.user as any;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      const startDate = req.query.startDate as string | undefined;
+      const endDate = req.query.endDate as string | undefined;
       
       // Branch managers can only see suppliers from their own branch
       let targetBranchId = branchId;
@@ -414,7 +416,75 @@ Disallow: /`);
         targetBranchId = user.branchId;
       }
       
-      // Get suppliers with their branch relationships
+      // If date filtering is requested, calculate dynamically from invoices and payments
+      if (startDate || endDate) {
+        // Get invoices
+        let invoices;
+        if (targetBranchId) {
+          invoices = await storage.getInvoicesByBranch(targetBranchId);
+        } else {
+          invoices = await storage.getAllInvoices();
+        }
+        
+        // Apply date range filtering
+        if (startDate || endDate) {
+          invoices = invoices.filter((invoice) => {
+            const invoiceDate = new Date(invoice.invoiceDate);
+            if (startDate && invoiceDate < new Date(startDate)) return false;
+            if (endDate && invoiceDate > new Date(endDate)) return false;
+            return true;
+          });
+        }
+        
+        // Get all supplier payments
+        const allSupplierPayments = await storage.getAllSupplierPayments();
+        
+        // Calculate balance per supplier
+        const supplierBalances: Record<number, number> = {};
+        const supplierInfo: Record<number, any> = {};
+        
+        // Process invoices
+        for (const invoice of invoices) {
+          if (!invoice.supplierId) continue;
+          
+          if (!supplierBalances[invoice.supplierId]) {
+            supplierBalances[invoice.supplierId] = 0;
+            const supplier = await storage.getSupplier(invoice.supplierId);
+            supplierInfo[invoice.supplierId] = supplier;
+          }
+          
+          // Calculate balance: Standard/Cash - Credit Notes
+          if (invoice.type === 'standard' || invoice.type === 'cash') {
+            supplierBalances[invoice.supplierId] += invoice.amount;
+          } else if (invoice.type === 'credit_note') {
+            supplierBalances[invoice.supplierId] -= invoice.amount;
+          }
+        }
+        
+        // Subtract bulk payments
+        for (const payment of allSupplierPayments) {
+          if (!payment.supplierId) continue;
+          if (supplierBalances[payment.supplierId] !== undefined) {
+            supplierBalances[payment.supplierId] -= payment.totalAmount;
+          }
+        }
+        
+        // Convert to array and sort
+        const topSuppliers = Object.entries(supplierBalances)
+          .map(([supplierId, balance]) => ({
+            id: parseInt(supplierId),
+            name: supplierInfo[parseInt(supplierId)]?.name || 'Unknown',
+            contactPerson: supplierInfo[parseInt(supplierId)]?.contactPerson || '',
+            balance
+          }))
+          .filter(s => s.balance > 0)
+          .sort((a, b) => b.balance - a.balance)
+          .slice(0, limit);
+        
+        return res.json(topSuppliers);
+      }
+      
+      // No date filtering - use current balances from SupplierBranchBalance table
       let suppliersWithBranches;
       if (targetBranchId) {
         suppliersWithBranches = await storage.getAllSuppliersWithBranches(targetBranchId);
@@ -649,7 +719,7 @@ Disallow: /`);
   // Invoice API endpoints
   app.get('/api/invoices', requireAuth, async (req, res) => {
     try {
-      const { limit, branchId } = req.query;
+      const { limit, branchId, startDate, endDate } = req.query;
       
       // Build where conditions based on user access
       const whereConditions = [];
@@ -659,6 +729,14 @@ Disallow: /`);
         whereConditions.push(eq(invoices.branchId, req.user.branchId));
       } else if (branchId) {
         whereConditions.push(eq(invoices.branchId, parseInt(branchId as string)));
+      }
+      
+      // Add date range filtering if provided
+      if (startDate) {
+        whereConditions.push(gte(invoices.invoiceDate, new Date(startDate as string)));
+      }
+      if (endDate) {
+        whereConditions.push(lte(invoices.invoiceDate, new Date(endDate as string)));
       }
       
       // Build query with joins
@@ -1357,6 +1435,8 @@ Disallow: /`);
 
       const user = req.user as any;
       let branchId = req.query.branchId ? parseInt(req.query.branchId as string) : null;
+      const startDate = req.query.startDate as string | undefined;
+      const endDate = req.query.endDate as string | undefined;
       
       // Branch managers can only see their own branch data
       if (user?.role === 'branch_manager' && user?.branchId) {
@@ -1372,6 +1452,16 @@ Disallow: /`);
       } else {
         // Branch managers without proper branchId should see empty data
         invoices = [];
+      }
+      
+      // Apply date range filtering if provided
+      if (startDate || endDate) {
+        invoices = invoices.filter((invoice) => {
+          const invoiceDate = new Date(invoice.invoiceDate);
+          if (startDate && invoiceDate < new Date(startDate)) return false;
+          if (endDate && invoiceDate > new Date(endDate)) return false;
+          return true;
+        });
       }
       
       // Get all supplier payments for balance calculation
