@@ -5,6 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   TrendingUp,
   TrendingDown,
@@ -14,7 +31,6 @@ import {
   Building,
   PlusIcon,
   ArrowRight,
-  Calendar,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
@@ -23,8 +39,17 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 export default function Dashboard() {
   const { user } = useAuth();
 
-  // Determine branch ID based on user role
-  const branchId = user?.role === "branch_manager" ? user?.branchId : null;
+  // State for filters
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
+
+  // Determine branch ID based on user role and selection
+  const branchId = user?.role === "branch_manager" || user?.role === "accountant" 
+    ? user?.branchId 
+    : selectedBranchId;
 
   // Fetch dashboard summary
   const { data: summary, isLoading: summaryLoading } = useQuery<{
@@ -49,6 +74,17 @@ export default function Dashboard() {
   // Fetch recent payments
   const { data: recentPayments = [] } = useQuery<Array<any>>({
     queryKey: branchId ? ["/api/payments/tracking", { branchId, limit: 5 }] : ["/api/payments/tracking", { limit: 5 }],
+  });
+
+  // Fetch all branches (for admin)
+  const { data: branches = [] } = useQuery<Array<{ id: number; name: string }>>({
+    queryKey: ["/api/branches"],
+    enabled: user?.role === "admin",
+  });
+
+  // Fetch top suppliers by balance
+  const { data: topSuppliers = [] } = useQuery<Array<any>>({
+    queryKey: branchId ? ["/api/suppliers/top-balance", { branchId, limit: 10 }] : ["/api/suppliers/top-balance", { limit: 10 }],
   });
 
   const formatCurrency = (amount: number) => {
@@ -104,28 +140,92 @@ export default function Dashboard() {
   return (
     <div className="py-6 px-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              {user?.role === "branch_manager" 
-                ? `Welcome back, ${user?.fullName || 'Manager'}` 
-                : `Welcome back, ${user?.fullName || 'Admin'}`}
-            </p>
-            {user?.role === "branch_manager" && (
-              <Badge variant="outline" className="mt-2">
-                <Building className="h-3 w-3 mr-1" />
-                Branch Manager
-              </Badge>
-            )}
+        {/* Header with Filters */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                {user?.role === "branch_manager" 
+                  ? `Welcome back, ${user?.fullName || 'Manager'}` 
+                  : `Welcome back, ${user?.fullName || 'Admin'}`}
+              </p>
+              {user?.role === "branch_manager" && (
+                <Badge variant="outline" className="mt-2">
+                  <Building className="h-3 w-3 mr-1" />
+                  Branch Manager
+                </Badge>
+              )}
+            </div>
           </div>
-          <Link href="/invoices">
-            <Button size="lg" className="w-full sm:w-auto">
-              <PlusIcon className="h-4 w-4 mr-2" />
-              New Invoice
-            </Button>
-          </Link>
+
+          {/* Filters - Only for Admin */}
+          {user?.role === "admin" && (
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Select
+                value={selectedBranchId?.toString() || "all"}
+                onValueChange={(value) => setSelectedBranchId(value === "all" ? null : parseInt(value))}
+              >
+                <SelectTrigger className="w-full sm:w-[240px]" data-testid="select-branch">
+                  <SelectValue placeholder="All Branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full sm:w-[280px] justify-start text-left font-normal",
+                      !dateRange.from && !dateRange.to && "text-muted-foreground"
+                    )}
+                    data-testid="button-date-range"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd, y")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={{ from: dateRange.from, to: dateRange.to }}
+                    onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(dateRange.from || dateRange.to) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setDateRange({ from: undefined, to: undefined })}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Key Metrics Cards */}
@@ -329,6 +429,60 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Top Suppliers by Outstanding Balance */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Top Suppliers by Outstanding Balance</CardTitle>
+              <CardDescription>Suppliers with the highest outstanding amounts</CardDescription>
+            </div>
+            <Link href="/suppliers">
+              <Button variant="ghost" size="sm">
+                View All
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {topSuppliers.length > 0 ? (
+                <>
+                  {topSuppliers.slice(0, 10).map((supplier: any, index: number) => (
+                    <div key={supplier.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{supplier.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {supplier.contactPerson || 'No contact person'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="font-bold text-lg text-amber-600">
+                          {formatCurrency(supplier.balance || 0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Outstanding</p>
+                      </div>
+                    </div>
+                  ))}
+                  {topSuppliers.length > 10 && (
+                    <Link href="/suppliers">
+                      <Button variant="outline" className="w-full mt-2">
+                        Show More ({topSuppliers.length - 10} more suppliers)
+                      </Button>
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No suppliers with outstanding balance</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>

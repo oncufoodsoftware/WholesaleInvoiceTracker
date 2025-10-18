@@ -397,6 +397,61 @@ Disallow: /`);
     }
   });
   
+  // Get top suppliers by outstanding balance
+  app.get('/api/suppliers/top-balance', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      const user = req.user as any;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const branchId = req.query.branchId ? Number(req.query.branchId) : undefined;
+      
+      // Branch managers can only see suppliers from their own branch
+      let targetBranchId = branchId;
+      if ((user?.role === 'branch_manager' || user?.role === 'accountant') && user?.branchId) {
+        targetBranchId = user.branchId;
+      }
+      
+      // Get suppliers with their branch relationships
+      let suppliersWithBranches;
+      if (targetBranchId) {
+        suppliersWithBranches = await storage.getAllSuppliersWithBranches(targetBranchId);
+      } else {
+        suppliersWithBranches = await storage.getAllSuppliersWithBranches();
+      }
+      
+      // Calculate balance for each supplier
+      const suppliersWithBalance = await Promise.all(suppliersWithBranches.map(async ({ supplier, branches }) => {
+        let totalOutstanding = 0;
+        
+        for (const branch of branches) {
+          const branchBalanceRecord = await storage.getSupplierBranchBalance(supplier.id, branch.id);
+          totalOutstanding += branchBalanceRecord?.balance || 0;
+        }
+        
+        return {
+          id: supplier.id,
+          name: supplier.name,
+          contactPerson: supplier.contactPerson,
+          balance: totalOutstanding
+        };
+      }));
+      
+      // Sort by balance descending and limit
+      const topSuppliers = suppliersWithBalance
+        .filter(s => s.balance > 0)
+        .sort((a, b) => b.balance - a.balance)
+        .slice(0, limit);
+      
+      res.json(topSuppliers);
+    } catch (err) {
+      console.error('Error in /api/suppliers/top-balance:', err);
+      res.status(500).json({ message: `Error fetching top suppliers: ${err}` });
+    }
+  });
+
   // Get suppliers for a specific branch - for branch managers
   app.get('/api/suppliers/branch/:branchId', async (req, res) => {
     try {
