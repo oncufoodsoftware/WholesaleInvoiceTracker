@@ -511,9 +511,16 @@ Disallow: /`);
       const suppliersWithBalance = await Promise.all(suppliersWithBranches.map(async ({ supplier, branches }) => {
         let totalOutstanding = 0;
         
-        for (const branch of branches) {
-          const branchBalanceRecord = await storage.getSupplierBranchBalance(supplier.id, branch.id);
-          totalOutstanding += branchBalanceRecord?.balance || 0;
+        // If targetBranchId is specified, only get that branch's balance
+        if (targetBranchId) {
+          const branchBalanceRecord = await storage.getSupplierBranchBalance(supplier.id, targetBranchId);
+          totalOutstanding = branchBalanceRecord?.balance || 0;
+        } else {
+          // Otherwise sum all branches
+          for (const branch of branches) {
+            const branchBalanceRecord = await storage.getSupplierBranchBalance(supplier.id, branch.id);
+            totalOutstanding += branchBalanceRecord?.balance || 0;
+          }
         }
         
         return {
