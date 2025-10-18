@@ -113,6 +113,24 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- October 18, 2025. Dashboard date range presets and /finances page Export modernization
+  - **DASHBOARD DATE PRESETS**: Added comprehensive date range preset options
+  - Date preset dropdown: All Time, Today, Yesterday, This Week (Mon-Sun), This Month (1st-end), This Year, Custom Range
+  - Presets available for both admin and branch managers (not admin-only)
+  - **DASHBOARD METRICS FIX**: Corrected summary calculation logic
+  - Total Invoices: Now shows only Standard + Cash invoices (excludes credit notes from total)
+  - Paid Amount: Now shows total bulk payments (not calculated as totalInvoices - outstanding)
+  - Outstanding: Correctly calculated as Total Invoices - Credit Notes - Paid Amount
+  - Payment Rate: Accurately shows (Paid / Total Invoices) * 100%
+  - Backend now returns separate totalPaidAmount field from bulk payments sum
+  - **FINANCES PAGE EXPORT MODERNIZATION**: Complete UX overhaul for CSV export feature
+  - Export button now opens modern dialog with clean UI instead of direct export
+  - Export dialog includes: branch selector, date range presets (Today, Yesterday, Week, Month, Year, Custom)
+  - Custom date range shows start/end date pickers inline
+  - Branch managers automatically locked to their branch (disabled dropdown)
+  - Improved filename format: {BranchName}-Transactions-{DateRange}.csv
+  - Export dialog includes helpful info message about export contents
+  - **EDIT TRANSACTION**: Already working as popup dialog (no changes needed)
 - October 18, 2025. Dashboard branch filtering fixes and balance calculation consistency
   - **CRITICAL FIX**: Fixed default query fetcher to properly pass URL query parameters
   - Query fetcher now extracts params from queryKey[1] and builds URLSearchParams

@@ -61,10 +61,15 @@ export default function Finances() {
   });
   const [activeTab, setActiveTab] = useState("transactions");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [exportBranch, setExportBranch] = useState<string>("");
+  const [exportDateRange, setExportDateRange] = useState<string>("month");
+  const [exportStartDate, setExportStartDate] = useState<string>("");
+  const [exportEndDate, setExportEndDate] = useState<string>("");
 
   // Get branches
-  const { data: branches = [] } = useQuery({
+  const { data: branches = [] } = useQuery<any[]>({
     queryKey: ["/api/branches"],
   });
 
@@ -74,10 +79,12 @@ export default function Finances() {
   React.useEffect(() => {
     if (user && user.role === "branch_manager" && user.branchId) {
       setSelectedBranch(user.branchId.toString());
+      setExportBranch(user.branchId.toString());
     } else if (branches.length > 0 && !selectedBranch) {
       // Use branch 4 (Letchworth) as default since it has data
       const branchWithData = branches.find(b => b.id === 4) || branches[0];
       setSelectedBranch(branchWithData.id.toString());
+      setExportBranch(branchWithData.id.toString());
     }
   }, [branches, selectedBranch, user]);
 
@@ -195,29 +202,96 @@ export default function Finances() {
     }
   };
 
+  // Calculate export date range based on selection
+  const getExportDateRange = () => {
+    const today = new Date();
+    let startDate = "";
+    let endDate = "";
+    
+    switch (exportDateRange) {
+      case "today":
+        const todayYear = today.getFullYear();
+        const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const todayDay = String(today.getDate()).padStart(2, '0');
+        startDate = endDate = `${todayYear}-${todayMonth}-${todayDay}`;
+        break;
+      case "yesterday":
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const year = yesterday.getFullYear();
+        const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+        const day = String(yesterday.getDate()).padStart(2, '0');
+        startDate = endDate = `${year}-${month}-${day}`;
+        break;
+      case "week":
+        const currentDate = new Date();
+        const dayOfWeek = currentDate.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        
+        const currentWeekStart = new Date(currentDate);
+        currentWeekStart.setDate(currentDate.getDate() - daysToMonday);
+        
+        const currentWeekEnd = new Date(currentWeekStart);
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+        
+        startDate = `${currentWeekStart.getFullYear()}-${String(currentWeekStart.getMonth() + 1).padStart(2, '0')}-${String(currentWeekStart.getDate()).padStart(2, '0')}`;
+        endDate = `${currentWeekEnd.getFullYear()}-${String(currentWeekEnd.getMonth() + 1).padStart(2, '0')}-${String(currentWeekEnd.getDate()).padStart(2, '0')}`;
+        break;
+      case "month":
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startDate = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-${String(monthStart.getDate()).padStart(2, '0')}`;
+        endDate = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
+        break;
+      case "year":
+        const currentYear = today.getFullYear();
+        startDate = `${currentYear}-01-01`;
+        const currentYear2 = today.getFullYear();
+        const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const currentDay = String(today.getDate()).padStart(2, '0');
+        endDate = `${currentYear2}-${currentMonth}-${currentDay}`;
+        break;
+      case "custom":
+        startDate = exportStartDate;
+        endDate = exportEndDate;
+        break;
+      default:
+        const defYear = today.getFullYear();
+        const defMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const defDay = String(today.getDate()).padStart(2, '0');
+        startDate = endDate = `${defYear}-${defMonth}-${defDay}`;
+    }
+    
+    return { startDate, endDate };
+  };
+
   // Export transactions to CSV
   const exportToCSV = async () => {
-    if (!selectedBranch) {
+    if (!exportBranch) {
       toast({
         title: "Error",
-        description: "Please select a branch first",
+        description: "Please select a branch",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (exportDateRange === "custom" && (!exportStartDate || !exportEndDate)) {
+      toast({
+        title: "Error",
+        description: "Please select start and end dates",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { startDate, endDate } = getDateRange();
-      const selectedBranchName = branches.find(b => b.id === parseInt(selectedBranch))?.name || 'Unknown';
+      const { startDate, endDate } = getExportDateRange();
+      const selectedBranchName = branches.find(b => b.id === parseInt(exportBranch))?.name || 'Unknown';
       
-      // Build URL with date range parameters
-      let url = `/api/financial-transactions/export?branchId=${selectedBranch}`;
-      
-      // Always use date range parameters for consistency
+      let url = `/api/financial-transactions/export?branchId=${exportBranch}`;
       url += `&startDate=${startDate}&endDate=${endDate}`;
-      
-      console.log('Export URL:', url);
-      console.log('Date Range:', { startDate, endDate, dateRange, customStartDate, customEndDate });
 
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to export data");
@@ -227,15 +301,29 @@ export default function Finances() {
       const a = document.createElement('a');
       a.href = downloadUrl;
       
-      // Create filename with branch name and date range
-      const dateRangeText = getDateRangeDisplay();
-      a.download = `financial-transactions-${selectedBranchName}-${dateRangeText.replace(/[\/\s]/g, '-')}.csv`;
+      const formatDate = (dateStr: string) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        }).replace(/\//g, '-');
+      };
+      
+      const dateRangeText = startDate === endDate 
+        ? formatDate(startDate)
+        : `${formatDate(startDate)}_to_${formatDate(endDate)}`;
+      
+      a.download = `${selectedBranchName}-Transactions-${dateRangeText}.csv`;
       
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
 
+      setIsExportDialogOpen(false);
+      
       toast({
         title: "Export successful",
         description: `Financial transactions exported for ${selectedBranchName}`,
@@ -356,11 +444,20 @@ export default function Finances() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Branch Financial Tracking</h2>
         <div className="flex gap-2">
-          <Button onClick={exportToCSV} variant="outline" className="flex items-center gap-1">
+          <Button 
+            onClick={() => setIsExportDialogOpen(true)} 
+            variant="outline" 
+            className="flex items-center gap-2"
+            data-testid="button-export"
+          >
             <Download className="h-4 w-4" />
             <span>Export</span>
           </Button>
-          <Button onClick={() => setIsDialogOpen(true)} className="flex items-center gap-1">
+          <Button 
+            onClick={() => setIsDialogOpen(true)} 
+            className="flex items-center gap-2"
+            data-testid="button-add-transaction"
+          >
             <PlusIcon className="h-4 w-4" />
             <span>Add New Transaction</span>
           </Button>
@@ -772,6 +869,113 @@ export default function Finances() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Financial Transactions
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Branch Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="export-branch">Branch</Label>
+              <Select
+                value={exportBranch}
+                onValueChange={setExportBranch}
+                disabled={user?.role === "branch_manager"}
+              >
+                <SelectTrigger id="export-branch">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch: any) => (
+                    <SelectItem 
+                      key={branch.id} 
+                      value={branch.id.toString()}
+                      disabled={user?.role === "branch_manager" && user?.branchId !== branch.id}
+                    >
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range Preset */}
+            <div className="space-y-2">
+              <Label htmlFor="export-date-range">Date Range</Label>
+              <Select value={exportDateRange} onValueChange={setExportDateRange}>
+                <SelectTrigger id="export-date-range">
+                  <SelectValue placeholder="Select date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="year">This Year</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Date Range */}
+            {exportDateRange === "custom" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="export-start-date">Start Date</Label>
+                  <Input
+                    id="export-start-date"
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="export-end-date">End Date</Label>
+                  <Input
+                    id="export-end-date"
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Info Section */}
+            <div className="rounded-lg bg-muted p-3 text-sm">
+              <p className="text-muted-foreground">
+                The exported CSV file will include all transactions for the selected branch and date range.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsExportDialogOpen(false)}
+              data-testid="button-export-cancel"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={exportToCSV}
+              className="flex items-center gap-2"
+              data-testid="button-export-download"
+            >
+              <Download className="h-4 w-4" />
+              Download CSV
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

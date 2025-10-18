@@ -109,7 +109,7 @@ export function TransactionList({
   });
 
   // Get branches
-  const { data: branches = [] } = useQuery({
+  const { data: branches = [] } = useQuery<any[]>({
     queryKey: ["/api/branches"],
   });
 
