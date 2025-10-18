@@ -113,6 +113,23 @@ This is a comprehensive finance management system built with a modern full-stack
 - **Module Requirements**: Node.js 20, web server, PostgreSQL 16
 
 ## Changelog
+- October 18, 2025. Dashboard enhanced with branch/date filtering and top suppliers widget
+  - **DASHBOARD FILTERS**: Added admin-only branch dropdown and date range picker
+  - Branch dropdown allows admin to filter by specific branch or view "All Branches"
+  - Date range picker (calendar component) allows admin to filter by custom date ranges
+  - Branch managers and accountants automatically restricted to their own branch (no dropdown shown)
+  - **TOP SUPPLIERS WIDGET**: Added "Top 10 Suppliers by Outstanding Balance" section
+  - Shows suppliers ranked by balance with ranking badges, supplier info, and balances
+  - "Show More" link redirects to full suppliers page
+  - **BACKEND DATE FILTERING**: Comprehensive date range support across all dashboard APIs
+  - /api/dashboard/summary: Filters invoices and supplier payments by startDate/endDate
+  - /api/reports/revenue: getMonthlyRevenue() accepts date range, adjusts monthly buckets
+  - /api/invoices: Added gte/lte SQL operators for invoice date filtering
+  - /api/suppliers/top-balance: Dynamic calculation when date filtering, filters both invoices and payments
+  - All endpoints properly filter supplier payments by branch AND date range
+  - **QUERY OPTIMIZATION**: Frontend uses queryParams object with proper cache invalidation
+  - All TanStack Query keys include branchId, startDate, endDate for accurate caching
+  - Date format standardized to yyyy-MM-dd using date-fns
 - October 17, 2025. Complete dashboard redesign and invoice display bug fixes
   - **DASHBOARD REDESIGN**: Completely new modern, clean dashboard layout
   - Removed complex widgets and replaced with simple, effective metric cards
