@@ -63,32 +63,24 @@ export default function Dashboard() {
     totalInvoiceAmount: number;
     totalOutstandingAmount: number;
   }>({
-    queryKey: Object.keys(queryParams).length > 0 
-      ? ["/api/dashboard/summary", queryParams] 
-      : ["/api/dashboard/summary"],
+    queryKey: ["/api/dashboard/summary", queryParams],
   });
 
   // Fetch revenue chart data
   const { data: revenueData } = useQuery<{
     revenue: Array<{ month: string; amount: number }>;
   }>({
-    queryKey: Object.keys(queryParams).length > 0 
-      ? ["/api/reports/revenue", queryParams] 
-      : ["/api/reports/revenue"],
+    queryKey: ["/api/reports/revenue", queryParams],
   });
 
   // Fetch recent invoices
   const { data: recentInvoices = [] } = useQuery<Array<any>>({
-    queryKey: Object.keys(queryParams).length > 0 
-      ? ["/api/invoices", { ...queryParams, limit: 5 }] 
-      : ["/api/invoices", { limit: 5 }],
+    queryKey: ["/api/invoices", { ...queryParams, limit: 5 }],
   });
 
   // Fetch recent payments
   const { data: recentPayments = [] } = useQuery<Array<any>>({
-    queryKey: Object.keys(queryParams).length > 0 
-      ? ["/api/payments/tracking", { ...queryParams, limit: 5 }] 
-      : ["/api/payments/tracking", { limit: 5 }],
+    queryKey: ["/api/payments/tracking", { ...queryParams, limit: 5 }],
   });
 
   // Fetch all branches (for admin)
@@ -99,9 +91,7 @@ export default function Dashboard() {
 
   // Fetch top suppliers by balance
   const { data: topSuppliers = [] } = useQuery<Array<any>>({
-    queryKey: Object.keys(queryParams).length > 0 
-      ? ["/api/suppliers/top-balance", { ...queryParams, limit: 10 }] 
-      : ["/api/suppliers/top-balance", { limit: 10 }],
+    queryKey: ["/api/suppliers/top-balance", { ...queryParams, limit: 10 }],
   });
 
   const formatCurrency = (amount: number) => {
