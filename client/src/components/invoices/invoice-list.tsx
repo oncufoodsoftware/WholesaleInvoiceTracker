@@ -18,6 +18,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { InvoiceForm } from "./invoice-form";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 interface InvoiceListProps {
   invoices: any[];
@@ -112,29 +113,31 @@ export function InvoiceList({
     }
   };
 
-  // Format invoice type
+  // Get row background color based on invoice type
+  const getRowClassName = (invoice: any) => {
+    switch (invoice.type) {
+      case "standard":
+        return "bg-sky-50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-950/30";
+      case "credit_note":
+        return "bg-violet-50 dark:bg-violet-950/20 hover:bg-violet-100 dark:hover:bg-violet-950/30";
+      case "cash":
+        return "bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-950/30";
+      default:
+        return "";
+    }
+  };
+
+  // Format invoice type as text
   const formatType = (type: string) => {
     switch (type) {
       case "standard":
-        return (
-          <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400 border-0">
-            Standard
-          </Badge>
-        );
+        return "Standard";
       case "credit_note":
-        return (
-          <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400 border-0">
-            Credit Note
-          </Badge>
-        );
+        return "Credit Note";
       case "cash":
-        return (
-          <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400 border-0">
-            Cash Invoice
-          </Badge>
-        );
+        return "Cash Invoice";
       default:
-        return <Badge variant="outline">{type}</Badge>;
+        return type;
     }
   };
 
@@ -227,7 +230,13 @@ export function InvoiceList({
                 </TableRow>
               ) : (
                 invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                  <TableRow 
+                    key={invoice.id} 
+                    className={cn(
+                      getRowClassName(invoice),
+                      selectedRows.includes(invoice.id) && "ring-2 ring-primary ring-inset"
+                    )}
+                  >
                     <TableCell>
                       <Checkbox
                         checked={selectedRows.includes(invoice.id)}
@@ -239,7 +248,7 @@ export function InvoiceList({
                     <TableCell>{getSupplierName(invoice.supplierId)}</TableCell>
                     <TableCell>{getBranchName(invoice.branchId)}</TableCell>
                     <TableCell>{formatDate(invoice.invoiceDate)}</TableCell>
-                    <TableCell>{formatType(invoice.type)}</TableCell>
+                    <TableCell className="font-medium">{formatType(invoice.type)}</TableCell>
                     <TableCell className={invoice.type === "credit_note" ? "text-destructive font-medium" : ""}>
                       {invoice.type === "credit_note" ? "-" : ""}£{invoice.amount.toLocaleString()}
                     </TableCell>

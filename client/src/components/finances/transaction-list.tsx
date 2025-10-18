@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -258,22 +259,19 @@ export function TransactionList({
     }
   };
 
-  // Get transaction type badge
-  const getTransactionTypeBadge = (transactionType: string) => {
-    if (transactionType === "income") {
-      return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Income</Badge>;
+  // Get row background color based on transaction type and payment method
+  const getRowClassName = (transaction: any) => {
+    // Priority: Expense > Card > Cash
+    if (transaction.type === "expense") {
+      return "bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/30";
     }
-    return <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400">Expense</Badge>;
-  };
-
-  // Get payment method badge
-  const getPaymentMethodBadge = (paymentMethod: string) => {
-    if (paymentMethod === "card") {
-      return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">Card</Badge>;
-    } else if (paymentMethod === "cash") {
-      return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">Cash</Badge>;
+    if (transaction.paymentMethod === "card") {
+      return "bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30";
     }
-    return <span className="text-muted-foreground">N/A</span>;
+    if (transaction.paymentMethod === "cash") {
+      return "bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30";
+    }
+    return "";
   };
 
   // Check if user can edit/delete transactions
@@ -332,15 +330,15 @@ export function TransactionList({
                   </TableRow>
                 ) : (
                   transactions.map((transaction: any) => (
-                    <TableRow key={transaction.id}>
+                    <TableRow key={transaction.id} className={cn(getRowClassName(transaction))}>
                       {!type && (
-                        <TableCell>{getTransactionTypeBadge(transaction.type)}</TableCell>
+                        <TableCell className="font-medium capitalize">{transaction.type}</TableCell>
                       )}
                       <TableCell>{formatDate(transaction.date)}</TableCell>
                       <TableCell>{formatCurrency(transaction.amount)}</TableCell>
                       {type === "income" && (
-                        <TableCell>
-                          {getPaymentMethodBadge(transaction.paymentMethod)}
+                        <TableCell className="capitalize">
+                          {transaction.paymentMethod || "N/A"}
                         </TableCell>
                       )}
                       {(type === "expense" || !type) && (
