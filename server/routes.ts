@@ -436,8 +436,23 @@ Disallow: /`);
           });
         }
         
-        // Get all supplier payments
-        const allSupplierPayments = await storage.getAllSupplierPayments();
+        // Get all supplier payments and filter by date and branch
+        let allSupplierPayments = await storage.getAllSupplierPayments();
+        
+        // Filter payments by branch if needed
+        if (targetBranchId) {
+          allSupplierPayments = allSupplierPayments.filter(p => p.branchId === targetBranchId);
+        }
+        
+        // Filter payments by date range if provided
+        if (startDate || endDate) {
+          allSupplierPayments = allSupplierPayments.filter((payment) => {
+            const paymentDate = new Date(payment.paymentDate);
+            if (startDate && paymentDate < new Date(startDate)) return false;
+            if (endDate && paymentDate > new Date(endDate)) return false;
+            return true;
+          });
+        }
         
         // Calculate balance per supplier
         const supplierBalances: Record<number, number> = {};
@@ -1465,7 +1480,22 @@ Disallow: /`);
       }
       
       // Get all supplier payments for balance calculation
-      const allSupplierPayments = await storage.getAllSupplierPayments();
+      let allSupplierPayments = await storage.getAllSupplierPayments();
+      
+      // Filter payments by branch if needed
+      if (branchId) {
+        allSupplierPayments = allSupplierPayments.filter(p => p.branchId === branchId);
+      }
+      
+      // Filter payments by date range if provided
+      if (startDate || endDate) {
+        allSupplierPayments = allSupplierPayments.filter((payment) => {
+          const paymentDate = new Date(payment.paymentDate);
+          if (startDate && paymentDate < new Date(startDate)) return false;
+          if (endDate && paymentDate > new Date(endDate)) return false;
+          return true;
+        });
+      }
       
       // Calculate total invoice amount and outstanding amount per branch
       const branchSummary = {};
