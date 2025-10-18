@@ -261,9 +261,19 @@ export function TransactionList({
   // Get transaction type badge
   const getTransactionTypeBadge = (transactionType: string) => {
     if (transactionType === "income") {
-      return <Badge className="bg-success/10 text-success">Income</Badge>;
+      return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Income</Badge>;
     }
-    return <Badge className="bg-destructive/10 text-destructive">Expense</Badge>;
+    return <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400">Expense</Badge>;
+  };
+
+  // Get payment method badge
+  const getPaymentMethodBadge = (paymentMethod: string) => {
+    if (paymentMethod === "card") {
+      return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">Card</Badge>;
+    } else if (paymentMethod === "cash") {
+      return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">Cash</Badge>;
+    }
+    return <span className="text-muted-foreground">N/A</span>;
   };
 
   // Check if user can edit/delete transactions
@@ -329,8 +339,8 @@ export function TransactionList({
                       <TableCell>{formatDate(transaction.date)}</TableCell>
                       <TableCell>{formatCurrency(transaction.amount)}</TableCell>
                       {type === "income" && (
-                        <TableCell className="capitalize">
-                          {transaction.paymentMethod || "N/A"}
+                        <TableCell>
+                          {getPaymentMethodBadge(transaction.paymentMethod)}
                         </TableCell>
                       )}
                       {(type === "expense" || !type) && (

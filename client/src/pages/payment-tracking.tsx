@@ -487,19 +487,15 @@ export default function PaymentTracking() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {isProcessed ? (
-                              <>
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-                                  Processed
-                                </Badge>
-                              </>
+                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border-0">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Processed
+                              </Badge>
                             ) : (
-                              <>
-                                <Clock className="h-4 w-4 text-orange-600" />
-                                <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-300">
-                                  Pending
-                                </Badge>
-                              </>
+                              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 border-0">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending
+                              </Badge>
                             )}
                           </div>
                         </TableCell>
@@ -512,20 +508,20 @@ export default function PaymentTracking() {
                       </TableCell>
                       <TableCell>
                         {payment.bankTransferAmount > 0 ? (
-                          <div className="flex items-center gap-1">
-                            <CreditCardIcon className="h-3 w-3 text-green-600" />
+                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 border-0">
+                            <CreditCardIcon className="h-3 w-3 mr-1" />
                             £{payment.bankTransferAmount.toFixed(2)}
-                          </div>
+                          </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {payment.chequeAmount > 0 ? (
-                          <div className="flex items-center gap-1">
-                            <FileTextIcon className="h-3 w-3 text-blue-600" />
+                          <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400 border-0">
+                            <FileTextIcon className="h-3 w-3 mr-1" />
                             £{payment.chequeAmount.toFixed(2)}
-                          </div>
+                          </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}

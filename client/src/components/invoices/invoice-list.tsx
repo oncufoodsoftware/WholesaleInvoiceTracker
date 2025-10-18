@@ -91,19 +91,19 @@ export function InvoiceList({
     switch (status) {
       case "paid":
         return (
-          <Badge className="bg-success/10 text-success hover:bg-success/20">
+          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900">
             Paid
           </Badge>
         );
       case "partially_paid":
         return (
-          <Badge className="bg-warning/10 text-warning hover:bg-warning/20">
+          <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900">
             Partially Paid
           </Badge>
         );
       case "unpaid":
         return (
-          <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20">
+          <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900">
             Unpaid
           </Badge>
         );
@@ -117,19 +117,19 @@ export function InvoiceList({
     switch (type) {
       case "standard":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+          <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400 border-0">
             Standard
           </Badge>
         );
       case "credit_note":
         return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+          <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400 border-0">
             Credit Note
           </Badge>
         );
       case "cash":
         return (
-          <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400 border-0">
             Cash Invoice
           </Badge>
         );
