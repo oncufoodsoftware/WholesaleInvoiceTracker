@@ -499,7 +499,7 @@ Disallow: /`);
         return res.json(topSuppliers);
       }
       
-      // No date filtering - use current balances from SupplierBranchBalance table
+      // No date filtering - calculate from all invoices (same as /api/suppliers endpoint)
       let suppliersWithBranches;
       if (targetBranchId) {
         suppliersWithBranches = await storage.getAllSuppliersWithBranches(targetBranchId);
@@ -507,20 +507,52 @@ Disallow: /`);
         suppliersWithBranches = await storage.getAllSuppliersWithBranches();
       }
       
-      // Calculate balance for each supplier
-      const suppliersWithBalance = await Promise.all(suppliersWithBranches.map(async ({ supplier, branches }) => {
+      // Get all invoices
+      let allInvoices;
+      if (targetBranchId) {
+        allInvoices = await storage.getInvoicesByBranch(targetBranchId);
+      } else {
+        allInvoices = await storage.getAllInvoices();
+      }
+      
+      // Get all supplier payments
+      const allSupplierPayments = await storage.getAllSupplierPayments();
+      
+      // Calculate balance for each supplier using same logic as /api/suppliers
+      const suppliersWithBalance = suppliersWithBranches.map(({ supplier, branches }) => {
         let totalOutstanding = 0;
         
-        // If targetBranchId is specified, only get that branch's balance
-        if (targetBranchId) {
-          const branchBalanceRecord = await storage.getSupplierBranchBalance(supplier.id, targetBranchId);
-          totalOutstanding = branchBalanceRecord?.balance || 0;
-        } else {
-          // Otherwise sum all branches
-          for (const branch of branches) {
-            const branchBalanceRecord = await storage.getSupplierBranchBalance(supplier.id, branch.id);
-            totalOutstanding += branchBalanceRecord?.balance || 0;
+        // Calculate for each branch this supplier works with
+        for (const branch of branches) {
+          // Skip branches not matching targetBranchId if specified
+          if (targetBranchId && branch.id !== targetBranchId) {
+            continue;
           }
+          
+          const branchInvoices = allInvoices.filter(inv => 
+            inv.supplierId === supplier.id && inv.branchId === branch.id
+          );
+          
+          const branchPayments = allSupplierPayments.filter(payment => 
+            payment.supplierId === supplier.id && payment.branchId === branch.id
+          );
+          
+          // Calculate balance: Invoices - Credit Notes - Bulk Payments
+          let totalInvoices = 0;
+          let totalCreditNotes = 0;
+          
+          for (const invoice of branchInvoices) {
+            if (invoice.type === 'standard' || invoice.type === 'cash') {
+              totalInvoices += invoice.amount;
+            } else if (invoice.type === 'credit_note') {
+              totalCreditNotes += invoice.amount;
+            }
+          }
+          
+          const totalBulkPayments = branchPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
+          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments;
+          
+          totalOutstanding += branchBalance;
         }
         
         return {
@@ -529,7 +561,7 @@ Disallow: /`);
           contactPerson: supplier.contactPerson,
           balance: totalOutstanding
         };
-      }));
+      });
       
       // Sort by balance descending and limit
       const topSuppliers = suppliersWithBalance
