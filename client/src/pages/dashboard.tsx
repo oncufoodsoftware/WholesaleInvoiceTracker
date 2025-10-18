@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
@@ -41,10 +41,52 @@ export default function Dashboard() {
 
   // State for filters
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [datePreset, setDatePreset] = useState<string>("all");
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined,
   });
+
+  // Helper function to set date range based on preset
+  const applyDatePreset = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    
+    switch (preset) {
+      case "today":
+        setDateRange({ from: today, to: today });
+        break;
+      case "yesterday":
+        const yesterday = subDays(today, 1);
+        setDateRange({ from: yesterday, to: yesterday });
+        break;
+      case "thisWeek":
+        // Pazartesi - Pazar
+        setDateRange({
+          from: startOfWeek(today, { weekStartsOn: 1 }),
+          to: endOfWeek(today, { weekStartsOn: 1 })
+        });
+        break;
+      case "thisMonth":
+        // Ayın 1'i - Ay sonu
+        setDateRange({
+          from: startOfMonth(today),
+          to: endOfMonth(today)
+        });
+        break;
+      case "thisYear":
+        setDateRange({
+          from: startOfYear(today),
+          to: endOfYear(today)
+        });
+        break;
+      case "all":
+        setDateRange({ from: undefined, to: undefined });
+        break;
+      default:
+        break;
+    }
+  };
 
   // Determine branch ID based on user role and selection
   const branchId = user?.role === "branch_manager" || user?.role === "accountant" 
@@ -61,6 +103,8 @@ export default function Dashboard() {
   // Fetch dashboard summary
   const { data: summary, isLoading: summaryLoading } = useQuery<{
     totalInvoiceAmount: number;
+    totalCreditNotes: number;
+    totalPaidAmount: number;
     totalOutstandingAmount: number;
   }>({
     queryKey: ["/api/dashboard/summary", queryParams],
@@ -113,7 +157,7 @@ export default function Dashboard() {
   // Calculate key metrics
   const totalInvoices = summary?.totalInvoiceAmount || 0;
   const outstanding = summary?.totalOutstandingAmount || 0;
-  const paid = totalInvoices - outstanding;
+  const paid = summary?.totalPaidAmount || 0;
   const paymentRate = totalInvoices > 0 ? Math.round((paid / totalInvoices) * 100) : 0;
 
   // Prepare chart data
@@ -166,14 +210,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Filters - Only for Admin */}
-          {user?.role === "admin" && (
-            <div className="flex flex-col sm:flex-row gap-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Branch Filter - Only for Admin */}
+            {user?.role === "admin" && (
               <Select
                 value={selectedBranchId?.toString() || "all"}
                 onValueChange={(value) => setSelectedBranchId(value === "all" ? null : parseInt(value))}
               >
-                <SelectTrigger className="w-full sm:w-[240px]" data-testid="select-branch">
+                <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-branch">
                   <SelectValue placeholder="All Branches" />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,7 +230,29 @@ export default function Dashboard() {
                   ))}
                 </SelectContent>
               </Select>
+            )}
 
+            {/* Date Range Preset - For All Users */}
+            <Select
+              value={datePreset}
+              onValueChange={applyDatePreset}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-date-preset">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="thisWeek">This Week</SelectItem>
+                <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="thisYear">This Year</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Custom Date Range Picker - Only show when custom is selected */}
+            {datePreset === "custom" && (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -222,17 +289,8 @@ export default function Dashboard() {
                   />
                 </PopoverContent>
               </Popover>
-
-              {(dateRange.from || dateRange.to) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setDateRange({ from: undefined, to: undefined })}
-                >
-                  Clear
-                </Button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Key Metrics Cards */}

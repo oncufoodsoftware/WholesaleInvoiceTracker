@@ -1540,6 +1540,8 @@ Disallow: /`);
       const branchSummary = {};
       const supplierSummary = {};
       let totalInvoiceAmount = 0;
+      let totalCreditNotes = 0;
+      let totalPaidAmount = 0;
       let totalOutstandingAmount = 0;
       
       // Track invoices and payments per branch/supplier for correct balance calculation
@@ -1550,11 +1552,12 @@ Disallow: /`);
       
       // Process all invoices
       for (const invoice of invoices) {
-        // Calculate amount based on invoice type (credit notes are negative)
-        const calculatedAmount = invoice.type === 'credit_note' ? -invoice.amount : invoice.amount;
-        
-        // Add to totals
-        totalInvoiceAmount += calculatedAmount;
+        // Total Invoice Amount = Standard + Cash (NOT including credit notes as negative)
+        if (invoice.type === 'standard' || invoice.type === 'cash') {
+          totalInvoiceAmount += invoice.amount;
+        } else if (invoice.type === 'credit_note') {
+          totalCreditNotes += invoice.amount;
+        }
         
         // Group by branch
         if (!invoicesByBranch[invoice.branchId]) {
@@ -1581,6 +1584,9 @@ Disallow: /`);
       
       // Process supplier payments
       for (const payment of allSupplierPayments) {
+        // Add to total paid amount
+        totalPaidAmount += payment.totalAmount;
+        
         // Group by branch
         if (!paymentsByBranch[payment.branchId]) {
           paymentsByBranch[payment.branchId] = 0;
@@ -1596,6 +1602,9 @@ Disallow: /`);
         }
       }
       
+      // Calculate total outstanding: Total Invoices - Credit Notes - Paid Amount
+      totalOutstandingAmount = totalInvoiceAmount - totalCreditNotes - totalPaidAmount;
+      
       // Calculate branch summaries using: Invoices - Credit Notes - Bulk Payments
       for (const [branchIdKey, invoiceData] of Object.entries(invoicesByBranch)) {
         const branchIdNum = parseInt(branchIdKey);
@@ -1609,8 +1618,6 @@ Disallow: /`);
           totalAmount: (invoiceData as any).standard - (invoiceData as any).creditNotes,
           outstandingAmount: outstanding
         };
-        
-        totalOutstandingAmount += outstanding;
       }
       
       // Calculate supplier summaries using: Invoices - Credit Notes - Bulk Payments
@@ -1648,6 +1655,8 @@ Disallow: /`);
       
       res.json({
         totalInvoiceAmount,
+        totalCreditNotes,
+        totalPaidAmount,
         totalOutstandingAmount,
         branchData,
         supplierData
