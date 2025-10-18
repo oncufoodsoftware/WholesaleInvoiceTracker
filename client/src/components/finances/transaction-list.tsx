@@ -262,13 +262,16 @@ export function TransactionList({
   const getRowClassName = (transaction: any) => {
     // Priority: Expense > Card > Cash
     if (transaction.type === "expense") {
-      return "bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-950/70";
+      // Light red/pink - warning but soft
+      return "bg-red-100 hover:bg-red-200 dark:bg-red-950 dark:hover:bg-red-900";
     }
     if (transaction.paymentMethod === "card") {
-      return "bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950/70";
+      // Light indigo/purple - digital payment
+      return "bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950 dark:hover:bg-indigo-900";
     }
     if (transaction.paymentMethod === "cash") {
-      return "bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-950/50 dark:hover:bg-yellow-950/70";
+      // Light yellow/amber - cash money
+      return "bg-amber-100 hover:bg-amber-200 dark:bg-amber-950 dark:hover:bg-amber-900";
     }
     return "";
   };
