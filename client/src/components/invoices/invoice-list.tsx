@@ -117,11 +117,11 @@ export function InvoiceList({
   const getRowClassName = (invoice: any) => {
     switch (invoice.type) {
       case "standard":
-        return "bg-sky-50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-950/30";
+        return "bg-sky-100/50 hover:bg-sky-100 dark:bg-sky-900/20 dark:hover:bg-sky-900/30";
       case "credit_note":
-        return "bg-violet-50 dark:bg-violet-950/20 hover:bg-violet-100 dark:hover:bg-violet-950/30";
+        return "bg-violet-100/50 hover:bg-violet-100 dark:bg-violet-900/20 dark:hover:bg-violet-900/30";
       case "cash":
-        return "bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-950/30";
+        return "bg-orange-100/50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30";
       default:
         return "";
     }
