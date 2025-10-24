@@ -337,20 +337,21 @@ Disallow: /`);
             payment.supplierId === supplier.id && payment.branchId === branch.id
           );
           
-          // Calculate balance: Only UNPAID and PARTIALLY_PAID invoices
-          // (Bulk payments automatically update invoice status to 'paid', so no need to subtract them)
+          // Calculate balance: Unpaid invoices - ALL credit notes
+          // Credit notes always reduce balance (they are returns)
+          // Bulk payments automatically update invoice status to 'paid'
           let totalUnpaidInvoices = 0;
           let totalCreditNotes = 0;
           
           for (const invoice of branchInvoices) {
-            // Only count unpaid and partially paid invoices
-            if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+            if (invoice.type === 'credit_note') {
+              // Credit notes always reduce balance (returns)
+              totalCreditNotes += invoice.amount;
+            } else if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+              // Only count unpaid/partially paid standard and cash invoices
               if (invoice.type === 'standard' || invoice.type === 'cash') {
-                // For partially paid invoices, count the remaining unpaid amount
                 const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
                 totalUnpaidInvoices += unpaidAmount;
-              } else if (invoice.type === 'credit_note') {
-                totalCreditNotes += invoice.amount;
               }
             }
           }
@@ -473,15 +474,14 @@ Disallow: /`);
             supplierInfo[invoice.supplierId] = supplier;
           }
           
-          // Only count UNPAID and PARTIALLY_PAID invoices
-          // (Bulk payments automatically update invoice status to 'paid')
-          if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+          // Credit notes always reduce balance (returns)
+          if (invoice.type === 'credit_note') {
+            supplierBalances[invoice.supplierId] -= invoice.amount;
+          } else if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+            // Only count unpaid/partially paid standard and cash invoices
             if (invoice.type === 'standard' || invoice.type === 'cash') {
-              // For partially paid invoices, count the remaining unpaid amount
               const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
               supplierBalances[invoice.supplierId] += unpaidAmount;
-            } else if (invoice.type === 'credit_note') {
-              supplierBalances[invoice.supplierId] -= invoice.amount;
             }
           }
         }
@@ -539,20 +539,21 @@ Disallow: /`);
             payment.supplierId === supplier.id && payment.branchId === branch.id
           );
           
-          // Calculate balance: Only UNPAID and PARTIALLY_PAID invoices
-          // (Bulk payments automatically update invoice status to 'paid', so no need to subtract them)
+          // Calculate balance: Unpaid invoices - ALL credit notes
+          // Credit notes always reduce balance (they are returns)
+          // Bulk payments automatically update invoice status to 'paid'
           let totalUnpaidInvoices = 0;
           let totalCreditNotes = 0;
           
           for (const invoice of branchInvoices) {
-            // Only count unpaid and partially paid invoices
-            if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+            if (invoice.type === 'credit_note') {
+              // Credit notes always reduce balance (returns)
+              totalCreditNotes += invoice.amount;
+            } else if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+              // Only count unpaid/partially paid standard and cash invoices
               if (invoice.type === 'standard' || invoice.type === 'cash') {
-                // For partially paid invoices, count the remaining unpaid amount
                 const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
                 totalUnpaidInvoices += unpaidAmount;
-              } else if (invoice.type === 'credit_note') {
-                totalCreditNotes += invoice.amount;
               }
             }
           }
@@ -1552,7 +1553,7 @@ Disallow: /`);
       let totalOutstandingAmount = 0;
       
       // Track invoices per branch/supplier for balance calculation
-      // Balance = UNPAID + PARTIALLY_PAID invoices only (bulk payments update invoice status automatically)
+      // Balance = Unpaid invoices - ALL credit notes (credit notes are returns, always reduce balance)
       const invoicesByBranch: any = {};
       const invoicesBySupplier: any = {};
       
@@ -1566,31 +1567,38 @@ Disallow: /`);
           totalCreditNotes += invoice.amount;
         }
         
-        // For outstanding balance: Only count UNPAID and PARTIALLY_PAID invoices
-        if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+        // For credit notes: Always count them (they are returns)
+        if (invoice.type === 'credit_note') {
           // Group by branch
           if (!invoicesByBranch[invoice.branchId]) {
             invoicesByBranch[invoice.branchId] = { unpaidAmount: 0, creditNotes: 0 };
           }
-          
-          if (invoice.type === 'standard' || invoice.type === 'cash') {
-            const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
-            invoicesByBranch[invoice.branchId].unpaidAmount += unpaidAmount;
-          } else if (invoice.type === 'credit_note') {
-            invoicesByBranch[invoice.branchId].creditNotes += invoice.amount;
-          }
+          invoicesByBranch[invoice.branchId].creditNotes += invoice.amount;
           
           // Group by supplier (only for filtered branch)
           if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
             if (!invoicesBySupplier[invoice.supplierId]) {
               invoicesBySupplier[invoice.supplierId] = { unpaidAmount: 0, creditNotes: 0 };
             }
+            invoicesBySupplier[invoice.supplierId].creditNotes += invoice.amount;
+          }
+        } else if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+          // For standard/cash: Only count unpaid/partially paid invoices
+          if (invoice.type === 'standard' || invoice.type === 'cash') {
+            const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
             
-            if (invoice.type === 'standard' || invoice.type === 'cash') {
-              const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+            // Group by branch
+            if (!invoicesByBranch[invoice.branchId]) {
+              invoicesByBranch[invoice.branchId] = { unpaidAmount: 0, creditNotes: 0 };
+            }
+            invoicesByBranch[invoice.branchId].unpaidAmount += unpaidAmount;
+            
+            // Group by supplier (only for filtered branch)
+            if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
+              if (!invoicesBySupplier[invoice.supplierId]) {
+                invoicesBySupplier[invoice.supplierId] = { unpaidAmount: 0, creditNotes: 0 };
+              }
               invoicesBySupplier[invoice.supplierId].unpaidAmount += unpaidAmount;
-            } else if (invoice.type === 'credit_note') {
-              invoicesBySupplier[invoice.supplierId].creditNotes += invoice.amount;
             }
           }
         }

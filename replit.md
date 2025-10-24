@@ -6,11 +6,16 @@ This is a comprehensive finance management system designed for businesses requir
 
 ## Recent Changes (October 24, 2025)
 
-### Critical Bug Fix: Supplier Balance Calculations
-- **Fixed**: Supplier balances now correctly account for BOTH legacy invoice payments (invoice.paidAmount) AND new bulk payments (supplier_payments table)
-- **Issue**: Before payment-tracking system existed, invoices were marked as paid directly using invoice.paidAmount. After introducing /payment-tracking page and bulk_payments system, supplier balance calculations only considered bulk_payments, ignoring legacy payments
-- **Impact**: This caused mismatches where suppliers showed unpaid balances on /suppliers page despite invoices showing "Paid" status on /invoices page
-- **Solution**: Updated all balance calculation endpoints to use formula: `Balance = (Standard+Cash Invoices) - Credit Notes - (Bulk Payments + Legacy Invoice Payments)`
+### Critical Bug Fix: Supplier Balance Calculations (v2 - Final)
+- **Fixed**: Supplier balances now correctly show only unpaid amounts without double-counting bulk payments
+- **Issue**: Balance calculations were subtracting bulk payments twice - once when invoice status changed to "paid", and again by subtracting bulk_payments table amounts
+- **Root Cause**: Bulk payments automatically update invoice status to 'paid'. Only unpaid/partially_paid invoices should be counted in balance
+- **Impact**: Suppliers showed negative balances (e.g., Anthap UK Ltd showing -£3,108.64 instead of correct £5,090.83)
+- **Solution**: Updated all balance calculation endpoints to use correct formula: `Balance = (Unpaid Standard + Unpaid Cash invoices) - (ALL Credit Notes)`
+- **Key Logic**: 
+  - Only count invoices with status='unpaid' or 'partially_paid'
+  - Credit notes always reduce balance (they are returns) regardless of status
+  - Bulk payments don't need separate subtraction as they update invoice status
 - **Affected Endpoints**: `/api/suppliers`, `/api/suppliers/top-balance`, `/api/dashboard/summary`
 
 ## User Preferences
