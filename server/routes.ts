@@ -337,23 +337,25 @@ Disallow: /`);
             payment.supplierId === supplier.id && payment.branchId === branch.id
           );
           
-          // Calculate balance: Invoices - Credit Notes - (Bulk Payments + Legacy Invoice Payments)
-          let totalInvoices = 0;
+          // Calculate balance: Only UNPAID and PARTIALLY_PAID invoices
+          // (Bulk payments automatically update invoice status to 'paid', so no need to subtract them)
+          let totalUnpaidInvoices = 0;
           let totalCreditNotes = 0;
-          let totalLegacyPayments = 0; // Legacy payments from before payment-tracking system
           
           for (const invoice of branchInvoices) {
-            if (invoice.type === 'standard' || invoice.type === 'cash') {
-              totalInvoices += invoice.amount;
-              // Add legacy invoice payments (paid directly on invoice before payment-tracking existed)
-              totalLegacyPayments += (invoice.paidAmount || 0);
-            } else if (invoice.type === 'credit_note') {
-              totalCreditNotes += invoice.amount;
+            // Only count unpaid and partially paid invoices
+            if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+              if (invoice.type === 'standard' || invoice.type === 'cash') {
+                // For partially paid invoices, count the remaining unpaid amount
+                const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+                totalUnpaidInvoices += unpaidAmount;
+              } else if (invoice.type === 'credit_note') {
+                totalCreditNotes += invoice.amount;
+              }
             }
           }
           
-          const totalBulkPayments = branchPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
-          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments - totalLegacyPayments;
+          const branchBalance = totalUnpaidInvoices - totalCreditNotes;
           
           // If targetBranchId is specified, only include that branch's balance
           // Otherwise, include all branches
@@ -471,21 +473,16 @@ Disallow: /`);
             supplierInfo[invoice.supplierId] = supplier;
           }
           
-          // Calculate balance: Standard/Cash - Credit Notes - Legacy Payments
-          if (invoice.type === 'standard' || invoice.type === 'cash') {
-            supplierBalances[invoice.supplierId] += invoice.amount;
-            // Subtract legacy invoice payments (paid directly on invoice before payment-tracking existed)
-            supplierBalances[invoice.supplierId] -= (invoice.paidAmount || 0);
-          } else if (invoice.type === 'credit_note') {
-            supplierBalances[invoice.supplierId] -= invoice.amount;
-          }
-        }
-        
-        // Subtract bulk payments (new payment tracking system)
-        for (const payment of allSupplierPayments) {
-          if (!payment.supplierId) continue;
-          if (supplierBalances[payment.supplierId] !== undefined) {
-            supplierBalances[payment.supplierId] -= payment.totalAmount;
+          // Only count UNPAID and PARTIALLY_PAID invoices
+          // (Bulk payments automatically update invoice status to 'paid')
+          if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+            if (invoice.type === 'standard' || invoice.type === 'cash') {
+              // For partially paid invoices, count the remaining unpaid amount
+              const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+              supplierBalances[invoice.supplierId] += unpaidAmount;
+            } else if (invoice.type === 'credit_note') {
+              supplierBalances[invoice.supplierId] -= invoice.amount;
+            }
           }
         }
         
@@ -542,23 +539,25 @@ Disallow: /`);
             payment.supplierId === supplier.id && payment.branchId === branch.id
           );
           
-          // Calculate balance: Invoices - Credit Notes - (Bulk Payments + Legacy Invoice Payments)
-          let totalInvoices = 0;
+          // Calculate balance: Only UNPAID and PARTIALLY_PAID invoices
+          // (Bulk payments automatically update invoice status to 'paid', so no need to subtract them)
+          let totalUnpaidInvoices = 0;
           let totalCreditNotes = 0;
-          let totalLegacyPayments = 0; // Legacy payments from before payment-tracking system
           
           for (const invoice of branchInvoices) {
-            if (invoice.type === 'standard' || invoice.type === 'cash') {
-              totalInvoices += invoice.amount;
-              // Add legacy invoice payments (paid directly on invoice before payment-tracking existed)
-              totalLegacyPayments += (invoice.paidAmount || 0);
-            } else if (invoice.type === 'credit_note') {
-              totalCreditNotes += invoice.amount;
+            // Only count unpaid and partially paid invoices
+            if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+              if (invoice.type === 'standard' || invoice.type === 'cash') {
+                // For partially paid invoices, count the remaining unpaid amount
+                const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+                totalUnpaidInvoices += unpaidAmount;
+              } else if (invoice.type === 'credit_note') {
+                totalCreditNotes += invoice.amount;
+              }
             }
           }
           
-          const totalBulkPayments = branchPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
-          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments - totalLegacyPayments;
+          const branchBalance = totalUnpaidInvoices - totalCreditNotes;
           
           totalOutstanding += branchBalance;
         }
@@ -1552,100 +1551,78 @@ Disallow: /`);
       let totalPaidAmount = 0;
       let totalOutstandingAmount = 0;
       
-      // Track invoices and payments per branch/supplier for correct balance calculation
+      // Track invoices per branch/supplier for balance calculation
+      // Balance = UNPAID + PARTIALLY_PAID invoices only (bulk payments update invoice status automatically)
       const invoicesByBranch: any = {};
-      const paymentsByBranch: any = {};
       const invoicesBySupplier: any = {};
-      const paymentsBySupplier: any = {};
-      let totalLegacyPayments = 0; // Legacy payments from before payment-tracking system
       
       // Process all invoices
       for (const invoice of invoices) {
-        // Total Invoice Amount = Standard + Cash (NOT including credit notes as negative)
+        // Total Invoice Amount = All Standard + Cash (for reporting)
         if (invoice.type === 'standard' || invoice.type === 'cash') {
           totalInvoiceAmount += invoice.amount;
-          // Track legacy invoice payments (paid directly on invoice before payment-tracking existed)
-          totalLegacyPayments += (invoice.paidAmount || 0);
+          totalPaidAmount += (invoice.paidAmount || 0);
         } else if (invoice.type === 'credit_note') {
           totalCreditNotes += invoice.amount;
         }
         
-        // Group by branch
-        if (!invoicesByBranch[invoice.branchId]) {
-          invoicesByBranch[invoice.branchId] = { standard: 0, creditNotes: 0, legacyPayments: 0 };
-        }
-        if (invoice.type === 'standard' || invoice.type === 'cash') {
-          invoicesByBranch[invoice.branchId].standard += invoice.amount;
-          invoicesByBranch[invoice.branchId].legacyPayments += (invoice.paidAmount || 0);
-        } else if (invoice.type === 'credit_note') {
-          invoicesByBranch[invoice.branchId].creditNotes += invoice.amount;
-        }
-        
-        // Group by supplier (only for filtered branch)
-        if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
-          if (!invoicesBySupplier[invoice.supplierId]) {
-            invoicesBySupplier[invoice.supplierId] = { standard: 0, creditNotes: 0, legacyPayments: 0 };
+        // For outstanding balance: Only count UNPAID and PARTIALLY_PAID invoices
+        if (invoice.status === 'unpaid' || invoice.status === 'partially_paid') {
+          // Group by branch
+          if (!invoicesByBranch[invoice.branchId]) {
+            invoicesByBranch[invoice.branchId] = { unpaidAmount: 0, creditNotes: 0 };
           }
+          
           if (invoice.type === 'standard' || invoice.type === 'cash') {
-            invoicesBySupplier[invoice.supplierId].standard += invoice.amount;
-            invoicesBySupplier[invoice.supplierId].legacyPayments += (invoice.paidAmount || 0);
+            const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+            invoicesByBranch[invoice.branchId].unpaidAmount += unpaidAmount;
           } else if (invoice.type === 'credit_note') {
-            invoicesBySupplier[invoice.supplierId].creditNotes += invoice.amount;
+            invoicesByBranch[invoice.branchId].creditNotes += invoice.amount;
+          }
+          
+          // Group by supplier (only for filtered branch)
+          if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
+            if (!invoicesBySupplier[invoice.supplierId]) {
+              invoicesBySupplier[invoice.supplierId] = { unpaidAmount: 0, creditNotes: 0 };
+            }
+            
+            if (invoice.type === 'standard' || invoice.type === 'cash') {
+              const unpaidAmount = invoice.amount - (invoice.paidAmount || 0);
+              invoicesBySupplier[invoice.supplierId].unpaidAmount += unpaidAmount;
+            } else if (invoice.type === 'credit_note') {
+              invoicesBySupplier[invoice.supplierId].creditNotes += invoice.amount;
+            }
           }
         }
       }
       
-      // Process supplier payments (new payment tracking system)
-      for (const payment of allSupplierPayments) {
-        // Add to total paid amount
-        totalPaidAmount += payment.totalAmount;
-        
-        // Group by branch
-        if (!paymentsByBranch[payment.branchId]) {
-          paymentsByBranch[payment.branchId] = 0;
-        }
-        paymentsByBranch[payment.branchId] += payment.totalAmount;
-        
-        // Group by supplier (only for filtered branch)
-        if (payment.supplierId && (!branchId || payment.branchId === branchId)) {
-          if (!paymentsBySupplier[payment.supplierId]) {
-            paymentsBySupplier[payment.supplierId] = 0;
-          }
-          paymentsBySupplier[payment.supplierId] += payment.totalAmount;
-        }
-      }
+      // Calculate total outstanding: Only unpaid/partially paid amounts
+      totalOutstandingAmount = totalInvoiceAmount - totalCreditNotes - totalPaidAmount;
       
-      // Calculate total outstanding: Total Invoices - Credit Notes - (Bulk Payments + Legacy Payments)
-      totalOutstandingAmount = totalInvoiceAmount - totalCreditNotes - totalPaidAmount - totalLegacyPayments;
-      
-      // Calculate branch summaries using: Invoices - Credit Notes - (Bulk Payments + Legacy Payments)
+      // Calculate branch summaries using unpaid amounts
       for (const [branchIdKey, invoiceData] of Object.entries(invoicesByBranch)) {
         const branchIdNum = parseInt(branchIdKey);
         const branch = await storage.getBranch(branchIdNum);
-        const bulkPayments = paymentsByBranch[branchIdNum] || 0;
-        const legacyPayments = (invoiceData as any).legacyPayments || 0;
-        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - bulkPayments - legacyPayments;
+        const outstanding = (invoiceData as any).unpaidAmount - (invoiceData as any).creditNotes;
         
         branchSummary[branchIdNum] = {
           id: branchIdNum,
           name: branch?.name || `Branch ${branchIdNum}`,
-          totalAmount: (invoiceData as any).standard - (invoiceData as any).creditNotes,
+          totalAmount: (invoiceData as any).unpaidAmount,
           outstandingAmount: outstanding
         };
       }
       
-      // Calculate supplier summaries using: Invoices - Credit Notes - (Bulk Payments + Legacy Payments)
+      // Calculate supplier summaries using unpaid amounts
       for (const [supplierIdKey, invoiceData] of Object.entries(invoicesBySupplier)) {
         const supplierIdNum = parseInt(supplierIdKey);
         const supplier = await storage.getSupplier(supplierIdNum);
-        const bulkPayments = paymentsBySupplier[supplierIdNum] || 0;
-        const legacyPayments = (invoiceData as any).legacyPayments || 0;
-        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - bulkPayments - legacyPayments;
+        const outstanding = (invoiceData as any).unpaidAmount - (invoiceData as any).creditNotes;
         
         supplierSummary[supplierIdNum] = {
           id: supplierIdNum,
           name: supplier?.name || `Supplier ${supplierIdNum}`,
-          totalAmount: (invoiceData as any).standard - (invoiceData as any).creditNotes,
+          totalAmount: (invoiceData as any).unpaidAmount,
           outstandingAmount: outstanding
         };
       }
