@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { CalendarIcon, CreditCardIcon, FileTextIcon, FilterIcon, RefreshCwIcon, Download, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +56,10 @@ export default function PaymentTracking() {
     startDate: "",
     endDate: "",
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
 
   // Edit payment dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -122,6 +127,8 @@ export default function PaymentTracking() {
       return;
     }
     setFilters(prev => ({ ...prev, [key]: value }));
+    // Reset to page 1 when filters change
+    setCurrentPage(1);
   };
 
   const clearFilters = () => {
@@ -135,11 +142,19 @@ export default function PaymentTracking() {
       startDate: "",
       endDate: "",
     });
+    // Reset to page 1 when filters are cleared
+    setCurrentPage(1);
   };
 
   const totalAmount = payments.reduce((sum: number, payment: any) => sum + payment.totalAmount, 0);
   const bankTransferTotal = payments.reduce((sum: number, payment: any) => sum + (payment.bankTransferAmount || 0), 0);
   const chequeTotal = payments.reduce((sum: number, payment: any) => sum + (payment.chequeAmount || 0), 0);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(payments.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedPayments = payments.slice(startIndex, endIndex);
 
   // Delete payment mutation
   const deletePaymentMutation = useMutation({
@@ -469,7 +484,7 @@ export default function PaymentTracking() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment: any) => {
+                  {paginatedPayments.map((payment: any) => {
                     const paymentDate = new Date(payment.paymentDate);
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -561,6 +576,58 @@ export default function PaymentTracking() {
                   })}
                 </TableBody>
               </Table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {startIndex + 1} to {Math.min(endIndex, payments.length)} of {payments.length} payments
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {/* Page Numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNumber;
+                        if (totalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNumber = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNumber = totalPages - 4 + i;
+                        } else {
+                          pageNumber = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <PaginationItem key={pageNumber}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(pageNumber)}
+                              isActive={currentPage === pageNumber}
+                              className="cursor-pointer"
+                            >
+                              {pageNumber}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
