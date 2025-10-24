@@ -337,20 +337,23 @@ Disallow: /`);
             payment.supplierId === supplier.id && payment.branchId === branch.id
           );
           
-          // Calculate balance: Invoices - Credit Notes - Bulk Payments
+          // Calculate balance: Invoices - Credit Notes - (Bulk Payments + Legacy Invoice Payments)
           let totalInvoices = 0;
           let totalCreditNotes = 0;
+          let totalLegacyPayments = 0; // Legacy payments from before payment-tracking system
           
           for (const invoice of branchInvoices) {
             if (invoice.type === 'standard' || invoice.type === 'cash') {
               totalInvoices += invoice.amount;
+              // Add legacy invoice payments (paid directly on invoice before payment-tracking existed)
+              totalLegacyPayments += (invoice.paidAmount || 0);
             } else if (invoice.type === 'credit_note') {
               totalCreditNotes += invoice.amount;
             }
           }
           
           const totalBulkPayments = branchPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
-          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments;
+          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments - totalLegacyPayments;
           
           // If targetBranchId is specified, only include that branch's balance
           // Otherwise, include all branches
@@ -468,15 +471,17 @@ Disallow: /`);
             supplierInfo[invoice.supplierId] = supplier;
           }
           
-          // Calculate balance: Standard/Cash - Credit Notes
+          // Calculate balance: Standard/Cash - Credit Notes - Legacy Payments
           if (invoice.type === 'standard' || invoice.type === 'cash') {
             supplierBalances[invoice.supplierId] += invoice.amount;
+            // Subtract legacy invoice payments (paid directly on invoice before payment-tracking existed)
+            supplierBalances[invoice.supplierId] -= (invoice.paidAmount || 0);
           } else if (invoice.type === 'credit_note') {
             supplierBalances[invoice.supplierId] -= invoice.amount;
           }
         }
         
-        // Subtract bulk payments
+        // Subtract bulk payments (new payment tracking system)
         for (const payment of allSupplierPayments) {
           if (!payment.supplierId) continue;
           if (supplierBalances[payment.supplierId] !== undefined) {
@@ -537,20 +542,23 @@ Disallow: /`);
             payment.supplierId === supplier.id && payment.branchId === branch.id
           );
           
-          // Calculate balance: Invoices - Credit Notes - Bulk Payments
+          // Calculate balance: Invoices - Credit Notes - (Bulk Payments + Legacy Invoice Payments)
           let totalInvoices = 0;
           let totalCreditNotes = 0;
+          let totalLegacyPayments = 0; // Legacy payments from before payment-tracking system
           
           for (const invoice of branchInvoices) {
             if (invoice.type === 'standard' || invoice.type === 'cash') {
               totalInvoices += invoice.amount;
+              // Add legacy invoice payments (paid directly on invoice before payment-tracking existed)
+              totalLegacyPayments += (invoice.paidAmount || 0);
             } else if (invoice.type === 'credit_note') {
               totalCreditNotes += invoice.amount;
             }
           }
           
           const totalBulkPayments = branchPayments.reduce((sum, payment) => sum + payment.totalAmount, 0);
-          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments;
+          const branchBalance = totalInvoices - totalCreditNotes - totalBulkPayments - totalLegacyPayments;
           
           totalOutstanding += branchBalance;
         }
@@ -1549,22 +1557,26 @@ Disallow: /`);
       const paymentsByBranch: any = {};
       const invoicesBySupplier: any = {};
       const paymentsBySupplier: any = {};
+      let totalLegacyPayments = 0; // Legacy payments from before payment-tracking system
       
       // Process all invoices
       for (const invoice of invoices) {
         // Total Invoice Amount = Standard + Cash (NOT including credit notes as negative)
         if (invoice.type === 'standard' || invoice.type === 'cash') {
           totalInvoiceAmount += invoice.amount;
+          // Track legacy invoice payments (paid directly on invoice before payment-tracking existed)
+          totalLegacyPayments += (invoice.paidAmount || 0);
         } else if (invoice.type === 'credit_note') {
           totalCreditNotes += invoice.amount;
         }
         
         // Group by branch
         if (!invoicesByBranch[invoice.branchId]) {
-          invoicesByBranch[invoice.branchId] = { standard: 0, creditNotes: 0 };
+          invoicesByBranch[invoice.branchId] = { standard: 0, creditNotes: 0, legacyPayments: 0 };
         }
         if (invoice.type === 'standard' || invoice.type === 'cash') {
           invoicesByBranch[invoice.branchId].standard += invoice.amount;
+          invoicesByBranch[invoice.branchId].legacyPayments += (invoice.paidAmount || 0);
         } else if (invoice.type === 'credit_note') {
           invoicesByBranch[invoice.branchId].creditNotes += invoice.amount;
         }
@@ -1572,17 +1584,18 @@ Disallow: /`);
         // Group by supplier (only for filtered branch)
         if (invoice.supplierId && (!branchId || invoice.branchId === branchId)) {
           if (!invoicesBySupplier[invoice.supplierId]) {
-            invoicesBySupplier[invoice.supplierId] = { standard: 0, creditNotes: 0 };
+            invoicesBySupplier[invoice.supplierId] = { standard: 0, creditNotes: 0, legacyPayments: 0 };
           }
           if (invoice.type === 'standard' || invoice.type === 'cash') {
             invoicesBySupplier[invoice.supplierId].standard += invoice.amount;
+            invoicesBySupplier[invoice.supplierId].legacyPayments += (invoice.paidAmount || 0);
           } else if (invoice.type === 'credit_note') {
             invoicesBySupplier[invoice.supplierId].creditNotes += invoice.amount;
           }
         }
       }
       
-      // Process supplier payments
+      // Process supplier payments (new payment tracking system)
       for (const payment of allSupplierPayments) {
         // Add to total paid amount
         totalPaidAmount += payment.totalAmount;
@@ -1602,15 +1615,16 @@ Disallow: /`);
         }
       }
       
-      // Calculate total outstanding: Total Invoices - Credit Notes - Paid Amount
-      totalOutstandingAmount = totalInvoiceAmount - totalCreditNotes - totalPaidAmount;
+      // Calculate total outstanding: Total Invoices - Credit Notes - (Bulk Payments + Legacy Payments)
+      totalOutstandingAmount = totalInvoiceAmount - totalCreditNotes - totalPaidAmount - totalLegacyPayments;
       
-      // Calculate branch summaries using: Invoices - Credit Notes - Bulk Payments
+      // Calculate branch summaries using: Invoices - Credit Notes - (Bulk Payments + Legacy Payments)
       for (const [branchIdKey, invoiceData] of Object.entries(invoicesByBranch)) {
         const branchIdNum = parseInt(branchIdKey);
         const branch = await storage.getBranch(branchIdNum);
-        const payments = paymentsByBranch[branchIdNum] || 0;
-        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - payments;
+        const bulkPayments = paymentsByBranch[branchIdNum] || 0;
+        const legacyPayments = (invoiceData as any).legacyPayments || 0;
+        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - bulkPayments - legacyPayments;
         
         branchSummary[branchIdNum] = {
           id: branchIdNum,
@@ -1620,12 +1634,13 @@ Disallow: /`);
         };
       }
       
-      // Calculate supplier summaries using: Invoices - Credit Notes - Bulk Payments
+      // Calculate supplier summaries using: Invoices - Credit Notes - (Bulk Payments + Legacy Payments)
       for (const [supplierIdKey, invoiceData] of Object.entries(invoicesBySupplier)) {
         const supplierIdNum = parseInt(supplierIdKey);
         const supplier = await storage.getSupplier(supplierIdNum);
-        const payments = paymentsBySupplier[supplierIdNum] || 0;
-        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - payments;
+        const bulkPayments = paymentsBySupplier[supplierIdNum] || 0;
+        const legacyPayments = (invoiceData as any).legacyPayments || 0;
+        const outstanding = (invoiceData as any).standard - (invoiceData as any).creditNotes - bulkPayments - legacyPayments;
         
         supplierSummary[supplierIdNum] = {
           id: supplierIdNum,

@@ -4,6 +4,15 @@
 
 This is a comprehensive finance management system designed for businesses requiring multi-branch invoice management, supplier tracking, financial analytics, and role-based access control. It aims to streamline financial operations, enhance payment tracking, improve supplier relationship management, and provide insightful financial performance data across various business locations.
 
+## Recent Changes (October 24, 2025)
+
+### Critical Bug Fix: Supplier Balance Calculations
+- **Fixed**: Supplier balances now correctly account for BOTH legacy invoice payments (invoice.paidAmount) AND new bulk payments (supplier_payments table)
+- **Issue**: Before payment-tracking system existed, invoices were marked as paid directly using invoice.paidAmount. After introducing /payment-tracking page and bulk_payments system, supplier balance calculations only considered bulk_payments, ignoring legacy payments
+- **Impact**: This caused mismatches where suppliers showed unpaid balances on /suppliers page despite invoices showing "Paid" status on /invoices page
+- **Solution**: Updated all balance calculation endpoints to use formula: `Balance = (Standard+Cash Invoices) - Credit Notes - (Bulk Payments + Legacy Invoice Payments)`
+- **Affected Endpoints**: `/api/suppliers`, `/api/suppliers/top-balance`, `/api/dashboard/summary`
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
