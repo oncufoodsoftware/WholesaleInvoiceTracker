@@ -1,3 +1,9 @@
+databases:
+  - name: wholesale-invoice-tracker-db
+    databaseName: wholesale_invoice_tracker
+    user: wholesale_user
+    plan: free   # Change to 'starter' or higher for production
+
 services:
   - type: web
     name: wholesale-invoice-tracker
@@ -11,7 +17,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false   # Set this secret in the Render dashboard
+        fromDatabase:
+          name: wholesale-invoice-tracker-db
+          property: connectionString
       - key: SESSION_SECRET
         generateValue: true   # Render auto-generates a secure random value
       - key: OPENAI_API_KEY
