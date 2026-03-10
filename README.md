@@ -19,7 +19,7 @@ A comprehensive finance management system for multi-branch wholesale businesses.
 |-------|-----------|
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | Backend | Node.js, Express.js, TypeScript |
-| Database | PostgreSQL (Neon serverless) |
+| Database | PostgreSQL (any provider – Render, Neon, Railway, local) |
 | ORM | Drizzle ORM |
 | Auth | Passport.js (session-based) |
 
@@ -30,7 +30,7 @@ A comprehensive finance management system for multi-branch wholesale businesses.
 ### Prerequisites
 
 - Node.js 20+
-- A [Neon](https://neon.tech) PostgreSQL database (free tier available)
+- A PostgreSQL database (any provider: [Neon](https://neon.tech), [Render](https://render.com), [Railway](https://railway.app), or local)
 
 ### 1. Clone the repository
 
@@ -86,14 +86,75 @@ Render is the easiest way to deploy this application with zero infrastructure ma
 2. Go to [render.com](https://render.com) and create a free account.
 3. Click **"New +"** → **"Blueprint"** → connect your GitHub repository.
 4. Render detects the `render.yaml` file and pre-fills **all** settings, including creating a managed PostgreSQL database and wiring `DATABASE_URL` automatically.
-5. Optionally set the following in the Render dashboard:
+5. On the first deploy the build command runs `npm run db:migrate` to create all database tables automatically — no manual schema setup needed.
+6. Optionally set the following in the Render dashboard:
    - `OPENAI_API_KEY` – optional, enables AI-powered financial tips
-6. Click **"Apply"**.
+7. Click **"Apply"**.
 
 Your app will be live at `https://<your-service-name>.onrender.com` within a few minutes. `SESSION_SECRET` is auto-generated and `DATABASE_URL` is automatically connected to the provisioned database — no manual secrets needed.
 
 > **Note:** The free tier spins down after 15 minutes of inactivity. Upgrade to the **Starter** plan for always-on availability.
 > The free PostgreSQL plan on Render expires after 90 days. Upgrade to a paid plan before then to retain your data.
+
+---
+
+### Migrating from Replit/Neon to Render
+
+When you first deploy to Render, it provisions a **fresh, empty PostgreSQL database**. The build step runs `npm run db:migrate` automatically to create all tables — but your existing data (from Replit) is not copied yet.
+
+You have two options:
+
+#### Option A — Keep using your existing Neon database (easiest, zero downtime)
+
+Your Replit app connects to a Neon cloud database hosted at `*.neon.tech`. This database is reachable from anywhere on the internet, so you can point your Render deployment at it without any data transfer.
+
+1. In Replit, copy the value of the `DATABASE_URL` environment variable  
+   (format: `postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech/dbname?sslmode=require`)
+
+2. In the [Render dashboard](https://dashboard.render.com), open your service → **Environment** tab.
+
+3. Add an environment variable:
+   ```
+   DATABASE_URL = <paste your Neon connection string>
+   ```
+   This overrides the auto-generated value from `render.yaml`, pointing Render at your existing database.
+
+4. Redeploy — your Render app will now use the same Neon database and all your data will be immediately available.
+
+> **Tip:** You can delete the `databases:` block from `render.yaml` once you've switched to Neon, so Render stops provisioning an unused managed database.
+
+---
+
+#### Option B — Migrate data to a Render-managed PostgreSQL
+
+Use this option if you want all your data hosted on Render's own infrastructure (e.g. for lower latency or to stop relying on Neon).
+
+**Prerequisites:**  
+- `psql` / `pg_dump` installed locally (comes with [PostgreSQL](https://www.postgresql.org/download/))
+- Your Neon `DATABASE_URL` (from Replit environment variables)
+- Your Render `DATABASE_URL` (from the Render dashboard → your database → **Connection** tab → **External Connection String**)
+
+**Steps:**
+
+```bash
+# 1. Dump all data from your Neon (Replit) database to a local file
+pg_dump "$NEON_DATABASE_URL" \
+  --no-owner --no-acl --format=custom \
+  --file=neon-backup.dump
+
+# 2. Restore the dump into your Render PostgreSQL database
+pg_restore "$RENDER_DATABASE_URL" \
+  --no-owner --no-acl \
+  --clean --if-exists \
+  neon-backup.dump
+```
+
+Replace `$NEON_DATABASE_URL` and `$RENDER_DATABASE_URL` with the actual connection strings.
+
+> **Note:** Both URLs must include credentials and the `sslmode=require` parameter.  
+> Example: `postgresql://user:password@hostname:5432/dbname?sslmode=require`
+
+After a successful restore, update the `DATABASE_URL` environment variable in the Render dashboard to point at the Render-managed database (it should already be set correctly if you used `render.yaml`).
 
 ---
 
@@ -169,13 +230,20 @@ docker run -d \
 
 ## Database Setup
 
-The application uses [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL. To create the database schema:
+The application uses [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL. Two commands are available:
 
 ```bash
+# Apply versioned migration files (recommended for production and CI)
+npm run db:migrate
+
+# Push schema directly from code (recommended for local development)
 npm run db:push
 ```
 
-This command applies the schema defined in `shared/schema.ts` directly to your database.
+`npm run db:migrate` applies the SQL files in the `migrations/` folder in order — it is idempotent and safe to run on every deploy.  
+`npm run db:push` computes a schema diff and applies it directly without migration files — convenient during development.
+
+> On Render, `npm run db:migrate` runs automatically as part of every build (`render.yaml` → `buildCommand`), so tables are always up to date when the service starts.
 
 ---
 

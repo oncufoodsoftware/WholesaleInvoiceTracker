@@ -10,7 +10,10 @@ services:
     runtime: node
     region: frankfurt  # Change to your preferred region
     plan: free         # Change to 'starter' or higher for production
-    buildCommand: npm ci && npm run build
+    # Running db:migrate in the build step is intentional: on Render, the build
+    # runs before the new version goes live, so a failed migration aborts the
+    # deploy and keeps the current (old) version running — fail-fast with no downtime.
+    buildCommand: npm ci && npm run build && npm run db:migrate
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
