@@ -1,0 +1,29 @@
+databases:
+  - name: wholesale-invoice-tracker-db
+    databaseName: wholesale_invoice_tracker
+    user: wholesale_user
+    plan: free   # Change to 'starter' or higher for production
+
+services:
+  - type: web
+    name: wholesale-invoice-tracker
+    runtime: node
+    region: frankfurt  # Change to your preferred region
+    plan: free         # Change to 'starter' or higher for production
+    # Running db:migrate in the build step is intentional: on Render, the build
+    # runs before the new version goes live, so a failed migration aborts the
+    # deploy and keeps the current (old) version running — fail-fast with no downtime.
+    buildCommand: npm ci && npm run build && npm run db:migrate
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wholesale-invoice-tracker-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true   # Render auto-generates a secure random value
+      - key: OPENAI_API_KEY
+        sync: false   # Optional: set in Render dashboard if using AI features
