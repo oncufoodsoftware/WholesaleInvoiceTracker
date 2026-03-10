@@ -1,24 +1,21 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Configure WebSocket for Neon
-neonConfig.webSocketConstructor = ws;
-
-// Add retry/error handling logic
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-// Create database connection pool with minimal options to improve stability
+// Create a standard PostgreSQL connection pool.
+// ssl: { rejectUnauthorized: false } allows self-signed certs on Render/cloud providers.
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Add error handling for the pool
+// Log unexpected errors on idle pool clients so they don't go unnoticed.
 pool.on('error', (err) => {
   console.error('Unexpected error on idle database client', err);
 });
