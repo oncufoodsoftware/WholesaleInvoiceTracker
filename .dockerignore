@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+.github
+.DS_Store
+*.log
+*.tar.gz
+attached_assets
+cookies.txt
+supplier_data.json
+suppliers_response.json

@@ -121,6 +121,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Access the middleware for role-based access control
   const requireRole = app.locals.requireRole;
 
+  // Health check endpoint for cloud platform monitoring (Render, Railway, etc.)
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Robots.txt endpoint to block search engines
   app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
