@@ -321,7 +321,7 @@ export const fileUploadSecurity = {
 
 // Environment variable validation
 export const validateEnvironment = () => {
-  const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
+  const requiredEnvVars = ['DATABASE_URL'];
   
   for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {
@@ -329,6 +329,14 @@ export const validateEnvironment = () => {
     }
   }
   
+  // SESSION_SECRET is optional — auth.ts falls back to a default value — but required in production
+  if (!process.env.SESSION_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET environment variable must be set in production. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    }
+    console.warn('Warning: SESSION_SECRET is not set. A default value will be used. Set SESSION_SECRET before deploying to production.');
+  }
+
   // Validate session secret strength
   if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 32) {
     console.warn('Warning: SESSION_SECRET should be at least 32 characters long');

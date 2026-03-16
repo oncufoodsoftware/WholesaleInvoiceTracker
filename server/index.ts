@@ -102,10 +102,12 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Use PORT environment variable if set (e.g. Plesk/cPanel hosting), otherwise default to 5000
+  const rawPort = process.env.PORT;
+  const port = rawPort ? parseInt(rawPort, 10) : 5000;
+  if (isNaN(port)) {
+    throw new Error(`Invalid PORT environment variable: "${rawPort}". Must be a number.`);
+  }
   server.listen({
     port,
     host: "0.0.0.0",
