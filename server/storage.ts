@@ -42,12 +42,11 @@ import {
   type DirectDebit,
   type InsertDirectDebit
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, gte, lte, desc, asc, like, or, inArray, count } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
-
-const MemoryStore = createMemoryStore(session);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const connectPgSimple = require("connect-pg-simple")(session) as new (options?: Record<string, unknown>) => session.Store;
 
 // Interface for storage methods
 export interface IStorage {
@@ -213,8 +212,10 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.SessionStore;
 
   constructor() {
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // 1 day in ms
+    const PgSession = connectPgSimple;
+    this.sessionStore = new PgSession({
+      pool: pool,
+      createTableIfMissing: true,
     });
   }
 
